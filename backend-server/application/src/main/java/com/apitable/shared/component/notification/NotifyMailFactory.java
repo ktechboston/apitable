@@ -356,7 +356,7 @@ public class NotifyMailFactory {
             emailMessage.setFrom(emailSendProperties.getFrom());
             emailMessage.setSubject(subject);
             emailMessage.setTo(Collections.singletonList(to.get(i)));
-            emailMessage.setFrom(emailSendProperties.getEmailFrom());
+            emailMessage.setFrom(emailSendProperties.getFrom());
             emailMessage.setPlainText(plainText);
             emailMessage.setHtmlText(htmlBody);
             messages[i] = emailMessage;
