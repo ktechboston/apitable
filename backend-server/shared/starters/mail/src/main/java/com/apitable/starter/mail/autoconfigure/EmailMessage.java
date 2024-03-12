@@ -36,8 +36,6 @@ public class EmailMessage {
      */
     private String personal;
 
-    private String from;
-
     /**
      * Recipient list (multiple supported).
      */
@@ -101,10 +99,6 @@ public class EmailMessage {
     public void setTo(List<String> to) {
         this.to = to;
     }
-
-    public String getFrom() { return this.from; }
-
-    public void setFrom(String from) { this.from = from; }
 
     public List<String> getCc() {
         return cc;
