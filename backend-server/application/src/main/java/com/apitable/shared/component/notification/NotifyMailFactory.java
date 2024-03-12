@@ -311,7 +311,7 @@ public class NotifyMailFactory {
         emailMessage.setFrom(emailSendProperties.getFrom());
         emailMessage.setSubject(subject);
         emailMessage.setTo(to);
-        emailMessage.setFrom(emailSendProperties.getEmailFrom());
+        emailMessage.setFrom(emailSendProperties.getFrom());
         if (subjectType != null) {
             return;
         }
