@@ -42,12 +42,12 @@ public class EmailMessage {
     private List<String> to;
 
     /**
-     * Sending email address
+     * Sending email address.
      */
     private String from;
 
     /**
-     * Cc list (multiple supported
+     * Cc list (multiple supported).
      */
     private List<String> cc;
 
