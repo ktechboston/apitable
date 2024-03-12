@@ -83,9 +83,6 @@ services:
       - TZ=${TIMEZONE}
     networks:
       - apitable
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # Third Party Dockers
   gateway:
