@@ -70,9 +70,6 @@ services:
       - ENABLE_SOCKET=true
     networks:
       - apitable
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   databus-server:
     image: ${IMAGE_REGISTRY}/${IMAGE_DATABUS_SERVER}
@@ -162,33 +159,6 @@ services:
     networks:
       - apitable
 
-  mysql:
-    container_name: mysql
-    image: ${IMAGE_MYSQL}
-    pull_policy: ${IMAGE_PULL_POLICY:-if_not_present}
-    restart: always
-    volumes:
-      - ${DATA_PATH}/.data/mysql:/var/lib/mysql
-    expose:
-      - "3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - TZ=${TIMEZONE}
-    command: --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_general_ci
-      --sql_mode=IGNORE_SPACE,NO_ENGINE_SUBSTITUTION
-      --lower_case_table_names=2
-    healthcheck:
-      test: "mysql ${MYSQL_DATABASE} -u${MYSQL_USERNAME} -p${MYSQL_PASSWORD} -e 'SELECT 1;'"
-      interval: 5s
-      timeout: 5s
-      start_period: 30s
-      retries: 60
-    networks:
-      - apitable
-
   rabbitmq:
     container_name: rabbitmq
     image: ${IMAGE_RABBITMQ}
@@ -221,9 +191,6 @@ services:
       - ACTION=update
     networks:
       - apitable
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   # init-appdata
   init-appdata:
@@ -234,8 +201,6 @@ services:
     networks:
       - apitable
     depends_on:
-      mysql:
-        condition: service_healthy
       init-db:
         condition: service_completed_successfully
 
