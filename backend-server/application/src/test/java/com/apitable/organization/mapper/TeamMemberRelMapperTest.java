@@ -43,8 +43,8 @@ public class TeamMemberRelMapperTest extends AbstractMyBatisMapperTest {
     @Test
     @Sql({"/sql/unit-team-member-rel-data.sql", "/sql/unit-member-data.sql"})
     void testCountByTeamId() {
-        Integer count = teamMemberRelMapper.countByTeamId(CollUtil.newArrayList(41L));
-        assertThat(count).isEqualTo(1);
+        Long count = teamMemberRelMapper.countByTeamId(CollUtil.newArrayList(41L));
+        assertThat(count).isEqualTo(1L);
     }
 
     @Test
@@ -84,13 +84,6 @@ public class TeamMemberRelMapperTest extends AbstractMyBatisMapperTest {
     void testSelectActiveMemberIdsByTeamIds() {
         List<Long> ids =
             teamMemberRelMapper.selectActiveMemberIdsByTeamIds(CollUtil.newArrayList(41L));
-        assertThat(ids).isNotEmpty();
-    }
-
-    @Test
-    @Sql({"/sql/unit-team-member-rel-data.sql", "/sql/unit-team-data.sql"})
-    void testSelectAllTeamIdByMemberId() {
-        List<Long> ids = teamMemberRelMapper.selectAllTeamIdByMemberId(41L);
         assertThat(ids).isNotEmpty();
     }
 

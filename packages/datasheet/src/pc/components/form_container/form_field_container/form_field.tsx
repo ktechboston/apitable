@@ -16,20 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useUnmount, useMount } from 'ahooks';
+import classNames from 'classnames';
 import { useCallback, useEffect, useRef, useContext } from 'react';
 import * as React from 'react';
+import { useThemeColors } from '@apitable/components';
 import { FieldType, IField, ILookUpField, Selectors, Strings, t } from '@apitable/core';
-import classNames from 'classnames';
-import styles from './style.module.less';
-import { useUnmount, useMount } from 'ahooks';
-import { FieldEditor } from './field_editor';
-import { usePrevious, useResponsive } from 'pc/hooks';
+import { Message } from 'pc/components/common';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { IEditor } from 'pc/components/editors/interface';
+import { usePrevious, useResponsive } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { FormContext } from '../form_context';
-import { useSelector } from 'react-redux';
-import { useThemeColors } from '@apitable/components';
-import { Message } from 'pc/components/common';
+import { FieldEditor } from './field_editor';
+import styles from './style.module.less';
 
 export type IFieldEditRef = Pick<IEditor, 'focus' | 'setValue' | 'saveValue'>;
 
@@ -45,10 +45,10 @@ interface IFormFieldProps {
 }
 
 // Field without background colour for mobile
-const _notNeedBgFieldMobile = [FieldType.Attachment, FieldType.Link, FieldType.LookUp];
+const _notNeedBgFieldMobile = [FieldType.Attachment, FieldType.Link, FieldType.OneWayLink, FieldType.LookUp];
 
 // Field without background colour
-const _notNeedBgField = [FieldType.Attachment, FieldType.Link, FieldType.LookUp, FieldType.Rating];
+const _notNeedBgField = [FieldType.Attachment, FieldType.Link, FieldType.OneWayLink, FieldType.LookUp, FieldType.Rating];
 
 // Field without active state
 const _notNeedActiveField = [FieldType.Checkbox, FieldType.Rating, FieldType.Formula];
@@ -59,12 +59,12 @@ const needTriggerStartEditField = [FieldType.Number, FieldType.Percent, FieldTyp
 
 const compactField = [FieldType.SingleSelect, FieldType.MultiSelect, FieldType.Cascader];
 
-export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = props => {
+export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = (props) => {
   const colors = useThemeColors();
-  const shareId = useSelector(state => state.pageParams.shareId);
+  const shareId = useAppSelector((state) => state.pageParams.shareId);
   const { datasheetId, field, isFocus = false, setFocusId, onClose, editable, recordId } = props;
   const previousFocus = usePrevious(isFocus);
-  const editorRef = (useRef<(IFieldEditRef & HTMLDivElement) | null>(null) as any) as React.MutableRefObject<IEditor>;
+  const editorRef = useRef<(IFieldEditRef & HTMLDivElement) | null>(null) as any as React.MutableRefObject<IEditor>;
   const { formData, formProps } = useContext(FormContext);
   const fieldId = field.id;
   // TODO(kailang) Next sprint supports form defaults
@@ -72,7 +72,7 @@ export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = pro
   // const defaultValue = Field.bindModel(field).defaultValue();
   // const cellValue = hasSetField ? (formData[fieldId] ?? null) : defaultValue;
   const cellValue = formData ? formData[fieldId] ?? null : null;
-  const isLogin = useSelector(state => state.user.isLogin);
+  const isLogin = useAppSelector((state) => state.user.isLogin);
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
   const compactMode = formProps?.compactMode;
@@ -136,7 +136,7 @@ export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = pro
     Message.destroy();
   });
 
-  const { entityField, lookupCellValue } = useSelector(state => {
+  const { entityField, lookupCellValue } = useAppSelector((state) => {
     if (field.type !== FieldType.LookUp) {
       return {
         entityField: undefined,
@@ -149,7 +149,7 @@ export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = pro
     let lookupCellValue;
     try {
       lookupCellValue = Selectors.getCellValue(state, snapshot, recordId, field.id, true);
-    } catch {
+    } catch (_e) {
       lookupCellValue = null;
     }
     const entityField = Selectors.findRealField(state, field) as ILookUpField;
@@ -188,11 +188,13 @@ export const FormField: React.FC<React.PropsWithChildren<IFormFieldProps>> = pro
 
   const disableField = entityFieldType === FieldType.LookUp || entityFieldType === FieldType.Formula;
 
+  const wordNotActiveMobile = isMobile && entityFieldType === FieldType.WorkDoc;
+
   return (
     <div
       className={classNames(styles.formFieldItem, {
         [styles.displayItem]: isNeedBgField,
-        [styles.active]: isFocus && editable && !notNeedActiveField.includes(entityFieldType),
+        [styles.active]: isFocus && editable && !notNeedActiveField.includes(entityFieldType) && !wordNotActiveMobile,
         [styles.autoFit]: entityFieldType === FieldType.Checkbox,
         [styles.displayItemMobile]: isMobile && entityFieldType !== FieldType.Checkbox,
         [styles.editable]: isNeedBgField && editable && !disableField,

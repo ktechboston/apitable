@@ -38,9 +38,16 @@ export class DatasheetException implements IBaseException {
   static readonly VIEW_ADD_LIMIT = new DatasheetException(304, 'the usage of this function exceed the 30 views limit of beta version');
   static readonly FIELD_ADD_LIMIT = new DatasheetException(304, 'the usage of this function exceed the 200 fields limit of beta version');
   static readonly RECORD_ADD_LIMIT = new DatasheetException(304, 'the usage of this function exceed the 50000 records limit of beta version');
+  static readonly FIELD_NOT_EXIST = new DatasheetException(440, 'field does not exist');
+  static readonly BUTTON_FIELD_AUTOMATION_NOT_CONFIGURED = new DatasheetException(444, 'button field automation not configured');
+  static readonly BUTTON_FIELD_AUTOMATION_TRIGGER_NOT_CONFIGURED = new DatasheetException(445, 'button field automation trigger not configured');
   static readonly RECORD_ADD_LIMIT_PER_DATASHEET = new DatasheetException(
     305,
     'the usage of this function exceed the 50000 records limit of beta version',
+  );
+  static readonly RECORD_ARCHIVE_LIMIT_PER_DATASHEET = new DatasheetException(
+    305,
+    'the usage of this function exceed the 10000 records limit of beta version',
   );
   static readonly RECORD_ADD_LIMIT_WITHIN_SPACE = new DatasheetException(
     309,
@@ -56,6 +63,11 @@ export class DatasheetException implements IBaseException {
   static getRECORD_ADD_LIMIT_PER_DATASHEETMsg(specification: number, usage: number) {
     // return new DatasheetException(305, t(Strings.max_rows_per_sheet, { specification, usage }));
     return new DatasheetException(305, JSON.stringify({ key: 'max_rows_per_sheet', specification, usage }));
+  }
+
+  static getRECORD_ARCHIVE_LIMIT_PER_DATASHEETMsg(specification: number, usage: number) {
+    // return new DatasheetException(305, t(Strings.max_archived_rows_per_sheet, { specification, usage }));
+    return new DatasheetException(305, JSON.stringify({ key: 'max_archived_rows_per_sheet', specification, usage }));
   }
 
   static getRECORD_ADD_LIMIT_WITHIN_SPACEMsg(specification: number, usage: number) {
@@ -75,7 +87,10 @@ export class DatasheetException implements IBaseException {
 
   // Exception Type --------------------------------
 
-  private constructor(public readonly code: number, public readonly message: string) {
+  private constructor(
+    public readonly code: number,
+    public readonly message: string,
+  ) {
     DatasheetException.AllValues[message] = this;
   }
 

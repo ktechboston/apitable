@@ -16,32 +16,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { LinkButton, Typography, useThemeColors, ThemeName } from '@apitable/components';
-import {
-  Api, CollaCommandName, ConfigConstant, DatasheetApi, IActivityListParams, ICommentMsg, IJOTAction, integrateCdnHost, IRemoteChangeset, MemberType,
-  OPEventNameEnums, OtherTypeUnitId, ResourceType, Selectors, Settings, StoreActions, Strings, t, WithOptional,
-} from '@apitable/core';
 import { Spin } from 'antd';
 import axios, { CancelTokenSource } from 'axios';
 import { clone, find, get, has, isEmpty, keyBy, set, toPairs, uniq, values } from 'lodash';
-import { LoadingOutlined } from '@apitable/icons';
 import Image from 'next/image';
+import * as React from 'react';
+import { FC, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { LinkButton, Typography, useThemeColors, ThemeName } from '@apitable/components';
+import {
+  Api,
+  CollaCommandName,
+  ConfigConstant,
+  DatasheetApi,
+  IActivityListParams,
+  ICommentMsg,
+  IJOTAction,
+  integrateCdnHost,
+  IRemoteChangeset,
+  MemberType,
+  OPEventNameEnums,
+  OtherTypeUnitId,
+  ResourceType,
+  Selectors,
+  Settings,
+  StoreActions,
+  Strings,
+  t,
+  WithOptional,
+} from '@apitable/core';
+import { LoadingOutlined } from '@apitable/icons';
 import { Message } from 'pc/components/common';
 import { SpaceLevelInfo } from 'pc/components/space_manage/space_info/utils';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { ACTIVITY_SELECT_MAP, ActivitySelectType } from 'pc/utils';
-import * as React from 'react';
-import { FC, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import IconNoListLight from 'static/icon/datasheet/activity/activity_empty_light.png';
 import IconNoListDark from 'static/icon/datasheet/activity/activity_empty_dark.png';
+import IconNoListLight from 'static/icon/datasheet/activity/activity_empty_light.png';
 import { ActivityContext, ICommentReplyMap } from '../activity_context';
 import { ChangesetItem } from '../activity_item';
 import { IActivityPaneProps, IChooseComment } from '../interface';
-import styles from './style.module.less';
 // @ts-ignore
-import { SubscribeUsageTipType, triggerUsageAlert } from 'enterprise';
+import { SubscribeUsageTipType, triggerUsageAlert } from 'enterprise/billing';
+import styles from './style.module.less';
 
 const PAGE_SIZE = 10;
 const LIMIT_DAY = 90;
@@ -60,17 +78,21 @@ interface ICommentUpdatedContext {
 
 export type IChangeSet = WithOptional<IRemoteChangeset, 'messageId' | 'resourceType'>;
 
-export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & {
-  containerRef: React.RefObject<HTMLDivElement>;
-  listRef: React.RefObject<HTMLDivElement>;
-  setEmpty: (bool: boolean) => void;
-}>> = props => {
+export const ActivityListItems: FC<
+  React.PropsWithChildren<
+    IActivityListProps & {
+      containerRef: React.RefObject<HTMLDivElement>;
+      listRef: React.RefObject<HTMLDivElement>;
+      setEmpty: (bool: boolean) => void;
+    }
+  >
+> = (props) => {
   const colors = useThemeColors();
   const { expandRecordId, datasheetId, selectType, setChooseComment, containerRef, listRef, setEmpty, mirrorId } = props;
   const dispatch = useDispatch();
   const { emojis, setEmojis, unitMap, updateCommentReplyMap } = useContext(ActivityContext);
-  const currUserId = useSelector(state => state.user.info?.userId);
-  const _maxRemainRecordActivityDays = useSelector(state => {
+  const currUserId = useAppSelector((state) => state.user.info?.userId);
+  const _maxRemainRecordActivityDays = useAppSelector((state) => {
     return state.billing?.subscription?.maxRemainRecordActivityDays || LIMIT_DAY;
   });
   // Mirror view to check if it is the current table's row panel
@@ -79,10 +101,10 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
   const [listHeight, setListHeight] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>();
-  const productName = useSelector(state => String(state.billing?.subscription?.product).toLowerCase());
-  const themeName = useSelector(state => state.theme);
+  const productName = useAppSelector((state) => String(state.billing?.subscription?.product).toLowerCase());
+  const themeName = useAppSelector((state) => state.theme);
   const IconNoList = themeName === ThemeName.Light ? IconNoListLight : IconNoListDark;
-  const fieldPermissionMap = useSelector(state => Selectors.getFieldPermissionMap(state));
+  const fieldPermissionMap = useAppSelector((state) => Selectors.getFieldPermissionMap(state));
 
   const product = useMemo(() => {
     return SpaceLevelInfo[productName]?.title || '';
@@ -125,7 +147,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
   };
 
   const loadMore = () => {
-    const getRecordList = async() => {
+    const getRecordList = async () => {
       setAdding(true);
       await getActivityList(resourceId, expandRecordId, ACTIVITY_SELECT_MAP[selectType][0] as ConfigConstant.ActivityListParamsType);
       // Scroll to original position after getting new data
@@ -152,8 +174,8 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
       const hasDeleteEmoji = has(action, 'ld.commentMsg.emojis');
       if (expandRecordId === recordId) {
         if (hasAddEmoji) {
-          const commentId: string = get(action, 'li.commentId');
-          const curEmojis: ICommentMsg['emojis'] = get(action, 'li.commentMsg.emojis');
+          const commentId = get(action as any, 'li.commentId');
+          const curEmojis: ICommentMsg['emojis'] = get(action as any, 'li.commentMsg.emojis');
           const [emojiKey, emojiUserIds] = toPairs(curEmojis)[0]!;
           const newEmojis = clone(emojis);
           const newUserIds = get(newEmojis, `${commentId}.${emojiKey}`, []) as string[];
@@ -162,7 +184,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
           return;
         }
         if (hasDeleteEmoji) {
-          const commentId: string = get(action, 'ld.commentId');
+          const commentId = get(action as any, 'ld.commentId');
           const curEmojis: ICommentMsg['emojis'] = get(action, 'ld.commentMsg.emojis');
           const [emojiKey, emojiUserIds] = toPairs(curEmojis)[0]!;
           const newEmojis = clone(emojis);
@@ -170,14 +192,15 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
           set(
             newEmojis,
             `${commentId}.${emojiKey}`,
-            newUserIds.filter(id => id !== emojiUserIds[0]),
+            newUserIds.filter(id => id !== emojiUserIds?.[0]),
           );
           setEmojis(newEmojis);
           return;
         }
         if (hasAddComment && !hasDeleteComment) {
-          const createdAt: number = get(action, 'li.createdAt');
-          const unitId: string = get(action, 'li.unitId');
+          const createdAt = get(action as any, 'li.createdAt');
+
+          const unitId: string = get(action as any, 'li.unitId');
           const userId = unitMap ? unitMap[unitId]?.userId : undefined;
           const addComment = (uid?: string) => {
             setRecordList([
@@ -205,7 +228,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
           if (userId) {
             addComment();
           } else {
-            Api.loadOrSearch({ unitIds: unitId }).then(res => {
+            Api.loadOrSearch({ unitIds: unitId }).then((res) => {
               const {
                 data: { data: resData, success },
               } = res;
@@ -227,7 +250,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
       if (hasDeleteComment && !hasAddComment) {
         const commentId = get(action, 'ld.commentId');
         const filterRecordList: WithOptional<IRemoteChangeset, 'messageId' | 'resourceType'>[] = [];
-        recordList.forEach(rc => {
+        recordList.forEach((rc) => {
           // Filter deleted comments
           if (get(rc, 'operations.0.actions.0.li.commentId') !== commentId) {
             // Deleted comments are marked as deleted in the reply
@@ -299,9 +322,9 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
             return;
           }
           const { actions } = firstOperation;
-          actions.forEach(action => {
+          actions.forEach((action) => {
             // Get the od for switching, deleting the first action of the field
-            const firstOd = get(action, 'od');
+            const firstOd = get(action as any, 'od');
             // Add to cache if single, multi-select
             if (
               has(firstOd, 'property.options') ||
@@ -337,8 +360,8 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
 
   useEffect(() => {
     // Observer pattern for scrolling loading
-    observerRef.current = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
+    observerRef.current = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
         // Access to the visual area
         if (entry.isIntersecting) {
           if (topRef.current) {
@@ -381,7 +404,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
 
     return () => {
       // Canceling a failed active API request
-      cancelsRef.current.forEach(c => c.cancel());
+      cancelsRef.current.forEach((c) => c.cancel());
       cancelsRef.current = [];
       if (topTarget) {
         observerRef.current?.unobserve(topTarget);
@@ -393,18 +416,18 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
   if (isEmpty(recordList) && cancelsRef.current.length > 0 && loading) {
     return (
       <div className={styles.spin}>
-        <Spin indicator={<LoadingOutlined size={24} className='circle-loading' />} />
+        <Spin indicator={<LoadingOutlined size={24} className="circle-loading" />} />
       </div>
     );
   }
   if (isEmpty(recordList)) {
     return (
       <div className={styles.blankTip}>
-        <Image src={IconNoList} alt='' width={160} height={120} />
+        <Image src={IconNoList} alt="" width={160} height={120} />
         <div>{t(Strings.no_comment_tip)}</div>
         <div>
           {selectType !== ActivitySelectType.Comment && t(Strings.history_view_tip, { day: maxRemainRecordActivityDays })}
-          <LinkButton href={t(Strings.record_history_help_url)} color={colors.thirdLevelText} className={styles.more} target='_blank'>
+          <LinkButton href={t(Strings.record_history_help_url)} color={colors.thirdLevelText} className={styles.more} target="_blank">
             {t(Strings.know_more)}
           </LinkButton>
         </div>
@@ -449,7 +472,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
       {more && <div className={styles.loadTrigger} ref={topRef} onClick={() => loadMore()} />}
       {isAdding && (
         <div className={styles.spin}>
-          <Spin indicator={<LoadingOutlined size={14} className='circle-loading' />} />
+          <Spin indicator={<LoadingOutlined size={14} className="circle-loading" />} />
         </div>
       )}
       {end &&
@@ -467,7 +490,7 @@ export const ActivityListItems: FC<React.PropsWithChildren<IActivityListProps & 
             {maxRemainRecordActivityDays !== MAX_LIMIT_DAY ? (
               <div>
                 「{product}」{t(Strings.history_view_tip, { day: maxRemainRecordActivityDays })}
-                <LinkButton href={t(Strings.record_history_help_url)} color={colors.thirdLevelText} className={styles.more} target='_blank'>
+                <LinkButton href={t(Strings.record_history_help_url)} color={colors.thirdLevelText} className={styles.more} target="_blank">
                   {t(Strings.know_more)}
                 </LinkButton>
               </div>

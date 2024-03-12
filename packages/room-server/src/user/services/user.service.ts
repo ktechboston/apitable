@@ -21,10 +21,11 @@ import { EnvConfigKey } from 'shared/common';
 import { IAuthHeader, INamedUser, IOssConfig, IUserBaseInfo } from 'shared/interfaces';
 import { EnvConfigService } from 'shared/services/config/env.config.service';
 import { RestService } from 'shared/services/rest/rest.service';
+import { UnitMemberRepository } from 'unit/repositories/unit.member.repository';
 import { UnitInfo } from '../../database/interfaces';
-import { UserRepository } from '../repositories/user.repository';
-import { UserEntity } from '../entities/user.entity';
 import { UserBaseInfoDto } from '../dtos/user.dto';
+import { UserEntity } from '../entities/user.entity';
+import { UserRepository } from '../repositories/user.repository';
 
 @Injectable()
 export class UserService {
@@ -32,7 +33,7 @@ export class UserService {
     private readonly envConfigService: EnvConfigService,
     private readonly restService: RestService,
     private readonly userRepo: UserRepository,
-
+    private readonly memberRepo: UnitMemberRepository,
   ) {}
 
   /**
@@ -44,8 +45,10 @@ export class UserService {
     }
     const users: any[] = await this.userRepo.selectUserInfoBySpaceIdAndUuids(spaceId, uuids);
     const oss = this.envConfigService.getRoomConfig(EnvConfigKey.OSS) as IOssConfig;
-    return users.reduce<UnitInfo[]>((pre, cur) => {
+    const needSignatureOldUrlMap = new Map();
+    const unitInfos = users.reduce<UnitInfo[]>((pre, cur) => {
       if (cur.avatar && !cur.avatar.startsWith('http')) {
+        needSignatureOldUrlMap.set(cur.uuid, cur.avatar);
         cur.avatar = oss.host + '/' + cur.avatar;
       }
       cur.isMemberNameModified = Number(cur.isMemberNameModified) === 1;
@@ -53,6 +56,21 @@ export class UserService {
       pre.push(cur);
       return pre;
     }, []);
+
+    const attachmentTokens: string[] = Array.from(needSignatureOldUrlMap.values());
+    if (!oss.ossSignatureEnabled || !attachmentTokens.length) {
+      return unitInfos;
+    }
+    const signatureMap = await this.getSignatureMap(attachmentTokens);
+
+    // Loop Replace URL
+    unitInfos.forEach((dto) => {
+      if (needSignatureOldUrlMap.has(dto.uuid)) {
+        dto.avatar = signatureMap.get(needSignatureOldUrlMap.get(dto.uuid))!;
+      }
+    });
+
+    return unitInfos;
   }
 
   /**
@@ -63,7 +81,7 @@ export class UserService {
     const users = await this.userRepo.selectUserBaseInfoByIds(userIds);
     const userMap = new Map<string, INamedUser>();
     if (users) {
-      users.forEach(user => {
+      users.forEach((user) => {
         userMap.set(user.id, {
           id: Number(user.id),
           uuid: user.uuid || '',
@@ -125,5 +143,26 @@ export class UserService {
 
   async selectUserBaseInfoById(userId: string): Promise<UserEntity | undefined> {
     return await this.userRepo.selectUserBaseInfoById(userId);
+  }
+
+  public async getSignatureMap(attachmentTokens: string[]): Promise<Map<string, string>> {
+    const batchSize = 100;
+    const signatureMap = new Map<string, string>();
+
+    for (let i = 0; i < attachmentTokens.length; i += batchSize) {
+      const batchTokens = attachmentTokens.slice(i, i + batchSize);
+      const batchSignatures = await this.restService.getSignatures(batchTokens);
+      batchSignatures.forEach((obj) => {
+        const key = obj.resourceKey;
+        const value = obj.url;
+        signatureMap.set(key, value);
+      });
+    }
+
+    return signatureMap;
+  }
+
+  public async getUserMemberName(userId: string, spaceId: string): Promise<string | undefined> {
+    return await this.memberRepo.selectMemberNameByUserIdAndSpaceId(userId, spaceId);
   }
 }

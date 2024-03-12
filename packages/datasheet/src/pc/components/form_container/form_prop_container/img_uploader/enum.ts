@@ -1,9 +1,10 @@
 export enum UploadContainerSize {
-    small = '64px',
-    normal = '120px'
+  Small = '64px',
+  Normal = '120px',
+  MobileNormal = '80px',
 }
 
-export enum UploadContainerShape{
-    Square,
-    Circle
+export enum UploadContainerShape {
+  Square,
+  Circle,
 }

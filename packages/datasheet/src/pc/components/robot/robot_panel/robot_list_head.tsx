@@ -16,24 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Box, IconButton, TextButton, Tooltip, Typography, useTheme } from '@apitable/components';
-import { Strings, t } from '@apitable/core';
+import * as React from 'react';
+import { Box, FloatUiTooltip, IconButton, Typography, useTheme } from '@apitable/components';
+import { Selectors, Strings, t } from '@apitable/core';
 import { AddOutlined, CloseOutlined, QuestionCircleOutlined } from '@apitable/icons';
 import { ShortcutActionManager, ShortcutActionName } from 'modules/shared/shortcut_key';
-import * as React from 'react';
-import { useAddNewRobot, useShowRobot } from '../hooks';
-import { IRobotHeadAddBtn } from '../interface';
+import { useAppSelector } from 'pc/store/react-redux';
+import { useAutomationNavigateController } from '../../automation/controller/controller';
+import { OrTooltip } from '../../common/or_tooltip';
+import { useAddNewRobot } from '../hooks';
 
 export const Beta = () => {
   const theme = useTheme();
   return (
-    <Box
-      display="flex"
-      background={theme.color.primaryLight}
-      borderRadius="2px"
-      padding="1px 4px"
-      marginLeft="8px"
-    >
+    <Box display="flex" background={theme.color.primaryLight} borderRadius="2px" padding="1px 4px" marginLeft="8px">
       <Typography variant="h9" color={theme.color.primaryColor}>
         BETA
       </Typography>
@@ -41,95 +37,44 @@ export const Beta = () => {
   );
 };
 
-export const AddRobotButton = (props?: IRobotHeadAddBtn) => {
-  const theme = useTheme();
-  const {
-    canAddNewRobot,
-    disableTip,
-    toggleNewRobotModal,
-  } = useAddNewRobot();
-  const isShowRobot = useShowRobot();
+export const AddRobotButton = () => {
+  const datasheetId = useAppSelector(Selectors.getActiveDatasheetId);
+  const { canAddNewRobot, disableTip } = useAddNewRobot();
 
-  const WrapperTooltip: any = canAddNewRobot ? (props?.container || React.Fragment) : Tooltip;
-  const WrapperTooltipProps = canAddNewRobot ? (props?.toolTips || {}) : { placement: 'bottom-center', content: disableTip };
-  const boxStyle: React.CSSProperties = props && props.style ? props.style : {};
-
-  const icon = <AddOutlined color={theme.color.fc1} />;
-
-  const child = (
-    <Typography variant="body3" color={theme.color.fc1}>
-      {t(Strings.robot_panel_create_tab)}
-    </Typography>
-  );
-
-  const content = (canAddNewRobot && props?.useTextBtn) ? (
-    <Box
-      display="flex"
-      alignItems="center"
-      style={boxStyle}
-    >
-      <TextButton
-        size="small"
-        disabled={!canAddNewRobot || !isShowRobot}
-        onClick={toggleNewRobotModal}
-        prefixIcon={icon}
-        style={props?.btnStyle}
-      >
-        {child}
-      </TextButton>
-    </Box>
-  ) : (
-    <Box
-      display="flex"
-      alignItems="center"
-      justifyContent="space-between"
-      padding="5px 8px"
-      opacity={canAddNewRobot ? 1 : 0.5}
-      style={{ cursor: canAddNewRobot ? 'pointer' : 'not-allowed', ...boxStyle }}
-      onClick={() => canAddNewRobot && toggleNewRobotModal()}
-    >
-      {icon}
-      {child}
-    </Box>
-  );
+  const { createNewRobot } = useAutomationNavigateController();
 
   return (
-    <WrapperTooltip {...WrapperTooltipProps}>
-      {content}
-    </WrapperTooltip>
+    <OrTooltip tooltip={disableTip} tooltipEnable={!canAddNewRobot}>
+      <IconButton
+        shape={'square'}
+        disabled={!canAddNewRobot}
+        onClick={canAddNewRobot ? () => createNewRobot(datasheetId) : undefined}
+        icon={AddOutlined}
+      />
+    </OrTooltip>
   );
 };
 
 export const RobotListHead = () => {
-  const isShowRobot = useShowRobot();
   return (
     <>
-      <AddRobotButton
-        toolTips={{ placement: 'bottom-center', content: isShowRobot ? t(Strings.robot_panel_create_tab) : t(Strings.robot_disable_create_tooltip) }}
-        container={Tooltip}
-        useTextBtn
-        btnStyle={{ paddingLeft: 8, paddingRight: 8 }}
-      />
+      <AddRobotButton />
+
       <Box display="flex" alignItems="center">
-        <Typography variant="h6">
-          {t(Strings.robot_panel_title)}
-        </Typography>
-        <Tooltip content={t(Strings.robot_panel_help_tooltip)} placement="top-center">
+        <Typography variant="h6">{t(Strings.robot_panel_title)}</Typography>
+        <FloatUiTooltip content={t(Strings.robot_panel_help_tooltip)} placement="left" arrow>
           <Box display="flex" alignItems="center">
             <IconButton
               shape="square"
-              icon={QuestionCircleOutlined} onClick={() => {
+              icon={QuestionCircleOutlined}
+              onClick={() => {
                 window.open(t(Strings.robot_help_url));
-              }} />
+              }}
+            />
           </Box>
-        </Tooltip>
-        <Beta />
+        </FloatUiTooltip>
       </Box>
-      <IconButton
-        shape="square"
-        onClick={() => ShortcutActionManager.trigger(ShortcutActionName.ToggleRobotPanel)}
-        icon={CloseOutlined}
-      />
+      <IconButton shape="square" onClick={() => ShortcutActionManager.trigger(ShortcutActionName.ToggleRobotPanel)} icon={CloseOutlined} />
     </>
   );
 };

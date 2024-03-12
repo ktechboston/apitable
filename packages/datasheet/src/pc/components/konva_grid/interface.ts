@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ICellValue, IField, RowHeightLevel, ViewType, ThemeName } from '@apitable/core';
+import { ICellValue, IField, RowHeightLevel, ViewType, ThemeName, IPermissions } from '@apitable/core';
 
 // index - size
 export type IndicesMap = Record<number, number>;
@@ -63,13 +63,14 @@ export interface IRenderProps {
   isActive?: boolean;
   editable?: boolean;
   rowHeightLevel: RowHeightLevel;
+  permissions?: IPermissions| {},
   style: IRenderStyleProps;
   callback?: ({ width }: { width: number }) => void;
   viewType?: ViewType;
   realField?: IField;
   unitTitleMap?: object;
   cacheTheme: ThemeName;
-  currentResourceId?: string
+  currentResourceId?: string;
 }
 
 export interface IRenderStyleProps {
@@ -90,5 +91,5 @@ export interface ICellHeightProps {
 export enum FieldHeadIconType {
   Permission = 'Permission',
   Description = 'Description',
-  Error = 'Error'
+  Error = 'Error',
 }

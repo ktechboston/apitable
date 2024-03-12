@@ -17,11 +17,11 @@
  */
 
 import { useRouter } from 'next/router';
-import { SpaceMenuTree } from 'pc/components/space_manage/space_menu_tree';
 import { FC } from 'react';
-import { useSelector } from 'react-redux';
+import { SpaceMenuTree } from 'pc/components/space_manage/space_menu_tree';
 // import styles from './style.module.less';
 // import { SpaceMenuTree } from '../space_manage/space_menu_tree';
+import { useAppSelector } from 'pc/store/react-redux';
 import { AddressSide } from './address_side';
 import { TemplateCategorySide } from './template_category_side';
 import { TemplateDetailSide } from './template_detail_side/template_detail_side';
@@ -29,13 +29,13 @@ import { WorkbenchSide } from './workbench_side';
 
 export const CommonSide: FC<React.PropsWithChildren<unknown>> = () => {
   const router = useRouter();
-  const user = useSelector(state => state.user.info);
+  const user = useAppSelector((state) => state.user.info);
 
   if (router.pathname.includes('management')) {
     return user && user.isAdmin ? <SpaceMenuTree /> : <div />;
   }
 
-  if (router.asPath.includes('workbench')) {
+  if (router.pathname.includes('workbench')) {
     return <WorkbenchSide />;
   }
 
@@ -47,5 +47,4 @@ export const CommonSide: FC<React.PropsWithChildren<unknown>> = () => {
     return <TemplateDetailSide />;
   }
   return <TemplateCategorySide />;
-
 };

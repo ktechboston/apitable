@@ -42,6 +42,15 @@ import java.util.List;
 public interface IUnitService extends IService<UnitEntity> {
 
     /**
+     * Get ref id.
+     *
+     * @param id table id
+     * @return refId
+     * @author Chambers
+     */
+    Long getUnitRefIdById(Long id);
+
+    /**
      * get unit primary id by ref id.
      *
      * @param refId unit's ref id
@@ -288,5 +297,13 @@ public interface IUnitService extends IService<UnitEntity> {
      * @return UnitRoleMemberVo
      */
     UnitRoleMemberVo getRoleMembers(String spaceId, Long roleId, Boolean sensitiveData);
+
+    /**
+     * check current member whether match unit.
+     *
+     * @param memberId current member id
+     * @param unitId   unit id
+     */
+    void checkUnit(Long memberId, String unitId);
 
 }

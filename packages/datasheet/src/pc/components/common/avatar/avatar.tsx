@@ -16,11 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { getThemeColors, lightColors, getThemeName } from '@apitable/components';
-import { CutMethod, getImageThumbSrc, integrateCdnHost } from '@apitable/core';
-import { UserGroupOutlined } from '@apitable/icons';
-import { createAvatarRainbowColorsArr } from 'pc/utils/color_utils';
 import * as React from 'react';
+import { getThemeColors, getThemeName, lightColors } from '@apitable/components';
+import { CutMethod, getImageThumbSrc, integrateCdnHost } from '@apitable/core';
+import { UserGroupOutlined, UserRoleOutlined } from '@apitable/icons';
+import { useGetSignatureAssertByToken } from '@apitable/widget-sdk';
+import { createAvatarRainbowColorsArr } from 'pc/utils/color_utils';
 
 import { AvatarBase, IAvatarBaseProps } from './avatar_base';
 
@@ -49,6 +50,7 @@ export const getAvatarRandomColor = (str: string) => {
 };
 
 export function getFirstWordFromString(str: string) {
+  if(!str) return '';
   const word = str.trim();
   if (!word.length) return '';
   const codePoint = word.codePointAt(0);
@@ -63,7 +65,7 @@ export enum AvatarType {
 }
 
 export interface IAvatarProps extends Omit<IAvatarBaseProps, 'shape'> {
-  id: string; 
+  id: string;
   title: string;
   isGzip?: boolean;
   children?: JSX.Element;
@@ -71,6 +73,7 @@ export interface IAvatarProps extends Omit<IAvatarBaseProps, 'shape'> {
   avatarColor?: number | null;
   style?: React.CSSProperties;
   defaultIcon?: JSX.Element;
+  isRole?: boolean;
 }
 
 const AvatarHoc = (Component: any) => {
@@ -79,32 +82,42 @@ const AvatarHoc = (Component: any) => {
   const themeName = getThemeName();
   const bgColorList = createAvatarRainbowColorsArr(themeName);
 
-  return (props: IAvatarProps) => {
-    const { src, title, isGzip = true, id, size = AvatarSize.Size32, type = AvatarType.Member, style, defaultIcon, avatarColor } = props;
+  const FC = (props: IAvatarProps) => {
+    const { src, title, isGzip = true, id, size = AvatarSize.Size32, type = AvatarType.Member, style, defaultIcon, avatarColor, isRole } = props;
+    const _src = useGetSignatureAssertByToken(src || null) || '';
+
     if (!title || !id) return null;
+
     if (type === AvatarType.Team) {
       return (
         <Component
           {...props}
           shape="square"
-          src={src}
+          src={_src}
           style={{
             backgroundColor: getAvatarRandomColor(id),
-            border: !src && '0px',
+            border: !_src && '0px',
             ...style,
           }}
         >
-          {!src && <UserGroupOutlined size={size * 0.625} color={colors.textCommonPrimary} />}
+          {isRole ? (
+            <UserRoleOutlined size={size * 0.625} color={colors.textStaticPrimary} />
+          ) : (
+            !_src && <UserGroupOutlined size={size * 0.625} color={colors.textStaticPrimary} />
+          )}
         </Component>
       );
     }
-    const avatarSrc = isGzip && src ? getImageThumbSrc(integrateCdnHost(src), {
-      method: CutMethod.CUT,
-      quality: 100,
-      size: size * ratio,
-    }) : src;
+    const avatarSrc =
+      isGzip && _src
+        ? getImageThumbSrc(integrateCdnHost(_src), {
+          method: CutMethod.CUT,
+          quality: 100,
+          size: size * ratio,
+        })
+        : _src;
     const firstWord = getFirstWordFromString(title);
-    const avatarBg = avatarSrc ? colors.defaultBg : (avatarColor != null ? bgColorList[avatarColor] : getAvatarRandomColor(id));
+    const avatarBg = avatarSrc ? colors.defaultBg : avatarColor != null ? bgColorList[avatarColor] : getAvatarRandomColor(id);
     if (type === AvatarType.Space) {
       return (
         <Component
@@ -114,7 +127,7 @@ const AvatarHoc = (Component: any) => {
           style={{
             backgroundColor: avatarBg,
             color: colors.defaultBg,
-            border: !src && '0px',
+            border: !_src && '0px',
             ...style,
           }}
         >
@@ -130,7 +143,7 @@ const AvatarHoc = (Component: any) => {
         style={{
           backgroundColor: defaultIcon ? colors.rc01 : avatarBg,
           color: colors.textStaticPrimary,
-          border: !src && '0px',
+          border: !_src && '0px',
           ...style,
         }}
       >
@@ -138,6 +151,8 @@ const AvatarHoc = (Component: any) => {
       </Component>
     );
   };
+
+  return FC;
 };
 
 export const Avatar = AvatarHoc(AvatarBase);

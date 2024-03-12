@@ -16,17 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ConfigConstant, INode, IViewColumn, Strings, t, ViewType } from '@apitable/core';
 import Image from 'next/image';
-import { File, Folder, View } from 'pc/components/datasheet_search_panel/components';
-import styles from 'pc/components/datasheet_search_panel/style.module.less';
 import * as React from 'react';
+import { ThemeName } from '@apitable/components';
+import { ConfigConstant, INode, IViewColumn, Strings, t, ViewType } from '@apitable/core';
+import { File, Folder, FormSearchItem, View } from 'pc/components/datasheet_search_panel/components';
+import styles from 'pc/components/datasheet_search_panel/style.module.less';
+import { checkNodeDisable } from 'pc/components/datasheet_search_panel/utils/check_node_disabled';
+import { ScrollBar } from 'pc/components/scroll_bar';
+import { useAppSelector } from 'pc/store/react-redux';
 import EmptyPngDark from 'static/icon/datasheet/empty_state_dark.png';
 import EmptyPngLight from 'static/icon/datasheet/empty_state_light.png';
-import { ScrollBar } from 'pc/components/scroll_bar';
-import { useSelector } from 'react-redux';
-import { ThemeName } from '@apitable/components';
-import { checkNodeDisable } from 'pc/components/datasheet_search_panel/utils/check_node_disabled';
+import { SecondConfirmType } from './interface';
 
 export interface IViewNode {
   nodeId: string;
@@ -39,115 +40,220 @@ export interface IViewNode {
 export type ICommonNode = INode | IViewNode;
 
 interface IFolderContentProps {
-  nodes: ICommonNode[],
-  currentViewId: string,
-  currentMirrorId: string,
-  currentDatasheetId: string,
-  loading: boolean,
-  onlyShowEditableNode: boolean,
-  isSelectView: boolean
-  showMirrorNode?: boolean
-  noCheckPermission?: boolean,
+  options?: {
+    showForm: boolean;
+    showDatasheet: boolean;
+    needPermission?: 'manageable' | 'editable';
+    showMirror: boolean;
+    showView: boolean;
+  };
+  nodes: ICommonNode[];
+  currentViewId: string;
+  currentMirrorId: string;
+  currentDatasheetId: string;
+  loading: boolean;
+  onlyShowEditableNode: boolean;
+  isSelectView: boolean;
+  showMirrorNode?: boolean;
+  noCheckPermission?: boolean;
+  secondConfirmType?: SecondConfirmType;
 
-  onNodeClick(nodeType: 'Mirror' | 'Datasheet' | 'View' | 'Folder', id: string): void,
+  onNodeClick(nodeType: 'Mirror' | 'Datasheet' | 'View' | 'Folder' | 'Form', id: string): void;
 
-  hideViewNode?: boolean
+  hideViewNode?: boolean;
 }
 
 export const FolderContent: React.FC<React.PropsWithChildren<IFolderContentProps>> = (props) => {
   const {
-    nodes, onNodeClick, currentViewId, currentMirrorId, loading, onlyShowEditableNode,
-    noCheckPermission, currentDatasheetId, isSelectView, showMirrorNode, hideViewNode,
+    nodes,
+    options,
+    onNodeClick,
+    currentViewId,
+    currentMirrorId,
+    loading,
+    onlyShowEditableNode,
+    noCheckPermission,
+    currentDatasheetId,
+    isSelectView,
+    showMirrorNode,
+    hideViewNode,
+    secondConfirmType,
   } = props;
-  const themeName = useSelector(state => state.theme);
+  const themeName = useAppSelector((state) => state.theme);
   const EmptyFolderImg = themeName === ThemeName.Light ? EmptyPngLight : EmptyPngDark;
 
-  const _checkNodeDisable = (node: INode) => {
+  const showForm = options?.showForm ?? false;
+
+  const showDatasheet = options?.showDatasheet ?? true;
+  let showMirror = options?.showMirror ?? false;
+  if (showMirrorNode != null && options?.showMirror != null) {
+    showMirror = showMirrorNode;
+  }
+
+  let showView = options?.showView ?? false;
+  if (hideViewNode != null && options?.showView != null) {
+    showView = !hideViewNode;
+  }
+
+  const _checkNodeDisable = (node: INode, needPermission: 'manageable' | 'editable' | undefined) => {
     if (noCheckPermission) return;
-    return checkNodeDisable(node);
+    if (!needPermission) return;
+    return checkNodeDisable(node, needPermission);
+  };
+
+  const checkVisible = (nodeType: ConfigConstant.NodeType, result: boolean) => {
+    if (!options) return result;
+
+    switch (nodeType) {
+      case ConfigConstant.NodeType.FORM: {
+        return result && showForm;
+      }
+      case ConfigConstant.NodeType.DATASHEET: {
+        return result && showDatasheet;
+      }
+      case ConfigConstant.NodeType.MIRROR: {
+        return result && showMirror;
+      }
+      case ConfigConstant.NodeType.VIEW: {
+        return result && showView;
+      }
+      default: {
+        return result;
+      }
+    }
   };
 
   return (
     <div className={styles.folderContent}>
       <ScrollBar>
-        {nodes.map(node => {
+        {nodes.map((node) => {
+          showForm &&
+            node.type === ConfigConstant.NodeType.FORM &&
+            (!onlyShowEditableNode || !_checkNodeDisable(node as INode, options?.needPermission));
+
           if (node.type === ConfigConstant.NodeType.FOLDER) {
             return (
-              <Folder
-                key={node.nodeId}
-                id={node.nodeId}
-                onClick={id => onNodeClick('Folder', id)}
-              >
+              <Folder key={node.nodeId} id={node.nodeId} onClick={(id) => onNodeClick('Folder', id)}>
                 {node.nodeName}
               </Folder>
             );
           }
+          if (secondConfirmType === SecondConfirmType.AIForm) {
+            if (node.type === ConfigConstant.NodeType.FORM) {
+              return (
+                <File
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={!isSelectView && currentDatasheetId === node.nodeId}
+                  onClick={(id) => onNodeClick('Form', id)}
+                  disable={_checkNodeDisable(node as INode, options?.needPermission)}
+                  nodeType={ConfigConstant.NodeType.FORM}
+                >
+                  {node.nodeName}
+                </File>
+              );
+            }
+          } else {
+            if (
+              node.type === ConfigConstant.NodeType.DATASHEET &&
+              checkVisible(node.type, !onlyShowEditableNode || !_checkNodeDisable(node as INode, options?.needPermission))
+            ) {
+              return (
+                <File
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={!isSelectView && currentDatasheetId === node.nodeId}
+                  onClick={(id) => onNodeClick('Datasheet', id)}
+                  disable={_checkNodeDisable(node as INode, options?.needPermission)}
+                  nodeType={ConfigConstant.NodeType.DATASHEET}
+                >
+                  {node.nodeName}
+                </File>
+              );
+            }
 
-          if (
-            node.type === ConfigConstant.NodeType.DATASHEET &&
-            (!onlyShowEditableNode || !_checkNodeDisable(node as INode))
-          ) {
-            return (
-              <File
-                key={node.nodeId}
-                id={node.nodeId}
-                active={
-                  !isSelectView && currentDatasheetId === node.nodeId
-                }
-                onClick={id => onNodeClick('Datasheet', id)}
-                disable={_checkNodeDisable(node as INode)}
-              >
-                {node.nodeName}
-              </File>
-            );
+            if (
+              showForm &&
+              node.type === ConfigConstant.NodeType.FORM &&
+              checkVisible(node.type, !onlyShowEditableNode || !_checkNodeDisable(node as INode, options?.needPermission))
+            ) {
+              return (
+                <FormSearchItem
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={!isSelectView && currentDatasheetId === node.nodeId}
+                  onClick={(id) => onNodeClick('Form', id)}
+                  disable={_checkNodeDisable(node as INode, options?.needPermission)}
+                >
+                  {node.nodeName}
+                </FormSearchItem>
+              );
+            }
+
+            if (
+              showDatasheet &&
+              node.type === ConfigConstant.NodeType.DATASHEET &&
+              checkVisible(node.type, !onlyShowEditableNode || !_checkNodeDisable(node as INode, options?.needPermission))
+            ) {
+              return (
+                <File
+                  nodeType={node.type}
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={!isSelectView && currentDatasheetId === node.nodeId}
+                  onClick={(id) => onNodeClick('Datasheet', id)}
+                  disable={_checkNodeDisable(node as INode, options?.needPermission)}
+                >
+                  {node.nodeName}
+                </File>
+              );
+            }
+
+            if (
+              showMirror &&
+              node.type === ConfigConstant.NodeType.MIRROR &&
+              checkVisible(node.type, !onlyShowEditableNode || !_checkNodeDisable(node as INode, options?.needPermission))
+            ) {
+              return (
+                <File
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={!isSelectView && currentMirrorId === node.nodeId}
+                  onClick={(id) => onNodeClick('Mirror', id)}
+                  disable={_checkNodeDisable(node as INode, options?.needPermission)}
+                  nodeType={ConfigConstant.NodeType.MIRROR}
+                >
+                  {node.nodeName}
+                </File>
+              );
+            }
+
+            if (showView && node.type === ConfigConstant.NodeType.VIEW && !hideViewNode) {
+              return (
+                <View
+                  key={node.nodeId}
+                  id={node.nodeId}
+                  active={currentViewId === node.nodeId}
+                  viewType={(node as IViewNode).viewType}
+                  onClick={(id) => onNodeClick('View', id)}
+                >
+                  {node.nodeName}
+                </View>
+              );
+            }
+            return null;
           }
 
-          if (
-            node.type === ConfigConstant.NodeType.MIRROR && showMirrorNode &&
-            (!onlyShowEditableNode || !_checkNodeDisable(node as INode))
-          ) {
-            // TODO
-            return (
-              <File
-                key={node.nodeId}
-                id={node.nodeId}
-                active={
-                  !isSelectView && currentMirrorId === node.nodeId
-                }
-                onClick={id => onNodeClick('Mirror', id)}
-                disable={_checkNodeDisable(node as INode)}
-                isMirror
-              >
-                {node.nodeName}
-              </File>
-            );
-          }
-
-          if (node.type === ConfigConstant.NodeType.VIEW && !hideViewNode) {
-            return (
-              <View
-                key={node.nodeId}
-                id={node.nodeId}
-                active={currentViewId === node.nodeId}
-                viewType={(node as IViewNode).viewType}
-                onClick={id => onNodeClick('View', id)}
-              >
-                {node.nodeName}
-              </View>
-            );
-          }
           return null;
         })}
-        {
-          !loading && !nodes.length && (
-            <div className={styles.emptyFolder}>
-              <div className={styles.emptyImg}>
-                <Image src={EmptyFolderImg} alt={t(Strings.folder_content_empty)} width={200} height={150} />
-              </div>
-              <p>{t(Strings.folder_content_empty)}</p>
+        {!loading && !nodes.length && (
+          <div className={styles.emptyFolder}>
+            <div className={styles.emptyImg}>
+              <Image src={EmptyFolderImg} alt={t(Strings.folder_content_empty)} width={200} height={150} />
             </div>
-          )
-        }
+            <p>{t(Strings.folder_content_empty)}</p>
+          </div>
+        )}
       </ScrollBar>
     </div>
   );

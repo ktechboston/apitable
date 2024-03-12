@@ -17,6 +17,7 @@
  */
 
 import * as actions from '../../../shared/store/action_constants';
+import { ISpaceResource } from 'exports/store/interfaces';
 
 export interface ISpace {
   spaceList: ISpaceInfo[];
@@ -102,7 +103,7 @@ export type ISocialAppType = 1 | 2;
 
 export enum SocialAppType {
   SelfApp = 1,
-  ThirdPartyAtt = 2
+  ThirdPartyAtt = 2,
 }
 
 export interface ISpaceBasicInfo {
@@ -123,11 +124,13 @@ export interface ISpaceBasicInfo {
   capacityUsedSizes: number;
   currentBundleCapacityUsedSizes: number;
   giftCapacityUsedSizes: number;
+  feature: ISpaceFeatures;
   formViewNums: number;
   fieldRoleNums: number;
   galleryViewNums: number;
   ganttViewNums: number;
   kanbanViewNums: number;
+  labsKeys: string[];
   calendarViewNums: number;
   mirrorNums: number;
   nodeRoleNums: number;
@@ -137,12 +140,20 @@ export interface ISpaceBasicInfo {
     appType: ISocialAppType;
     contactSyncing: boolean;
     authMode: number;
-
-  },
+  };
   isEnableChatbot: boolean;
   lastUpdateTime?: number;
   isCreatorNameModified?: boolean;
   isOwnerNameModified?: boolean;
+  usedCredit: number;
+  userResource:ISpaceResource;
+  seatUsage: {
+    total: number;
+    chatBotCount: number;
+    memberCount: number;
+  };
+  automationRunsNums: number;
+  widgetNums: number;
 }
 
 export interface IApp {
@@ -150,7 +161,7 @@ export interface IApp {
   status: boolean;
 }
 
-export type ISocialPlatformType = 1 | 2 | 3;
+export type ISocialPlatformType = 1 | 2 | 3 | 10;
 
 export interface ISpaceListAction {
   type: typeof actions.SET_SPACE_LIST;

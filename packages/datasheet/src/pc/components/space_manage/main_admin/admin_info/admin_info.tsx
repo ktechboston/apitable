@@ -17,30 +17,29 @@
  */
 
 import { FC } from 'react';
-import styles from './style.module.less';
-import { useSelector } from 'react-redux';
+import { useThemeColors, Typography } from '@apitable/components';
 import { IReduxState } from '@apitable/core';
 import { Avatar, AvatarSize } from 'pc/components/common';
-import { useThemeColors } from '@apitable/components';
-import { Typography } from '@apitable/components';
+import { useAppSelector } from 'pc/store/react-redux';
 // @ts-ignore
-import { getSocialWecomUnitName } from 'enterprise';
+import { getSocialWecomUnitName } from 'enterprise/home/social_platform/utils';
+import styles from './style.module.less';
 
 export const AdminInfo: FC<React.PropsWithChildren<unknown>> = () => {
   const colors = useThemeColors();
-  const mainAdminInfo = useSelector((state: IReduxState) => state.spacePermissionManage.mainAdminInfo);
-  const spaceInfo = useSelector(state => state.space.curSpaceInfo);
+  const mainAdminInfo = useAppSelector((state: IReduxState) => state.spacePermissionManage.mainAdminInfo);
+  const spaceInfo = useAppSelector((state) => state.space.curSpaceInfo);
   const { name = '-', email = '-', isMemberNameModified, avatarColor, nickName } = mainAdminInfo || {};
-  const displayName = getSocialWecomUnitName?.({
-    name,
-    isModified: isMemberNameModified,
-    spaceInfo
-  }) || name;
+  const displayName =
+    getSocialWecomUnitName?.({
+      name,
+      isModified: isMemberNameModified,
+      spaceInfo,
+    }) || name;
 
   return (
     <div className={styles.adminInfoWrapper}>
-      {
-        mainAdminInfo &&
+      {mainAdminInfo && (
         <Avatar
           title={nickName || name}
           src={mainAdminInfo.avatar}
@@ -49,19 +48,12 @@ export const AdminInfo: FC<React.PropsWithChildren<unknown>> = () => {
           className={styles.portrait}
           id={mainAdminInfo.name}
         />
-      }
+      )}
       <div className={styles.infoRight}>
-        <Typography
-          variant={'h6'}
-          ellipsis={{ rows: 2 }}
-          color={name === '-' ? colors.fourthLevelText : colors.firstLevelText}
-        >
+        <Typography variant={'h6'} ellipsis={{ rows: 2 }} color={name === '-' ? colors.fourthLevelText : colors.firstLevelText}>
           {displayName}
         </Typography>
-        <Typography
-          variant={'body4'}
-          color={email === '-' ? colors.fourthLevelText : colors.thirdLevelText}
-        >
+        <Typography variant={'body4'} color={email === '-' ? colors.fourthLevelText : colors.thirdLevelText}>
           {email}
         </Typography>
       </div>

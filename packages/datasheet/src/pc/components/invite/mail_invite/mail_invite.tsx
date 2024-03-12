@@ -16,13 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Api, Navigation, StoreActions } from '@apitable/core';
 import { useMount } from 'ahooks';
+import { FC, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { Api, Navigation, StoreActions } from '@apitable/core';
 import { Loading } from 'pc/components/common';
 import { Router } from 'pc/components/route_manager/router';
 import { useQuery, useRequest } from 'pc/hooks';
-import { FC, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { INVITE_TOKEN_LENGTH } from '../constant';
 
 const MailInvite: FC<React.PropsWithChildren<unknown>> = () => {
@@ -31,8 +31,8 @@ const MailInvite: FC<React.PropsWithChildren<unknown>> = () => {
   const tokenParams = query.get('inviteToken');
   const mailTokenParams = query.get('inviteMailToken');
   const [inviteMailToken, setInviteMailToken] = useState('');
-  const { run: verifyMailUrl } = useRequest(token => Api.inviteEmailVerify(token), {
-    onSuccess: res => {
+  const { run: verifyMailUrl } = useRequest((token) => Api.inviteEmailVerify(token), {
+    onSuccess: (res) => {
       const { success, data } = res.data;
       dispatch(StoreActions.updateInviteEmailInfo(res.data));
       dispatch(StoreActions.updateMailToken(inviteMailToken));
@@ -43,7 +43,7 @@ const MailInvite: FC<React.PropsWithChildren<unknown>> = () => {
         });
         return;
       }
-      const { isBound, isLogin, inviteEmail, spaceId } = data;
+      const { isBound, isLogin, isMatch, spaceId } = data;
       if (!isBound) {
         Router.push(Navigation.INVITE, {
           params: { invitePath: 'mail/bindphone' },
@@ -59,18 +59,18 @@ const MailInvite: FC<React.PropsWithChildren<unknown>> = () => {
         return;
       }
       if (isBound && isLogin) {
-        Api.validateEmail(inviteEmail).then(res => {
-          const { success, data } = res.data;
-          if (success && data) {
-            Router.push(Navigation.WORKBENCH, { params: { spaceId }, clearQuery: true });
-            return;
-          }
-          Router.push(Navigation.INVITE, {
-            params: { invitePath: 'mail/mismatch' },
-            query: { inviteMailToken },
-          });
+        if (isMatch) {
+          //TODO Staying on the invitation page,
+          // the user clicks the button and triggers the API before actually joining the space station.
+          // API.acceptEmailInvitation(spaceId, inviteMailToken)
+          Router.push(Navigation.WORKBENCH, { params: { spaceId }, clearQuery: true });
           return;
+        }
+        Router.push(Navigation.INVITE, {
+          params: { invitePath: 'mail/mismatch' },
+          query: { inviteMailToken },
         });
+        return;
       }
     },
     manual: true,

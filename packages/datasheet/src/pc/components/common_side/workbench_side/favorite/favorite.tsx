@@ -16,27 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Skeleton } from '@apitable/components';
-import { ConfigConstant, IReduxState, Navigation, NodeErrorType, Selectors, StoreActions, Strings, t } from '@apitable/core';
 import classnames from 'classnames';
 import Image from 'next/image';
+import * as React from 'react';
+import { FC, useContext, useEffect, useMemo, useRef } from 'react';
+import { shallowEqual, useDispatch } from 'react-redux';
+import { Skeleton } from '@apitable/components';
+import { ConfigConstant, IReduxState, Navigation, NodeErrorType, Selectors, StoreActions, Strings, t } from '@apitable/core';
 import { NodeItem } from 'pc/components/catalog/tree/node_item';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { ITreeViewRef, TreeItem, TreeView } from 'pc/components/common/tree_view';
 import { Router } from 'pc/components/route_manager/router';
 import { useCatalogTreeRequest, useRequest, useResponsive } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getContextTypeByNodeType, shouldOpenInNewTab } from 'pc/utils';
-import * as React from 'react';
-import { FC, useContext, useMemo, useRef } from 'react';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import EmptyFavoritePng from 'static/icon/workbench/catalogue/favorite.png';
 import { WorkbenchSideContext } from '../workbench_side_context';
 import styles from './style.module.less';
 
 const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   const dispatch = useDispatch();
-  const spaceId = useSelector((state: IReduxState) => state.space.activeId);
-  const activeNodeId = useSelector((state: IReduxState) => Selectors.getNodeId(state));
+  const spaceId = useAppSelector((state: IReduxState) => state.space.activeId);
+  const activeNodeId = useAppSelector((state: IReduxState) => Selectors.getNodeId(state));
   const {
     favoriteTreeNodeIds: _favoriteTreeNodeIds,
     favoriteDelNodeId,
@@ -44,7 +45,8 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
     favoriteLoading,
     favoriteExpandedKeys,
     treeNodesMap,
-  } = useSelector(
+    privateTreeNodesMap,
+  } = useAppSelector(
     (state: IReduxState) => ({
       favoriteTreeNodeIds: state.catalogTree.favoriteTreeNodeIds,
       favoriteDelNodeId: state.catalogTree.favoriteDelNodeId,
@@ -52,6 +54,7 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
       favoriteLoading: state.catalogTree.favoriteLoading,
       favoriteExpandedKeys: state.catalogTree.favoriteExpandedKeys,
       treeNodesMap: state.catalogTree.treeNodesMap,
+      privateTreeNodesMap: state.catalogTree.privateTreeNodesMap,
     }),
     shallowEqual,
   );
@@ -61,12 +64,22 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   const isMobile = screenIsAtMost(ScreenSize.md);
   const { setRightClickInfo, onSetContextMenu } = useContext(WorkbenchSideContext);
   const treeViewRef = useRef<ITreeViewRef>(null);
-  
+
   const favoriteTreeNodeIds = useMemo(() => [...new Set(_favoriteTreeNodeIds)], [_favoriteTreeNodeIds]);
 
   const expandHandler = (nodeIds: string[]) => {
     dispatch(StoreActions.setExpandedKeys(nodeIds, ConfigConstant.Modules.FAVORITE));
   };
+
+  const { getFavoriteNodeListReq } = useCatalogTreeRequest();
+  const { run: getFavoriteNodeList } = useRequest(getFavoriteNodeListReq, { manual: true });
+
+  useEffect(() => {
+    if (spaceId) {
+      getFavoriteNodeList();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spaceId]);
 
   const onContextMenu = (e: React.SyntheticEvent) => {
     e.stopPropagation();
@@ -76,12 +89,15 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   const renderTreeItem = (children: string[], parentNode: any = null, level = '0') => {
     const leafNodes = new Set([
       ConfigConstant.NodeType.DATASHEET,
+      ConfigConstant.NodeType.AUTOMATION,
       ConfigConstant.NodeType.FORM,
       ConfigConstant.NodeType.DASHBOARD,
       ConfigConstant.NodeType.MIRROR,
+      ConfigConstant.NodeType.AI,
+      ConfigConstant.NodeType.CUSTOM_PAGE,
     ]);
     return children.map((nodeId, index) => {
-      const nodeInfo = treeNodesMap[nodeId];
+      const nodeInfo = treeNodesMap[nodeId] || privateTreeNodesMap[nodeId];
       if (nodeInfo == null) return null;
       const { type, children, hasChildren, errType } = nodeInfo;
       const pos = `${level}-${index}`;
@@ -157,13 +173,23 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   };
 
   const loadData = (nodeId: string) => {
-    if (!treeNodesMap[nodeId]?.hasChildren) {
-      return new Promise(resolve => {
+    const nodeInfo = treeNodesMap[nodeId] || privateTreeNodesMap[nodeId];
+    if (!nodeInfo?.hasChildren) {
+      return new Promise((resolve) => {
         resolve(false);
       });
     }
-    return dispatch(StoreActions.getChildNode(nodeId));
+    return dispatch(StoreActions.getChildNode(nodeId, nodeInfo.nodePrivate ? ConfigConstant.Modules.PRIVATE : undefined));
   };
+
+  useEffect(() => {
+    if (favoriteExpandedKeys.length) {
+      favoriteExpandedKeys.forEach((nodeId) => {
+        loadData(nodeId);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoriteExpandedKeys]);
 
   const rightClickHandler = (e: React.MouseEvent<Element, MouseEvent>, data: any) => {
     e.preventDefault();
@@ -195,12 +221,12 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
 
   const dropHandler = (info: any) => {
     const { dragNodeId, dropNodeId, dropPosition } = info;
-    if (favoriteTreeNodeIds.findIndex(nodeId => [dropNodeId, dragNodeId].includes(nodeId)) === -1 || !dropPosition || dragNodeId === dropNodeId) {
+    if (favoriteTreeNodeIds.findIndex((nodeId) => [dropNodeId, dragNodeId].includes(nodeId)) === -1 || !dropPosition || dragNodeId === dropNodeId) {
       return;
     }
 
     if (dropPosition === -1) {
-      const index = favoriteTreeNodeIds.findIndex(id => id === dropNodeId);
+      const index = favoriteTreeNodeIds.findIndex((id) => id === dropNodeId);
       const prevNodeId = favoriteTreeNodeIds[index - 1] || '';
       dispatch(StoreActions.moveFavoriteNode(dragNodeId, prevNodeId));
       moveFavoriteNode(dragNodeId, prevNodeId);
@@ -213,9 +239,9 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   if (favoriteLoading) {
     return (
       <div style={{ margin: '0 8px', width: '100%' }}>
-        <Skeleton width='38%' />
+        <Skeleton width="38%" />
         <Skeleton />
-        <Skeleton width='61%' />
+        <Skeleton width="61%" />
       </div>
     );
   }
@@ -239,7 +265,7 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
       ) : (
         <div className={styles.empty}>
           <span className={styles.emptyFavoritePng}>
-            <Image src={EmptyFavoritePng} alt='empty favorite' width={60} height={44} />
+            <Image src={EmptyFavoritePng} alt="empty favorite" width={60} height={44} />
           </span>
           <div className={styles.tip}>{t(Strings.favorite_empty_tip1)}</div>
           <div className={styles.tip}>{t(Strings.favorite_empty_tip2)}~</div>

@@ -17,11 +17,13 @@
  */
 
 import { IJOTAction } from 'engine/ot';
-import { DatasheetActions, StatType } from 'model';
-import { getActiveDatasheetId, getDatasheet, getFieldMap } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { StatType } from 'model/field/stat';
+import { getActiveDatasheetId, getDatasheet } from 'modules/database/store/selectors/resource/datasheet/base';
+import { getFieldMap } from 'modules/database/store/selectors/resource/datasheet/calc';
 import { Strings, t } from '../../exports/i18n';
 import { ResourceType } from 'types';
-import { CollaCommandName } from 'commands';
+import { CollaCommandName } from 'commands/enum';
 import { ExecuteResult, ICollaCommandDef } from 'command_manager';
 
 export interface ISetColumnsPropertyOptions {
@@ -38,7 +40,7 @@ export const setColumnsProperty: ICollaCommandDef<ISetColumnsPropertyOptions> = 
   undoable: true,
 
   execute: (context, options) => {
-    const { model: state } = context;
+    const { state: state } = context;
     const { fieldId, viewId, data } = options;
     const { width, statType } = data;
     const datasheetId = getActiveDatasheetId(state)!;

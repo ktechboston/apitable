@@ -16,16 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { shallowEqual } from 'react-redux';
 import { getImageThumbSrc, Strings, t } from '@apitable/core';
-import { Message } from 'pc/components/common';
-import { joinPath } from 'pc/components/route_manager/helper';
-import { shallowEqual, useSelector } from 'react-redux';
-import { UploadManager } from '../utils/upload_manager';
 import { uploadAttachToS3, UploadType } from '@apitable/widget-sdk';
+import { Message } from 'pc/components/common/message/message';
+import { joinPath } from 'pc/components/route_manager/helper';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables } from 'pc/utils/env';
+import { UploadManager } from '../utils/upload_manager';
 
 export const useImageUpload = () => {
-  const { folderId, datasheetId } = useSelector(state => {
+  const { folderId, datasheetId } = useAppSelector((state) => {
     const { folderId, datasheetId } = state.pageParams;
     return { folderId, datasheetId };
   }, shallowEqual);
@@ -41,9 +42,11 @@ export const useImageUpload = () => {
     return uploadAttachToS3({
       file: fd.get('file')! as File,
       nodeId: folderId || datasheetId!,
-      fileType: UploadType.NodeDesc
+      fileType: UploadType.NodeDesc,
     }).then((res) => {
-      const { data: { data: imgData, success, message }} = res;
+      const {
+        data: { data: imgData, success, message },
+      } = res;
       if (!success) {
         Message.warning({ content: message });
         return Promise.reject(message);
@@ -51,7 +54,7 @@ export const useImageUpload = () => {
       const { bucket, token } = imgData;
       const host = getEnvVariables()[bucket];
       return Promise.resolve({
-        imgUrl: getImageThumbSrc(joinPath([host, token]), isSvgOrGif ? undefined : { format: 'jpg', quality: 100 })
+        imgUrl: getImageThumbSrc(joinPath([host, token]), isSvgOrGif ? undefined : { format: 'jpg', quality: 100 }),
       });
     });
   };

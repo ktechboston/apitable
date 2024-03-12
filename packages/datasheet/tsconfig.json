@@ -8,14 +8,23 @@
       "esnext"
     ],
     "paths": {
-      "pc": [
-        "./src/pc"
+      "pc/*": [
+        "./pc/*"
       ],
       "enterprise": [
-        "./src/modules/enterprise/"
+        "./modules/enterprise"
+      ],
+      "static/*": [
+        "../public/static/*"
+      ],
+      "api/*": [
+        "./modules/api/*"
+      ],
+      "enterprise/*": [
+        "./modules/enterprise/*"
       ]
     },
-    "module": "esnext",
+    "module": "ESNext",
     "baseUrl": "./src",
     "allowJs": true,
     "strict": true,
@@ -24,22 +33,26 @@
     "jsx": "preserve",
     "incremental": true,
     "noImplicitThis": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "alwaysStrict": true,
     "strictNullChecks": true,
-    "noUnusedLocals": true,
+    "noUnusedLocals": false,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-//    "noUncheckedIndexedAccess": true,
+    "useUnknownInCatchVariables": false,
+    //    "noUncheckedIndexedAccess": true,
     "noUnusedParameters": false,
     "strictBindCallApply": true,
     "strictFunctionTypes": true
   },
-  "exclude": ["**/node_modules", "**/.*/"],
+  "exclude": [
+    "**/node_modules",
+    "**/.*/"
+  ],
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx",
+    "**/*.tsx"
   ]
 }

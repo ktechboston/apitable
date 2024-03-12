@@ -23,7 +23,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { ServerResponse } from 'http';
 import { I18nService } from 'nestjs-i18n';
 import { USER_HTTP_DECORATE } from 'shared/common';
-import { ApiException, ServerException } from 'shared/exception';
+import { ApiException, OverLimitException, ServerException } from 'shared/exception';
 import { IHttpErrorResponse } from 'shared/interfaces/http.interfaces';
 
 /**
@@ -36,8 +36,7 @@ import { IHttpErrorResponse } from 'shared/interfaces/http.interfaces';
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  constructor(private readonly i18n: I18nService) {
-  }
+  constructor(private readonly i18n: I18nService) {}
 
   async catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -87,8 +86,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       });
     }
     if (exception instanceof BadRequestException) {
-      const errorMessages = exception.getResponse()['message'][0].split('.');
-      errMsg = errorMessages[errorMessages.length - 1];
+      errMsg = exception.getResponse()['message'];
       if (ApiTipConstant[errMsg]) {
         errMsg = await this.i18n.translate(errMsg, {
           lang: request[USER_HTTP_DECORATE]?.locale,
@@ -108,6 +106,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       });
     }
 
+    if (exception instanceof OverLimitException) {
+      httpStatusCode = exception.getStatus();
+      statusCode = exception.ex.getCode();
+      errMsg = exception.ex.getMessage();
+    }
+
     // standard error response
     const errorResponse: IHttpErrorResponse = {
       success: false,
@@ -115,20 +119,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message: errMsg,
     };
 
-    this.logger.error({
-      message: `request error: ${exception?.message || ''}`,
-      response: exception?.response || ''
-    },
-    exception?.stack || errMsg);
+    this.logger.error(
+      {
+        message: `request error: ${exception?.message || ''}`,
+        response: exception?.response || '',
+      },
+      exception?.stack || errMsg,
+    );
 
-    // set header, status code and error response data
-    if (response instanceof ServerResponse) {
-      response.setHeader('Content-Type', 'application/json');
-      response.statusCode = httpStatusCode;
-      response.write(JSON.stringify(errorResponse));
-      response.end();
-    } else {
-      await response.status(httpStatusCode).send(errorResponse);
-    }
+    try {
+      // set header, status code and error response data
+      if (response instanceof ServerResponse) {
+        response.setHeader('Content-Type', 'application/json');
+        response.statusCode = httpStatusCode;
+        response.write(JSON.stringify(errorResponse));
+        response.end();
+      } else {
+        await response.status(httpStatusCode).send(errorResponse);
+      }
+    } catch (e) {}
   }
 }

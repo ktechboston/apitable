@@ -18,12 +18,34 @@
 
 import { FC, memo } from 'react';
 import { FieldType } from '@apitable/core';
-import { 
-  AttachmentOutlined, AutonumberOutlined, CheckboxOutlined, UserAddOutlined, TimeOutlined,
-  CurrencyUsdOutlined, FormulaOutlined, UserEditOutlined, HistoryFilled,
-  LongtextOutlined, LookupOutlined, UserOutlined, PercentOutlined, TelephoneOutlined, StarOutlined,
-  SelectMultipleOutlined, SelectSingleOutlined, LinkOutlined, NumberOutlined, EmailOutlined,
-  LinktableOutlined, CalendarOutlined, TextOutlined, CascadeOutlined
+import {
+  AttachmentOutlined,
+  AutonumberOutlined,
+  CheckboxOutlined,
+  UserAddOutlined,
+  TimeOutlined,
+  CurrencyUsdOutlined,
+  FormulaOutlined,
+  UserEditOutlined,
+  HistoryFilled,
+  LongtextOutlined,
+  LookupOutlined,
+  UserOutlined,
+  PercentOutlined,
+  TelephoneOutlined,
+  StarOutlined,
+  SelectMultipleOutlined,
+  SelectSingleOutlined,
+  LinkOutlined,
+  NumberOutlined,
+  EmailOutlined,
+  CalendarOutlined,
+  TextOutlined,
+  CascadeOutlined,
+  FileOutlined,
+  OneWayLinkOutlined,
+  TwoWayLinkOutlined,
+  CursorButtonOutlined,
 } from '@apitable/icons';
 import { Icon } from 'pc/components/konva_components';
 
@@ -34,7 +56,8 @@ const ColumnMultipleFilledPath = SelectMultipleOutlined.toString();
 const ColumnCalendarFilledPath = CalendarOutlined.toString();
 const ColumnAttachmentFilledPath = AttachmentOutlined.toString();
 const ColumnFigureFilledPath = NumberOutlined.toString();
-const ColumnLinktableFilledPath = LinktableOutlined.toString();
+const ColumnTwoWayLinkOutlinedPath = TwoWayLinkOutlined.toString();
+const ColumnOneWayLinkOutlinedPath = OneWayLinkOutlined.toString();
 const ColumnUrlOutlinedPath = LinkOutlined.toString();
 const ColumnEmailFilledPath = EmailOutlined.toString();
 const ColumnPhoneFilledPath = TelephoneOutlined.toString();
@@ -51,6 +74,8 @@ const ColumnMemberFilledPath = UserOutlined.toString();
 const ColumnPercentFilledPath = PercentOutlined.toString();
 const ColumnRatingFilledPath = StarOutlined.toString();
 const ColumnCascadeOutlinedPath = CascadeOutlined.toString();
+const ColumnWorkdocPath = FileOutlined.toString();
+const CursorButtonOutlinedPath = CursorButtonOutlined.toString();
 
 interface IFieldIconProps {
   fieldType: FieldType;
@@ -80,7 +105,9 @@ export const FieldIcon: FC<React.PropsWithChildren<IFieldIconProps>> = memo((pro
     case FieldType.Number:
       return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnFigureFilledPath} fill={fill} />;
     case FieldType.Link:
-      return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnLinktableFilledPath} fill={fill} />;
+      return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnTwoWayLinkOutlinedPath} fill={fill} />;
+    case FieldType.OneWayLink:
+      return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnOneWayLinkOutlinedPath} fill={fill} />;
     case FieldType.URL:
       return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnUrlOutlinedPath} fill={fill} />;
     case FieldType.Email:
@@ -113,6 +140,10 @@ export const FieldIcon: FC<React.PropsWithChildren<IFieldIconProps>> = memo((pro
       return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnLastmodifiedbyFilledPath} fill={fill} />;
     case FieldType.Cascader:
       return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnCascadeOutlinedPath} fill={fill} />;
+    case FieldType.Button:
+      return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={CursorButtonOutlinedPath} fill={fill} />;
+    case FieldType.WorkDoc:
+      return <Icon x={x} y={y} size={width} backgroundHeight={height} listening={false} data={ColumnWorkdocPath} fill={fill} />;
     default:
       return null;
   }

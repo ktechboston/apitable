@@ -16,11 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { get, keyBy, sortBy } from 'lodash';
+import LRU from 'lru-cache';
 import { colors, ThemeName } from '@apitable/components';
 import {
   Api,
   ArrayValueField,
   BasicValueType,
+  ButtonStyleType,
   ConfigConstant,
   DatasheetApi,
   Field,
@@ -28,6 +31,7 @@ import {
   FormulaBaseError,
   handleNullArray,
   IAttachmentValue,
+  IButtonField,
   ICellValue,
   IField,
   ILookUpField,
@@ -36,6 +40,7 @@ import {
   ISegment,
   isGif,
   IUnitIds,
+  IWorkDocValue,
   LinkField,
   LOOKUP_VALUE_FUNC_SET,
   LookUpField,
@@ -54,11 +59,13 @@ import {
   t,
   ViewType,
 } from '@apitable/core';
-import { get, keyBy, sortBy } from 'lodash';
-import LRU from 'lru-cache';
+import { FileOutlined } from '@apitable/icons';
+import { assertSignatureManager } from '@apitable/widget-sdk';
+import { AutomationConstant } from 'pc/components/automation/config';
 import { AvatarSize, AvatarType } from 'pc/components/common';
 import { GANTT_SHORT_TASK_MEMBER_ITEM_HEIGHT } from 'pc/components/gantt_view';
 import { isUnitLeave } from 'pc/components/multi_grid/cell/cell_member/member_item';
+import { setColor } from 'pc/components/multi_grid/format';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
 import { emojiUrl, getCellValueThumbSrc, renderFileIconUrl, showOriginImageThumbnail, UploadManager } from 'pc/utils';
@@ -67,6 +74,7 @@ import { getDatasheetOrLoad } from 'pc/utils/get_datasheet_or_load';
 import { loadRecords } from 'pc/utils/load_records';
 import { getOptionNameColor, inquiryValueByKey } from '../components/cell';
 import {
+  GRID_CEL_ICON_GAP_SIZE,
   GRID_CELL_ABBR_MIN_WIDTH,
   GRID_CELL_ADD_ITEM_BUTTON_SIZE,
   GRID_CELL_ATTACHMENT_ITEM_MARGIN_LEFT,
@@ -82,6 +90,7 @@ import {
   GRID_CELL_MULTI_ITEM_MIN_WIDTH,
   GRID_CELL_MULTI_PADDING_TOP,
   GRID_CELL_VALUE_PADDING,
+  GRID_ICON_SMALL_SIZE,
   GRID_MEMBER_ITEM_AVATAR_MARGIN_RIGHT,
   GRID_MEMBER_ITEM_PADDING_RIGHT,
   GRID_OPTION_ITEM_HEIGHT,
@@ -91,6 +100,8 @@ import { IRenderProps } from '../interface';
 import { KonvaDrawer } from './drawer';
 import { imageCache } from './image_cache';
 import { IWrapTextDataProps } from './interface';
+
+const FileOutlinedPath = FileOutlined.toString();
 
 // Simple recognition rules are used to process single line text enhancement fields.
 const isEmail = (text: string) => text && /.+@.+/.test(text);
@@ -132,14 +143,15 @@ const DEFAULT_RENDER_DATA = {
 };
 
 export class CellHelper extends KonvaDrawer {
-  public initStyle(field: IField, styleProps: { fontWeight: any; }): void | null {
+  public initStyle(field: IField, styleProps: { fontWeight: any }): void | null {
     const { type: fieldType } = field;
     const { fontWeight = 'normal' } = styleProps;
 
     switch (fieldType) {
       case FieldType.SingleSelect:
       case FieldType.MultiSelect:
-      case FieldType.Link: {
+      case FieldType.Link:
+      case FieldType.OneWayLink: {
         return this.setStyle({ fontSize: 12, fontWeight });
       }
       case FieldType.Number:
@@ -159,11 +171,13 @@ export class CellHelper extends KonvaDrawer {
       case FieldType.Rating:
       case FieldType.CreatedBy:
       case FieldType.LastModifiedBy:
-      case FieldType.Cascader: {
+      case FieldType.Cascader:
+      case FieldType.Button:
+      case FieldType.WorkDoc: {
         return this.setStyle({ fontSize: 13, fontWeight });
       }
       case FieldType.LookUp: {
-        const realField = ((Field.bindModel(field) as any) as LookUpField).getLookUpEntityField();
+        const realField = (Field.bindModel(field) as any as LookUpField).getLookUpEntityField();
         const rollUpType = (field as ILookUpField).property.rollUpType || RollUpFuncType.VALUES;
         if (realField && ORIGIN_VALUES_FUNC_SET.has(rollUpType)) {
           return this.initStyle(realField, styleProps);
@@ -198,6 +212,12 @@ export class CellHelper extends KonvaDrawer {
       case FieldType.Cascader: {
         return this.renderCellText(renderProps, ctx);
       }
+      case FieldType.Button: {
+        return this.renderCellButton(renderProps, ctx);
+      }
+      case FieldType.WorkDoc: {
+        return this.renderCellWorkdoc(renderProps, ctx);
+      }
       case FieldType.DateTime:
       case FieldType.CreatedTime:
       case FieldType.LastModifiedTime: {
@@ -220,7 +240,8 @@ export class CellHelper extends KonvaDrawer {
       case FieldType.LastModifiedBy: {
         return this.renderCellMember(renderProps, ctx);
       }
-      case FieldType.Link: {
+      case FieldType.Link:
+      case FieldType.OneWayLink: {
         return this.renderCellLink(renderProps, ctx);
       }
       case FieldType.LookUp: {
@@ -290,6 +311,232 @@ export class CellHelper extends KonvaDrawer {
       height: GRID_OPTION_ITEM_HEIGHT,
       isOverflow: false,
       renderContent,
+    };
+  }
+
+  private renderCellButton(renderProps: IRenderProps, ctx?: any) {
+    const { x, y, rowHeight, rowHeightLevel, columnWidth, isActive, callback } = renderProps;
+
+    const GRID_OPTION_ITEM_HEIGHT = 22;
+    const buttonField = renderProps.field as IButtonField;
+    const cellValue = [1];
+    const isOperating = isActive;
+    const GRID_CELL_VALUE_PADDING = 0;
+    let currentX = GRID_CELL_VALUE_PADDING;
+    let currentY = GRID_CELL_MULTI_PADDING_TOP;
+    const isShortHeight = rowHeightLevel === RowHeightLevel.Short;
+    const maxHeight = isActive ? 130 - GRID_CELL_MULTI_PADDING_TOP : rowHeight - GRID_CELL_MULTI_PADDING_TOP;
+    const maxTextWidth = columnWidth - 2 * (GRID_CELL_VALUE_PADDING + GRID_OPTION_ITEM_PADDING) - GRID_ICON_SMALL_SIZE;
+    const renderDataList: any[] = [];
+    const listCount = cellValue.length;
+    let isOverflow = false;
+
+    const isValid = true;
+
+    const defaultColor = buttonField.property.style.color ? setColor(buttonField.property.style.color, renderProps.cacheTheme) : colors.defaultBg;
+    let bg = '';
+    if (buttonField.property.style.type === ButtonStyleType.Background) {
+      if (isValid) {
+        bg = defaultColor;
+      } else {
+        bg = colors.bgControlsDisabled;
+      }
+    }
+
+    for (let index = 0; index < listCount; index++) {
+      let color = isValid ? defaultColor : colors.textCommonDisabled;
+      if (buttonField.property.style.type === ButtonStyleType.Background) {
+        if (isValid) {
+          color = colors.textStaticPrimary;
+          if (renderProps.cacheTheme === 'dark') {
+            if (buttonField.property.style.color === AutomationConstant.whiteColor) {
+              color = colors.textReverseDefault;
+            }
+          }
+        } else {
+          color = colors.textCommonDisabled;
+        }
+      }
+      const background = bg;
+
+      const itemName = buttonField.property.text;
+      let realMaxTextWidth = maxTextWidth;
+
+      if (index === 0 && isOperating) {
+        const operatingMaxWidth = maxTextWidth - 6;
+        // item no space to display, then perform a line feed
+        if (operatingMaxWidth <= 10) {
+          currentX = GRID_CELL_VALUE_PADDING;
+          currentY += GRID_OPTION_ITEM_HEIGHT + GRID_CELL_MULTI_ITEM_MARGIN_TOP;
+        } else {
+          realMaxTextWidth = operatingMaxWidth;
+        }
+      }
+      const {
+        text: renderText,
+        textWidth,
+        isEllipsis,
+      } = this.textEllipsis({
+        text: itemName,
+        maxWidth: columnWidth && realMaxTextWidth,
+        fontSize: 12,
+      });
+      // GRID_ICON_SMALL_SIZE
+      const itemWidth = Math.max(textWidth + 2 * GRID_OPTION_ITEM_PADDING - (isEllipsis ? 8 : 0), GRID_CELL_MULTI_ITEM_MIN_WIDTH);
+
+      if (columnWidth != null) {
+        // In the inactive state, subsequent items are not rendered when the line width is exceeded
+        if (!isActive && currentX >= columnWidth) break;
+        // If it is not the last line in the inactive state, perform a line feed on the overflow item
+        if (
+          !isActive &&
+          !isShortHeight &&
+          currentY + GRID_OPTION_ITEM_HEIGHT < maxHeight &&
+          currentX + itemWidth > columnWidth - GRID_CELL_VALUE_PADDING
+        ) {
+          currentX = GRID_CELL_VALUE_PADDING;
+          currentY += GRID_OPTION_ITEM_HEIGHT + GRID_CELL_MULTI_ITEM_MARGIN_TOP;
+        }
+        if (isActive && currentX + itemWidth > columnWidth - GRID_CELL_VALUE_PADDING) {
+          currentX = GRID_CELL_VALUE_PADDING;
+        }
+        if (isActive && currentY >= maxHeight) isOverflow = true;
+      }
+
+      const itemY = y + currentY;
+      if (ctx && !isActive) {
+        const itemX1 = x + (columnWidth - itemWidth) / 2;
+        this.label({
+          x: itemX1,
+          y: itemY,
+          width: itemWidth,
+          height: GRID_OPTION_ITEM_HEIGHT,
+          background,
+          color,
+          radius: 2,
+          padding: GRID_OPTION_ITEM_PADDING,
+          text: renderText,
+          fontSize: 12,
+          // textAlign: 'right',
+        });
+      }
+
+      renderDataList.push({
+        x: currentX,
+        y: currentY,
+        width: itemWidth,
+        height: GRID_OPTION_ITEM_HEIGHT,
+        text: renderText,
+        style: {
+          background,
+          color,
+        },
+      });
+      currentX += itemWidth + GRID_CELL_MULTI_ITEM_MARGIN_LEFT;
+    }
+
+    callback?.({ width: currentX - GRID_CELL_MULTI_ITEM_MARGIN_LEFT });
+    return {
+      width: columnWidth,
+      height: currentY + GRID_OPTION_ITEM_HEIGHT + GRID_CELL_MULTI_ITEM_MARGIN_TOP,
+      renderContent: renderDataList,
+      isOverflow,
+    };
+  }
+
+  private renderCellWorkdoc(renderProps: IRenderProps, ctx?: any) {
+    const { x, y, cellValue, rowHeight, rowHeightLevel, columnWidth, isActive, callback } = renderProps;
+    if (!(cellValue as IWorkDocValue[])?.length || !Array.isArray(cellValue)) return DEFAULT_RENDER_DATA;
+    const isOperating = isActive;
+    let currentX = GRID_CELL_VALUE_PADDING;
+    let currentY = GRID_CELL_MULTI_PADDING_TOP;
+    const maxHeight = isActive ? 130 - GRID_CELL_MULTI_PADDING_TOP : rowHeight - GRID_CELL_MULTI_PADDING_TOP;
+    const maxTextWidth = columnWidth - 2 * GRID_CELL_VALUE_PADDING - GRID_ICON_SMALL_SIZE - GRID_CEL_ICON_GAP_SIZE;
+    const renderDataList: any[] = [];
+    const listCount = cellValue.length;
+    let isOverflow = false;
+
+    for (let index = 0; index < listCount; index++) {
+      const docItem = cellValue[index] as IWorkDocValue;
+      const color = colors.textBrandDefault;
+      const background = colors.bgBrandLightDefault;
+      const itemName = docItem.title || t(Strings.workdoc_unnamed);
+      let realMaxTextWidth = maxTextWidth;
+
+      if (index === 0 && isOperating) {
+        const operatingMaxWidth = maxTextWidth - 6;
+        // item no space to display, then perform a line feed
+        if (operatingMaxWidth <= 10) {
+          currentY += GRID_OPTION_ITEM_HEIGHT + GRID_CELL_MULTI_ITEM_MARGIN_TOP;
+        } else {
+          realMaxTextWidth = operatingMaxWidth;
+        }
+      }
+      const {
+        text: renderText,
+        textWidth,
+        isEllipsis,
+      } = this.textEllipsis({
+        text: itemName,
+        maxWidth: columnWidth && realMaxTextWidth,
+        fontSize: 12,
+      });
+      const itemWidth = Math.max(
+        textWidth + 2 * GRID_OPTION_ITEM_PADDING + GRID_ICON_SMALL_SIZE - (isEllipsis ? 8 : 0),
+        GRID_CELL_MULTI_ITEM_MIN_WIDTH,
+      );
+
+      if (columnWidth != null) {
+        // In the inactive state, subsequent items are not rendered when the line width is exceeded
+        if (!isActive && currentX >= columnWidth) break;
+        if (isActive && currentY >= maxHeight) isOverflow = true;
+      }
+
+      const itemX = x + currentX;
+      const itemY = y + currentY;
+      if (ctx && !isActive) {
+        this.label({
+          x: itemX,
+          y: itemY,
+          width: itemWidth,
+          height: GRID_OPTION_ITEM_HEIGHT,
+          background,
+          color,
+          radius: 4,
+          padding: 6,
+          text: renderText,
+          fontSize: 12,
+          textAlign: 'right',
+        });
+        this.path({
+          x: itemX + 4,
+          y: itemY + 2,
+          data: FileOutlinedPath,
+          size: 12,
+          fill: colors.textBrandDefault,
+        });
+      }
+
+      renderDataList.push({
+        x: currentX,
+        y: currentY,
+        width: itemWidth,
+        height: GRID_OPTION_ITEM_HEIGHT,
+        text: renderText,
+        style: {
+          background,
+          color,
+        },
+      });
+      currentX += itemWidth + GRID_CELL_MULTI_ITEM_MARGIN_LEFT;
+    }
+
+    callback?.({ width: currentX - GRID_CELL_MULTI_ITEM_MARGIN_LEFT });
+    return {
+      width: columnWidth,
+      height: currentY + GRID_OPTION_ITEM_HEIGHT + GRID_CELL_MULTI_ITEM_MARGIN_TOP,
+      renderContent: renderDataList,
+      isOverflow,
     };
   }
 
@@ -414,7 +661,7 @@ export class CellHelper extends KonvaDrawer {
 
     const isNumberField =
       Field.bindModel(field).basicValueType === BasicValueType.Number ||
-      ((Field.bindModel(field) as any) as ArrayValueField).innerBasicValueType === BasicValueType.Number;
+      (Field.bindModel(field) as any as ArrayValueField).innerBasicValueType === BasicValueType.Number;
     const isComputedField = Field.bindModel(field).isComputed;
     const isFromGantt = !columnWidth && !isActive;
     const isSingleLine = (rowHeightLevel === RowHeightLevel.Short || !columnWidth) && !isActive;
@@ -477,7 +724,11 @@ export class CellHelper extends KonvaDrawer {
     let textData: IWrapTextDataProps | null = null;
 
     if (isNumberField || isFromGantt || fieldType === FieldType.AutoNumber) {
-      const { text, textWidth } = this.textEllipsis({ text: renderText, maxWidth: columnWidth && textMaxWidth, fontWeight });
+      const { text, textWidth } = this.textEllipsis({
+        text: renderText,
+        maxWidth: columnWidth && textMaxWidth,
+        fontWeight,
+      });
       if (ctx) {
         let pureText = text;
         const isCurrencyAndAlignLeft = fieldType === FieldType.Currency && field.property.symbolAlign === SymbolAlign.left;
@@ -636,7 +887,7 @@ export class CellHelper extends KonvaDrawer {
       let offsetX = GRID_CELL_VALUE_PADDING;
 
       (cellValue as boolean[])
-        .filter(i => i)
+        .filter((i) => i)
         .map((_, index) => {
           if (index > 0) offsetX += ConfigConstant.CELL_EMOJI_SIZE + 4;
           if (columnWidth && offsetX >= columnWidth) return;
@@ -705,7 +956,7 @@ export class CellHelper extends KonvaDrawer {
     const uploadManager = resourceService.instance?.uploadManager;
     const loadingList = uploadManager ? uploadManager.get(cellId) : [];
     if (!loadedList?.length && !loadingList.length) return DEFAULT_RENDER_DATA;
-    const fileList: any[] = [...loadedList, ...loadingList];
+    const fileList: Array<IAttachmentValue | ReturnType<typeof uploadManager.get>[0]> = [...loadedList, ...loadingList];
     const height = rowHeight - GRID_CELL_ATTACHMENT_PADDING;
     const isOperating = editable && isActive;
     const initPadding = isOperating ? GRID_CELL_VALUE_PADDING + GRID_CELL_ADD_ITEM_BUTTON_SIZE + 4 : GRID_CELL_VALUE_PADDING;
@@ -718,25 +969,37 @@ export class CellHelper extends KonvaDrawer {
       const file = fileList[i];
       let imgUrl = '';
       // The attachment being uploaded uses a placeholder image of the corresponding type as loading
-      if (file.fileId) {
+      if ('fileId' in file) {
         const { name, type } = file.file;
-        imgUrl = (renderFileIconUrl({ name, type }) as any) as string;
+        imgUrl = renderFileIconUrl({ name, type }) as any as string;
       } else {
+        const token = assertSignatureManager.getAssertSignatureUrl(file.token);
+        const preview = assertSignatureManager.getAssertSignatureUrl(file.preview || '');
+
+        if (!token || (file.preview && !preview)) {
+          continue;
+        }
+
         // The icons in the cell are scaled
-        imgUrl = getCellValueThumbSrc(file, {
-          h: height * (window.devicePixelRatio || 1),
-          formatToJPG: isGif({ name: file.name, type: file.mimeType }),
-        });
+        imgUrl = getCellValueThumbSrc(
+          { ...file, token, preview },
+          {
+            h: height * (window.devicePixelRatio || 1),
+            formatToJPG: isGif({ name: file.name, type: file.mimeType }),
+          },
+        );
       }
       const name = imgUrl;
       const img = imageCache.getImage(name);
+
       if (img == null) {
         imageCache.loadImage(name, imgUrl);
         continue;
       }
+
       const imageWidth = img === false ? 1 : img.width;
       const imageHeight = img === false ? 1 : img.height;
-      const width = calcFileWidth(file, height);
+      const width = calcFileWidth(file as unknown as IAttachmentValue, height);
       const aspectRatio = Math.min(width / imageWidth, height / imageHeight);
       const finalWidth = Math.ceil(aspectRatio * imageWidth);
       const finalHeight = Math.ceil(aspectRatio * imageHeight);
@@ -757,7 +1020,7 @@ export class CellHelper extends KonvaDrawer {
         width: finalWidth,
         height: finalHeight,
         url: imgUrl,
-        text: file.name,
+        text: (file as unknown as IAttachmentValue).name,
       });
       currentX += finalWidth + GRID_CELL_ATTACHMENT_ITEM_MARGIN_LEFT;
       if (columnWidth != null && currentX >= columnWidth) break;
@@ -788,7 +1051,9 @@ export class CellHelper extends KonvaDrawer {
       cacheTheme,
     } = renderProps;
     const isMemberField = field.type === FieldType.Member;
-    const cellValue = isMemberField ? MemberField.polyfillOldData((_cellValue as IUnitIds)?.flat()) : [_cellValue as IUnitIds].flat().filter(v => v);
+    const cellValue = isMemberField
+      ? MemberField.polyfillOldData((_cellValue as IUnitIds)?.flat())
+      : [_cellValue as IUnitIds].flat().filter((v) => v);
 
     if (!cellValue?.length) return DEFAULT_RENDER_DATA;
 
@@ -813,7 +1078,7 @@ export class CellHelper extends KonvaDrawer {
 
     const state = store.getState();
     const unitMap = isMemberField ? Selectors.getUnitMap(state) : Selectors.getUserMap(state);
-    const missInfoUnitIds: string[] = cellValue.filter(v => {
+    const missInfoUnitIds: string[] = cellValue.filter((v) => {
       return !unitMap?.[v] && v !== OtherTypeUnitId.Alien;
     });
     const cacheKey = missInfoUnitIds.length ? sortBy(missInfoUnitIds).join(',') : null;
@@ -826,7 +1091,7 @@ export class CellHelper extends KonvaDrawer {
       if (isMemberField) {
         const linkId = shareId || templateId;
         Api.loadOrSearch({ unitIds: cacheKey, linkId })
-          .then(res => {
+          .then((res) => {
             const {
               data: { data: resData, success },
             } = res;
@@ -836,7 +1101,7 @@ export class CellHelper extends KonvaDrawer {
           .finally(() => httpCache.del(cacheKey));
       } else {
         DatasheetApi.fetchUserList(datasheetId!, cellValue as string[])
-          .then(res => {
+          .then((res) => {
             const {
               data: { data: resData, success },
             } = res as any;
@@ -920,7 +1185,6 @@ export class CellHelper extends KonvaDrawer {
           radius: type === MemberType.Member ? (isFromGanttShortHeight ? 10 : 16) : 4,
           fill: colors.fc11,
         });
-
         this.avatar({
           x: x + currentX + GRID_CELL_MEMBER_ITEM_PADDING_LEFT,
           y: y + currentY + (itemHeight - avatarSize) / 2,
@@ -975,20 +1239,23 @@ export class CellHelper extends KonvaDrawer {
      * Then if it's a directly rendered associated field, pageParams.nodeId === currentResourceId
      */
     const { x, y, field, cellValue, rowHeight, columnWidth, rowHeightLevel, isActive, editable, callback, currentResourceId } = renderProps;
-    const linkRecordIds = cellValue ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT) : null;
+    const linkRecordIds = Array.isArray(cellValue) ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT) : [];
     const state = store.getState();
     const NO_DATA = Symbol('NO_DATA');
     const ERROR_DATA = Symbol('ERROR_DATA');
+    const ARCHIVED_DATA = Symbol('ARCHIVED_DATA');
     const foreignDatasheetId = field.property.foreignDatasheetId;
     const datasheet = getDatasheetOrLoad(state, foreignDatasheetId, currentResourceId, true);
     const isLoading = Selectors.getDatasheetLoading(state, foreignDatasheetId);
     const datasheetClient = Selectors.getDatasheetClient(state, foreignDatasheetId);
     const snapshot = datasheet && datasheet.snapshot;
+    const archivedRecordIds = snapshot?.meta.archivedRecordIds || [];
+
     const emptyRecords: string[] = [];
 
     if (!linkRecordIds?.length) return DEFAULT_RENDER_DATA;
-    let linkInfoList: { recordId: string; text: string | symbol | null }[] = [];
-    linkInfoList = linkRecordIds.map(recordId => {
+    let linkInfoList: { recordId: string; text: string | symbol | null, disabled?: boolean }[] = [];
+    linkInfoList = linkRecordIds.map((recordId) => {
       if (!snapshot) {
         return {
           recordId,
@@ -997,16 +1264,25 @@ export class CellHelper extends KonvaDrawer {
       }
 
       if (!snapshot.recordMap[recordId]) {
+        if (archivedRecordIds.includes(recordId)) {
+          return {
+            recordId,
+            text: ARCHIVED_DATA,
+            disabled: true
+          };
+        }
         if (!isLoading && datasheetClient!.loadingRecord[recordId] === 'error') {
           return {
             recordId,
             text: ERROR_DATA,
+            disabled: true
           };
         }
         emptyRecords.push(recordId);
         return {
           recordId,
           text: NO_DATA,
+          disabled: true
         };
       }
       return {
@@ -1040,6 +1316,8 @@ export class CellHelper extends KonvaDrawer {
           return t(Strings.loading);
         case ERROR_DATA:
           return t(Strings.record_fail_data);
+        case ARCHIVED_DATA:
+          return t(Strings.record_archived_data);
         default:
           return text as string;
       }
@@ -1053,7 +1331,7 @@ export class CellHelper extends KonvaDrawer {
     let isOverflow = false;
 
     for (let index = 0; index < listCount; index++) {
-      const { recordId, text: _text } = linkInfoList[index];
+      const { recordId, text: _text, disabled } = linkInfoList[index];
       const color = typeof _text === 'string' ? colors.firstLevelText : colors.thirdLevelText;
       const text = displayText(_text);
       let realMaxTextWidth = maxTextWidth < 0 ? 0 : maxTextWidth;
@@ -1123,6 +1401,7 @@ export class CellHelper extends KonvaDrawer {
         text: renderText,
         style: { color },
         id: recordId,
+        disabled,
       });
       currentX += itemWidth + GRID_CELL_MULTI_ITEM_MARGIN_LEFT;
     }
@@ -1139,9 +1418,9 @@ export class CellHelper extends KonvaDrawer {
   private renderCellLookUp(renderProps: IRenderProps, ctx?: any) {
     renderProps = { ...renderProps, cellValue: handleNullArray(renderProps.cellValue) };
     const { field, cellValue } = renderProps;
-    const realField = ((Field.bindModel(field) as any) as LookUpField).getLookUpEntityField();
-    const entityFieldInfo = ((Field.bindModel(field) as any) as LookUpField).getLookUpEntityFieldInfo();
-    const valueType = ((Field.bindModel(field) as any) as LookUpField).basicValueType;
+    const realField = (Field.bindModel(field) as any as LookUpField).getLookUpEntityField();
+    const entityFieldInfo = (Field.bindModel(field) as any as LookUpField).getLookUpEntityFieldInfo();
+    const valueType = (Field.bindModel(field) as any as LookUpField).basicValueType;
     if (cellValue != null && realField != null) {
       const rollUpType = (field as ILookUpField).property.rollUpType || RollUpFuncType.VALUES;
       if (!ORIGIN_VALUES_FUNC_SET.has(rollUpType)) {
@@ -1176,8 +1455,12 @@ export class CellHelper extends KonvaDrawer {
 
       const realCellValue = cellValue?.flat(1) as ICellValue;
       const realRenderProps = { ...renderProps, cellValue: realCellValue, editable: false };
-      const realFieldRenderProps =
-        { ...realRenderProps, cellValue: realCellValue, field: realField, currentResourceId: entityFieldInfo?.datasheetId };
+      const realFieldRenderProps = {
+        ...realRenderProps,
+        cellValue: realCellValue,
+        field: realField,
+        currentResourceId: entityFieldInfo?.datasheetId,
+      };
 
       // Non-plain text fields are displayed as is
       switch (realField.type) {
@@ -1191,6 +1474,7 @@ export class CellHelper extends KonvaDrawer {
         case FieldType.LastModifiedBy:
           return this.renderCellMember(realFieldRenderProps, ctx);
         case FieldType.Link:
+        case FieldType.OneWayLink:
           return this.renderCellLink(realFieldRenderProps, ctx);
         case FieldType.Checkbox:
           return this.renderCellMultiCheckbox(realRenderProps, ctx);
@@ -1211,6 +1495,8 @@ export class CellHelper extends KonvaDrawer {
         case FieldType.Text:
         case FieldType.SingleText:
         case FieldType.Cascader:
+        case FieldType.Button:
+        case FieldType.WorkDoc:
           realRenderProps.realField = realField;
           return this.renderCellText(realRenderProps, ctx);
         case FieldType.NotSupport:

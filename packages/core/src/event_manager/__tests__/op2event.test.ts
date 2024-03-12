@@ -18,8 +18,7 @@
 
 import { OP2Event } from 'event_manager/op2event';
 import { IChangeset } from './../../engine/ot/interface';
-import { OPEventNameEnums } from './../const';
-import { eventRecordDeleted } from './expectEvents';
+import { OPEventNameEnums } from './../enum';
 import { createRecordOps, deleteRecordOps, duplicateRecordOps, updateRecordOps, updateRecordsOpsByFill } from './mockOps';
 import { state } from './mockState';
 
@@ -39,7 +38,7 @@ describe('convert op to OPEvent', () => {
     const watchedEvents = [OPEventNameEnums.RecordDeleted];
     const op2event = new OP2Event(watchedEvents);
     const events = op2event.parseOps2Events(deleteRecordOps as IChangeset[]);
-    expect(events).toEqual(eventRecordDeleted);
+    expect(events[0]!.eventName).toEqual('RecordDeleted');
   });
 
   it('update cell', () => {

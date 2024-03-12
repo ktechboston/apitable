@@ -16,223 +16,243 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Box, Button, ContextMenu, IconButton, Tooltip, Typography, useContextMenu, useTheme } from '@apitable/components';
-import { Strings, t, validateMagicForm } from '@apitable/core';
-import { DeleteOutlined, MoreStandOutlined, WarnCircleFilled } from '@apitable/icons';
+import { useHover } from 'ahooks';
+import { useAtom, useAtomValue } from 'jotai';
+import { JSONSchema7 } from 'json-schema';
 import Image from 'next/image';
+import { forwardRef, memo, ReactElement, useImperativeHandle, useRef } from 'react';
+import { Box, Button, ContextMenu, FloatUiTooltip as Tooltip, IconButton, Typography, useContextMenu, useTheme } from '@apitable/components';
+import { IJsonSchema, Strings, t, validateMagicFormWithCustom } from '@apitable/core';
+import { DeleteOutlined, MoreStandOutlined, WarnCircleFilled } from '@apitable/icons';
 import { Modal } from 'pc/components/common';
+import { deleteRobotAction, deleteTrigger } from 'pc/components/robot/api';
 import { flatContextData } from 'pc/utils';
 import { getEnvVariables } from 'pc/utils/env';
-import { useRef, useState } from 'react';
-import { mutate } from 'swr';
-import { IRobotNodeType } from '../../interface';
-import { useDeleteRobotAction, useRobot } from '../../hooks';
+import { automationPanelAtom, automationStateAtom, PanelName, useAutomationController } from '../../../automation/controller';
+import { useAutomationResourcePermission } from '../../../automation/controller/use_automation_permission';
+import { OrEmpty } from '../../../common/or_empty';
+import { useDeleteRobotAction } from '../../hooks';
+import { INodeOutputSchema, IRobotNodeType } from '../../interface';
+import { useCssColors } from '../trigger/use_css_colors';
+import { IFormProps } from './core/interface';
 import { MagicVariableForm } from './ui';
-// FIXME: form type
-// Trigger and Action's From form, wrapped in a layer here.
-export const NodeForm = (props: any) => {
-  const ref = useRef<any>(null);
-  const [show, setShow] = useState(false);
-  const { title, serviceLogo, children, description, type = 'trigger', nodeId, index = 0, ...restProps } = props;
-  const theme = useTheme();
-  const text = type === IRobotNodeType.Trigger ? t(Strings.robot_trigger_guide) : t(Strings.robot_action_guide);
-  const selectTitle = type === IRobotNodeType.Trigger ? t(Strings.robot_trigger_type) : t(Strings.robot_action_type);
-  const configTitle = type === IRobotNodeType.Trigger ? t(Strings.robot_trigger_config) : t(Strings.robot_action_config);
 
-  const { hasError } = validateMagicForm(restProps.schema, restProps.formData);
-  const deleteRobotAction = useDeleteRobotAction();
-  const { currentRobotId } = useRobot();
+type INodeFormProps<T> = Omit<IFormProps<T>, 'schema' | 'nodeOutputSchemaList'> & {
+  index: number;
+  itemId?: string;
+  schema: IJsonSchema;
+  description?: string;
+  serviceLogo?: string;
+  onChange?: (value: string) => void;
+  nodeOutputSchemaList?: INodeOutputSchema[];
+  nodeId: string;
+  title?: string;
+  type?: 'trigger' | 'action';
+  children?: ReactElement;
+  handleClick?: () => void;
+  handleDelete?: () => void;
+  handleSubmit?: () => void;
+  unsaved?: boolean;
+};
 
-  const handleDeleteRobotAction = () => {
-    Modal.confirm({
-      title: t(Strings.robot_action_delete),
-      content: t(Strings.robot_action_delete_confirm_desc),
-      cancelText: t(Strings.cancel),
-      okText: t(Strings.confirm),
-      onOk: async() => {
-        const deleteOk = await deleteRobotAction(nodeId);
-        deleteOk && mutate(`/robots/${currentRobotId}/actions`);
+export interface INodeFormControlProps {
+  submit?: () => void;
+}
+export const NodeForm = memo(
+  forwardRef<INodeFormControlProps, INodeFormProps<any>>((props: INodeFormProps<any>, ref) => {
+    const formRef = useRef<any>(null);
+    const { description, title, unsaved, type = 'trigger', children, handleClick, ...restProps } = props;
+    const colors = useCssColors();
+
+    useImperativeHandle(ref, () => ({
+      submit: () => {
+        (formRef.current as any)?.submit();
       },
-      onCancel: () => {
-        return;
-      },
-      type: 'warning',
-    });
-  };
+    }));
 
-  const menuId = `robot_${type}_${nodeId}`;
-  const menuData = [
-    [
-      {
-        text: t(Strings.robot_action_delete),
-        icon: <DeleteOutlined />,
-        onClick: handleDeleteRobotAction,
-      },
-    ]
-  ];
-  const { show: showMenu } = useContextMenu({
-    id: menuId
-  });
-
-  return (
-    <>
-      {
-        index === 0 && <Box display="flex" alignItems="center">
-          <Box
-            height="12px"
-            width="2px"
-            backgroundColor={theme.color.fc0}
-            marginRight="4px"
-          />
-          <Typography variant="body2">
-            {text}
+    return (
+      <Box height={'100%'} display={'flex'} flexDirection={'column'}>
+        <Box flex={'1 1 auto'} overflow={'auto'}>
+          <Typography variant="h6" color={colors.textCommonPrimary}>
+            {title}
           </Typography>
+
+          <Typography variant="body4" style={{ marginTop: 8 }} color={colors.textCommonTertiary}>
+            {description}
+          </Typography>
+
+          <MagicVariableForm {...restProps} ref={formRef} liveValidate noValidate={false} style={{ marginTop: -24 }}>
+            <></>
+          </MagicVariableForm>
         </Box>
-      }
+
+        <Box flex={'0 0 32px'} marginTop="16px" display="flex" width={'100%'} justifyContent={'center'} flexDirection="row-reverse">
+          <Box display="flex">
+            <Button
+              variant="fill"
+              style={{ width: '128px' }}
+              size="middle"
+              onClick={() => {
+                (formRef.current as any)?.submit();
+              }}
+              color="primary"
+            >
+              {t(Strings.robot_save_step_button)}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }),
+);
+
+export const NodeFormInfo = memo(
+  forwardRef<INodeFormControlProps, INodeFormProps<any>>((props: INodeFormProps<any>, ref) => {
+    const { title, serviceLogo, itemId, handleDelete, unsaved, type = 'trigger', nodeId, children, handleClick, index = 0, ...restProps } = props;
+    const theme = useTheme();
+    // @ts-ignore
+    const { hasError } = validateMagicFormWithCustom(restProps.schema as JSONSchema7, restProps.formData, restProps?.validate);
+    const deleteRobotAction = useDeleteRobotAction();
+    const [, setAutomationPanel] = useAtom(automationPanelAtom);
+
+    const automationState = useAtomValue(automationStateAtom);
+    const {
+      api: { refresh },
+    } = useAutomationController();
+    const colors = useCssColors();
+
+    useImperativeHandle(ref, () => ({
+      submit: () => {
+        console.error('is not supported');
+      },
+    }));
+
+    const handleDeleteRobotAction = () => {
+      Modal.confirm({
+        title: type === 'action' ? t(Strings.robot_action_delete) : t(Strings.robot_trigger_delete),
+        content: t(Strings.robot_action_delete_confirm_desc),
+        cancelText: t(Strings.cancel),
+        okText: t(Strings.confirm),
+        onOk: async () => {
+          let deleteOk;
+          handleDelete?.();
+          if (type === 'trigger') {
+            deleteOk = await deleteTrigger(automationState?.resourceId!, nodeId, automationState?.robot?.robotId!);
+          } else {
+            deleteOk = await deleteRobotAction(nodeId);
+          }
+
+          if (deleteOk) {
+            if (!automationState?.resourceId) {
+              return;
+            }
+            await refresh({
+              resourceId: automationState?.resourceId!,
+              robotId: automationState?.currentRobotId!,
+            });
+            setAutomationPanel((draft) => {
+              draft.panelName = PanelName.BasicInfo;
+            });
+          }
+        },
+        onCancel: () => {
+          return;
+        },
+        type: 'danger',
+      });
+    };
+
+    const [panelState] = useAtom(automationPanelAtom);
+    const isActive = panelState.dataId === nodeId && panelState?.panelName !== PanelName.BasicInfo;
+    const permissions = useAutomationResourcePermission();
+    const menuId = `robot_${type}_${nodeId}`;
+    const menuData = [
+      [
+        {
+          text: type === 'trigger' ? t(Strings.robot_trigger_delete) : t(Strings.robot_action_delete),
+          icon: <DeleteOutlined />,
+          onClick: handleDeleteRobotAction,
+        },
+      ],
+    ];
+    const itemRef = useRef(null);
+    const isHovering = useHover(itemRef);
+    const { show: showMenu } = useContextMenu({
+      id: menuId,
+    });
+
+    return (
       <Box
-        border={`1px solid ${theme.color.lineColor}`}
-        borderRadius="8px"
-        height={show ? 'max-content' : '48px'}
+        border={!isActive ? `1px solid ${theme.color.lineColor}` : `1px solid ${theme.color.borderBrandDefault}`}
+        borderRadius="4px"
+        ref={itemRef}
         width="100%"
-        margin="8px 0px"
-        padding="12px"
+        padding="16px"
+        onClick={handleClick}
         backgroundColor={theme.color.fc8}
-        id={`robot_node_${nodeId}`}
+        id={itemId ?? `robot_node_${nodeId}`}
       >
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          width="100%"
-        >
-          <Box display="flex" alignItems="center"
-            onClick={() => setShow(!show)}
-            width="100%"
-            style={{ cursor: 'pointer' }}
-          >
+        <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+          <Box display="flex" alignItems="center" width="100%" style={{ cursor: props.disabled ? 'not-allowed' : 'pointer' }}>
             <span
               style={{
                 borderRadius: 4,
-                marginRight: '4px',
                 display: 'flex',
-                alignItems: 'center'
+                alignItems: 'center',
+                marginRight: '16px',
               }}
             >
               <Image
-                src={(type === IRobotNodeType.Trigger && getEnvVariables().ROBOT_TRIGGER_ICON) ?
-                  getEnvVariables().ROBOT_TRIGGER_ICON! : serviceLogo || '?'}
-                width={24}
-                height={24}
+                src={
+                  type === IRobotNodeType.Trigger && getEnvVariables().ROBOT_TRIGGER_ICON ? getEnvVariables().ROBOT_TRIGGER_ICON! : serviceLogo || '?'
+                }
+                width={48}
+                height={48}
                 alt=""
               />
             </span>
-            <Typography variant="h7" ellipsis>
-              {title}
-            </Typography>
-            {
-              hasError && <Box
-                marginLeft="4px"
-                display="flex"
-                alignItems="center"
-              >
-                <Tooltip content={t(Strings.robot_config_incomplete_tooltip)}>
-                  <Box
-                    as="span"
-                    marginLeft="4px"
-                    display="flex"
-                    alignItems="center"
-                  >
-                    <WarnCircleFilled color={theme.color.textWarnDefault} />
-                  </Box>
-                </Tooltip>
-              </Box>
-            }
-          </Box>
-          {
-            type === 'action' && <>
-              <IconButton
-                shape="square"
-                icon={MoreStandOutlined}
-                onClick={(e) => showMenu(e)}
-              />
-              <ContextMenu
-                overlay={flatContextData(menuData, true)}
-                menuId={menuId}
-              />
-            </>
-          }
-        </Box>
-        {
-          show && <Box
-            marginTop="13px"
-            paddingTop="16px"
-            borderTop={`1px solid ${theme.color.lineColor}`}
-          >
-            <Box display="flex" alignItems="center" style={{ marginBottom: 4 }}>
-              <Box
-                height="12px"
-                width="2px"
-                backgroundColor={theme.color.fc0}
-                marginRight="4px"
-              />
-              <Typography variant="h7" color={theme.color.fc1}>
-                {selectTitle}
-              </Typography>
-            </Box>
-            {children}
-            <Typography variant="body4" style={{ marginTop: 4 }} color={theme.color.fc3}>
-              {description}
-            </Typography>
-            <Box display="flex" alignItems="center" style={{ marginTop: 16, marginBottom: -16 }}>
-              <Box
-                height="12px"
-                width="2px"
-                backgroundColor={theme.color.fc0}
-                marginRight="4px"
-              />
-              <Typography variant="h7" color={theme.color.fc1}>
-                {configTitle}
-              </Typography>
-            </Box>
-            <MagicVariableForm
-              {...restProps}
-              ref={ref}
-              liveValidate
-              style={{ marginTop: -24 }}
-            >
-              <Box
-                marginTop="16px"
-                display="flex"
-                flexDirection="row-reverse"
-              >
-                <Box
-                  display="flex"
-                >
-                  <Button
-                    onClick={() => setShow(!show)}
-                    variant="fill"
-                    size="small"
-                    style={{ marginRight: 16 }}
-                  >
-                    {t(Strings.robot_cancel_save_step_button)}
-                  </Button>
-                  <Button
-                    variant="fill"
-                    size="small"
-                    onClick={() => {
-                      (ref.current as any)?.submit();
-                    }}
-                    color="primary"
-                  >
-                    {t(Strings.robot_save_step_button)}
-                  </Button>
-                </Box>
 
+            <Box display={'flex'} flexDirection={'column'}>
+              <Typography
+                variant="body4"
+                ellipsis
+                color={colors.textCommonTertiary}
+                style={{
+                  textTransform: 'capitalize',
+                }}
+              >
+                {type == IRobotNodeType.Trigger ? t(Strings.robot_trigger_guide) : t(Strings.action)}
+              </Typography>
+
+              <Box display={'flex'} flexDirection={'row'}>
+                {children}
+                {unsaved && (
+                  <Box marginLeft="8px" display="flex" alignItems="center">
+                    <Tooltip content={t(Strings.there_are_unsaved_content_in_the_current_step)}>
+                      <Box as="span" marginLeft="4px" display="flex" alignItems="center">
+                        <WarnCircleFilled color={theme.color.textWarnDefault} />
+                      </Box>
+                    </Tooltip>
+                  </Box>
+                )}
+                {hasError && !unsaved && (
+                  <Box marginLeft="8px" display="flex" alignItems="center">
+                    <Tooltip content={t(Strings.robot_config_incomplete_tooltip)}>
+                      <Box as="span" marginLeft="4px" display="flex" alignItems="center">
+                        <WarnCircleFilled color={theme.color.textWarnDefault} />
+                      </Box>
+                    </Tooltip>
+                  </Box>
+                )}
               </Box>
-            </MagicVariableForm>
+            </Box>
           </Box>
-        }
+          <OrEmpty visible={permissions.editable}>
+            <>{(isHovering || isActive) && <IconButton shape="square" icon={MoreStandOutlined} onClick={(e) => showMenu(e)} />}</>
+          </OrEmpty>
+          <ContextMenu overlay={flatContextData(menuData, true)} menuId={menuId} />
+        </Box>
       </Box>
-    </>
-  );
-};
+    );
+  }),
+);

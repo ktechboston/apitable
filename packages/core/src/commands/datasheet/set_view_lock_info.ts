@@ -17,12 +17,12 @@
  */
 
 import { IJOTAction } from 'engine/ot';
-import { DatasheetActions } from 'model';
-import { getActiveDatasheetId, getDatasheet } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { getActiveDatasheetId, getDatasheet } from 'modules/database/store/selectors/resource/datasheet/base';
 import { ResourceType } from 'types';
-import { CollaCommandName } from 'commands';
+import { CollaCommandName } from 'commands/enum';
 import { ExecuteResult, ICollaCommandDef } from 'command_manager';
-import { IViewLockInfo } from '../../exports/store';
+import { IViewLockInfo } from '../../exports/store/interfaces';
 
 export interface ISetViewLockInfo {
   cmd: CollaCommandName.SetViewLockInfo;
@@ -34,7 +34,7 @@ export const setViewLockInfo: ICollaCommandDef<ISetViewLockInfo> = {
   undoable: true,
 
   execute: (context, options) => {
-    const { model: state } = context;
+    const { state: state } = context;
     const { data, viewId } = options;
     const datasheetId = getActiveDatasheetId(state)!;
     const datasheet = getDatasheet(state, datasheetId);

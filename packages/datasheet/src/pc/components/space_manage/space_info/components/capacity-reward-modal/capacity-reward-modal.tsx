@@ -16,21 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ThemeProvider } from '@apitable/components';
-import { ConfigConstant, Strings, t } from '@apitable/core';
 import { ConfigProvider, Table, Tabs } from 'antd';
 import { ColumnsType } from 'antd/lib/table';
+import React, { FC, useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Provider } from 'react-redux';
+import { ThemeProvider } from '@apitable/components';
+import { ConfigConstant, Strings, t } from '@apitable/core';
 import { UnitTag } from 'pc/components/catalog/permission_settings/permission/select_unit_modal/unit_tag';
 import { UserCardTrigger } from 'pc/components/common';
 import { Modal } from 'pc/components/common/modal/modal/modal';
 import { TComponent } from 'pc/components/common/t_component';
 import { antdConfig } from 'pc/components/route_manager/router_provider';
 import { useRequest } from 'pc/hooks';
-import { useCapacityRequest } from 'pc/hooks/use_capacity-reword-request';
+import { useCapacityRequest } from 'pc/hooks/use_capacity_request';
 import { store } from 'pc/store';
-import React, { FC, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Provider } from 'react-redux';
 import styles from './style.module.less';
 
 const { TabPane } = Tabs;
@@ -123,18 +123,24 @@ export const CapacityRewardModal: FC<React.PropsWithChildren<ICapacityRewardModa
   const [list, setList] = useState([]);
 
   const [currTab, setCurrTab] = useState(CapacityType.InEffect);
-  const { getCapacityListReq } = useCapacityRequest();
-  const { run: getCapacityList } = useRequest(getCapacityListReq, { manual: true });
+  const { getCapacityRewardListReq } = useCapacityRequest();
+  const { run: getCapacityRewardList } = useRequest(getCapacityRewardListReq, { manual: true });
   const [pageNo, setPageNo] = useState(1);
   const [total, setTotal] = useState(1);
 
   useEffect(() => {
     const isExpire = currTab === CapacityType.Expired;
-    getCapacityList(isExpire, pageNo).then(res => {
-      setList(res.records);
+    getCapacityRewardList(isExpire, pageNo).then((res) => {
+      const _list = res.records.map((item: any, index) => {
+        return {
+          ...item,
+          key: index,
+        };
+      });
+      setList(_list);
       setTotal(res.total);
     });
-  }, [currTab, getCapacityList, pageNo]);
+  }, [currTab, getCapacityRewardList, pageNo]);
 
   const TableEl = (
     <div className={styles.rewardTable}>
@@ -168,7 +174,7 @@ export const CapacityRewardModal: FC<React.PropsWithChildren<ICapacityRewardModa
     >
       <div className={styles.content}>
         <Tabs
-          onChange={type => {
+          onChange={(type) => {
             setCurrTab(type as CapacityType);
             setPageNo(1);
           }}
@@ -201,7 +207,6 @@ export const expandCapacityRewardModal = () => {
   }
 
   const render = () => {
-
     root.render(
       <ConfigProvider {...antdConfig}>
         <Provider store={store}>

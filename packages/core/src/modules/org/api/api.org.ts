@@ -19,15 +19,15 @@
 import axios from 'axios';
 import * as Url from '../../shared/api/url';
 import {
-  IAddIsActivedMemberInfo, IApiWrapper, IInviteMemberList, IMemberInfoInAddressList,
-  IUpdateMemberInfo,
-} from '../../../exports/store';
-import { IAxiosResponse } from 'types';
+  IAddIsActivedMemberInfo, IApiWrapper, IInviteMemberList, IMemberInfoInAddressList, IUpdateMemberInfo
+} from '../../../exports/store/interfaces';
+import urlcat from 'urlcat';
 
 const CancelToken = axios.CancelToken;
+
 /**
  * Query the list of units(member/group) in the space's organization
- * @returns 
+ * @returns
  */
 export function getUnitsByMember() {
   return axios.get(Url.MEMBER_UNITS);
@@ -38,21 +38,8 @@ export function getTeamListLayered() {
 }
 
 /**
- * Contact list, get members
- * 
- * @param teamId team ID, if empty, return root team, default 0
- */
-export function getMemberList(teamId?: string): Promise<IAxiosResponse<IMemberInfoInAddressList[]>> {
-  return axios.get(Url.MEMBER_LIST, {
-    params: {
-      teamId,
-    },
-  });
-}
-
-/**
  * Get member info
- * 
+ *
  * @param memberId  Contact member id
  * @param userId   user id
  */
@@ -69,17 +56,17 @@ export function getNodeCollaboratorInfo({ uuid, nodeId }: { uuid?: string; nodeI
   return axios.get<IApiWrapper & { data: IMemberInfoInAddressList }>(Url.COLLABORATOR_INFO, {
     params: {
       uuid,
-      nodeId
+      nodeId,
     },
   });
 }
 
 /**
  * Get member list by pagination
- * 
+ *
  * @param pageObjectParams pagination params
  * @param teamId if empty return root team, default 0
- * @param isActive whether the member has joined space 
+ * @param isActive whether the member has joined space
  */
 export function getMemberListInSpace(pageObjectParams: string, teamId?: string, isActive?: string) {
   return axios.get(Url.MEMBER_LIST_IN_SPACE, {
@@ -93,9 +80,9 @@ export function getMemberListInSpace(pageObjectParams: string, teamId?: string, 
 
 /**
  * Update Team Info
- * edit the team 
- * 
- * @param teamId 
+ * edit the team
+ *
+ * @param teamId
  * @param superId parent team ID,if empty return root team, default 0
  * @param teamName team name
  */
@@ -109,8 +96,8 @@ export function updateTeamInfo(teamId: string, superId: string, teamName?: strin
 
 /**
  * Create Team
- * 
- * @param name 
+ *
+ * @param name
  * @param superId parent team id, if empty return root team, default 0
  */
 export function createTeam(name: string, superId: string) {
@@ -122,8 +109,8 @@ export function createTeam(name: string, superId: string) {
 
 /**
  * Get Team Info
- * 
- * @param teamId 
+ *
+ * @param teamId
  */
 export function readTeam(teamId: string) {
   return axios.get(Url.READ_TEAM, {
@@ -143,7 +130,7 @@ export function deleteTeam(teamId: string) {
 
 /**
  * Update Member Info
- * 
+ *
  * @param data member info
  */
 export function updateMember(data: IUpdateMemberInfo) {
@@ -152,7 +139,7 @@ export function updateMember(data: IUpdateMemberInfo) {
 
 /**
  * Delete single member
- * 
+ *
  * @param teamId Team ID
  * @param memberId Member ID
  * @param action Delete Action(0:delete from inner team, 1:delete from organization)
@@ -169,7 +156,7 @@ export function singleDeleteMember(teamId: string, memberId: string, isDeepDel: 
 
 /**
  * Batch Delete Members
- * 
+ *
  * @param memberId Member ID
  * @param teamId Team ID
  * @param action Delete Action(0:delete from inner team, 1:delete from organization)
@@ -186,7 +173,7 @@ export function BatchDeleteMember(teamId: string, memberId: string[], isDeepDel:
 
 /**
  * Get Sub Teams
- * 
+ *
  * @param teamId Team ID
  */
 export function getSubTeams(teamId: string | number) {
@@ -199,9 +186,9 @@ export function getSubTeams(teamId: string | number) {
 
 /**
  * Add active units(members,teams) to team
- * 
- * @param unitList 
- * @param teamId 
+ *
+ * @param unitList
+ * @param teamId
  */
 export function addIsActivedMembersInSpace(unitList: IAddIsActivedMemberInfo[], teamId: string) {
   return axios.post(Url.TEAM_ADD_MEMBER, {
@@ -222,10 +209,10 @@ export function getTeamAndMemberWithoutSub(teamId?: string) {
 }
 
 /**
- * 
+ *
  * Search organization resources
  * search in the add department member UI modal
- * 
+ *
  * @param keyword the keyword to search
  * @param className class style
  */
@@ -240,7 +227,7 @@ export function addMemberSearchRes(keyword: string, className: string) {
 
 /**
  * Search Teams or Members
- * 
+ *
  * @param keyword the keyword to search
  */
 export function searchTeamAndMember(keyword: string) {
@@ -254,7 +241,7 @@ export function searchTeamAndMember(keyword: string) {
 
 /**
  * Update Member's Team
- * @param memberIds 
+ * @param memberIds
  * @param preTeamId Original Team ID, required
  * @param newTeamIds New Team IDs list
  */
@@ -269,34 +256,37 @@ export function updateMemberTeam(memberIds: string[], newTeamIds: string[], preT
 /**
  * Invite members(batch available)
  */
-export function sendInvite(invite: IInviteMemberList[], nodeId?: string, nvcVal?: string) {
-  return axios.post(Url.SEND_INVITE, {
+export function sendInvite(spaceId: string, invite: IInviteMemberList[], nvcVal?: string) {
+  return axios.post(urlcat(Url.SEND_EMAIL_INVITATION, { spaceId }), {
     invite,
-    nodeId,
     data: nvcVal,
   });
 }
 
 /**
  * ReSend email to invite members
- * 
+ *
  * @param email strict email format
  */
-export function reSendInvite(email: string) {
-  return axios.post(Url.RESEND_INVITE, {
+export function reSendInvite(spaceId: string, email: string) {
+  return axios.post(urlcat(Url.RESEND_EMAIL_INVITATION, { spaceId }), {
     email,
   });
 }
 
 /**
  * Invite Email Verify
- * @param token one-time invite token 
- * @param from inviter
+ * @param inviteToken one-time invite token
  */
-export function inviteEmailVerify(token: string) {
-  return axios.post(Url.INVITE_EMAIL_VERIFY, {
-    token,
-  });
+export function inviteEmailVerify(inviteToken: string) {
+  return axios.get(urlcat(Url.VALID_EMAIL_INVITATION, { inviteToken }));
+}
+
+/**
+ * Accept email invitation.
+ */
+export function acceptEmailInvitation(spaceId: string, inviteToken: string) {
+  return axios.post(urlcat(Url.ACCEPT_EMAIL_INVITATION, { spaceId, inviteToken }));
 }
 
 /**
@@ -330,7 +320,7 @@ export function createLink(teamId: string, nodeId?: string) {
 
 /**
  * Get links list
- * @returns 
+ * @returns
  */
 export function getLinkList() {
   return axios.get(Url.LINK_LIST);
@@ -338,19 +328,19 @@ export function getLinkList() {
 
 /**
  * Delete team invite link
- * 
- * @param teamId 
- * @returns 
+ *
+ * @param teamId
+ * @returns
  */
 export function deleteLink(teamId: string) {
-  return axios.delete(Url.DELETE_LINK, { data: { teamId }});
+  return axios.delete(Url.DELETE_LINK, { data: { teamId } });
 }
 
 /**
  * public link validation
- * @param token 
- * @param nodeId 
- * @returns 
+ * @param token
+ * @param nodeId
+ * @returns
  */
 export function linkValid(token: string, nodeId?: string) {
   return axios.post(Url.LINK_VALID, { token, nodeId });
@@ -358,20 +348,32 @@ export function linkValid(token: string, nodeId?: string) {
 
 /**
  * join space by public link
- * 
- * @param token 
- * @param nodeId 
- * @returns 
+ *
+ * @param token
+ * @param nodeId
+ * @returns
  */
-export function joinViaSpace(token: string, nodeId?: string) {
-  return axios.post(Url.JOIN_VIA_LINK, { token, nodeId });
+export function joinViaSpace(token: string, nodeId: string, data?: string) {
+  return axios.post(Url.JOIN_VIA_LINK, { token, nodeId, data });
 }
 
 export function getCollaboratorListPage(pageObjectParams: string, nodeId: string) {
-  return axios.get(Url.COLLABORATOR_LIST_PAGE,{
-    params: { 
+  return axios.get(Url.COLLABORATOR_LIST_PAGE, {
+    params: {
       pageObjectParams,
-      nodeId
-    }
+      nodeId,
+    },
+  });
+}
+
+/**
+ * get field permissions page member list
+ */
+
+export function getFieldPermissionPageMemberList(dstId: string, fieldId: string, pageObjectParams: string) {
+  return axios.get<IApiWrapper & { data: any }>(urlcat(Url.GET_FIELD_PERMISSION_PAGE_MEMBER_LIST, { dstId, fieldId }), {
+    params: {
+      pageObjectParams,
+    },
   });
 }

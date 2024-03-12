@@ -20,22 +20,23 @@ import { ICollaCommandExecuteContext, ILinkedActions } from 'command_manager';
 import { IJOTAction } from 'engine';
 import { Strings, t } from '../../exports/i18n';
 import { isEqual, keyBy } from 'lodash';
-import {
-  CreatedByField,
-  DatasheetActions,
-  Field,
-  getFieldClass,
-  handleEmptyCellValue,
-  ICellValue,
-  StatType,
-  TextField
-} from 'model';
-import { IReduxState, ISnapshot, Selectors, ViewType } from '../../exports/store';
+import { Field } from 'model/field';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { CreatedByField } from 'model/field/created_by_field';
+import { StatType } from 'model/field/stat';
+import { TextField } from 'model/field/text_field';
+import { getFieldClass } from 'model/field';
+import { handleEmptyCellValue } from 'model/utils';
+import { ICellValue } from 'model/record';
+import { IReduxState, ISnapshot } from '../../exports/store/interfaces';
+import { ViewType } from 'modules/shared/store/constants';
+import { getDateTimeCellAlarm } from 'modules/database/store/selectors/resource/datasheet/calc';
+import { getCellValue } from 'modules/database/store/selectors/resource/datasheet/cell_calc';
 import { KanbanStyleKey } from '../../modules/shared/store/constants';
-import { getDatasheet, getSnapshot } from '../../exports/store/selectors';
+import { getDatasheet, getSnapshot } from 'modules/database/store/selectors/resource/datasheet/base';
 import { FieldType, IField, ILinkField, ISelectField, readonlyFields } from 'types';
 import { getNewId, getUniqName, IDPrefix, isSelectField } from 'utils';
-import { KanbanView } from '../../model/views/kanban_view';
+import { ViewAction } from 'commands_actions/view';
 
 // The store cannot be called here! !
 
@@ -79,6 +80,7 @@ function changeFieldSetting(
       }
       return actions;
     }
+    case FieldType.OneWayLink:
     case FieldType.Link: {
       // When switching the associated datasheetId, you need to clear the value of the cell
       if (oldField.property.foreignDatasheetId !== (newField as ILinkField).property.foreignDatasheetId) {
@@ -126,7 +128,7 @@ function switchFieldRecordData(
   oldField: IField,
   newField: IField,
 ) {
-  const { model: state, ldcMaintainer } = context;
+  const { state: state, ldcMaintainer } = context;
   const actions: IJOTAction[] = [];
   // Converted into an associated field to synchronize the associated data of the associated table
   // Only related fields with sibling fields need data consistency maintenance
@@ -139,7 +141,7 @@ function switchFieldRecordData(
   }
 
   for (const recordId in snapshot.recordMap) {
-    const cellValue = Selectors.getCellValue(state, snapshot, recordId, newField.id);
+    const cellValue = getCellValue(state, snapshot, recordId, newField.id);
 
     function setValue(convertValue: ICellValue) {
       const action = DatasheetActions.setRecord2Action(snapshot, {
@@ -176,7 +178,7 @@ function switchFieldRecordData(
 
     // delete the alarm when modifying the date column type
     if (oldField.type === FieldType.DateTime) {
-      const alarm = Selectors.getDateTimeCellAlarm(snapshot, recordId, oldField.id);
+      const alarm = getDateTimeCellAlarm(snapshot, recordId, oldField.id);
       if (alarm) {
         const alarmActions = DatasheetActions.setDateTimeCellAlarm(snapshot, {
           recordId,
@@ -274,7 +276,7 @@ function clearViewAttribute(snapshot: ISnapshot, oldField: IField, newField: IFi
       action && actions.push(action);
     }
 
-    // The grouping field of the kanban board, if the type is converted, 
+    // The grouping field of the kanban board, if the type is converted,
     // or the multi-selection of the member field is turned on, the grouping field should be clear
     if (
       view.type === ViewType.Kanban &&
@@ -283,7 +285,7 @@ function clearViewAttribute(snapshot: ISnapshot, oldField: IField, newField: IFi
         newField.type !== oldField.type || newField.property.isMulti
       )
     ) {
-      const action = KanbanView.setViewStyle2Action(snapshot, {
+      const action = ViewAction.setViewStyle2Action(snapshot, {
         viewId: view.id,
         styleKey: KanbanStyleKey.KanbanFieldId,
         styleValue: null,
@@ -291,7 +293,7 @@ function clearViewAttribute(snapshot: ISnapshot, oldField: IField, newField: IFi
       action && actions.push(action);
     }
 
-    // The Grid view needs to consider the attachment field. 
+    // The Grid view needs to consider the attachment field.
     // The field that has been set as a grouping item should be deleted after being converted into an attachment field.
     if (
       view.type === ViewType.Grid &&
@@ -334,7 +336,7 @@ export function createConvertActions(
 export function setField(
   context: ICollaCommandExecuteContext, snapshot: ISnapshot, oldField: IField, newField: IField, datasheetId?: string,
 ) {
-  const state = context.model;
+  const state = context.state;
   const actions: IJOTAction[] = [];
   // When different types are converted to each other, the property needs to be updated
   if (newField.type !== oldField.type) {
@@ -344,7 +346,7 @@ export function setField(
     });
     const property = Field.bindContext(newField, state).enrichProperty(stdVals);
     newField.property = property;
-    // Calculated fields need to determine their own datasheet through the field property, 
+    // Calculated fields need to determine their own datasheet through the field property,
     // here we force him to specify the datasheetId of the current command
     if (Field.bindContext(newField, state).isComputed) {
       newField.property = {
@@ -377,7 +379,7 @@ export function setField(
   actions.push(...converted.actions);
 
   /**
-   * After the field is converted/deleted, the corresponding functions on the view, 
+   * After the field is converted/deleted, the corresponding functions on the view,
    * such as filtering/grouping, need to be deleted or adjusted synchronously
    */
   actions.push(...clearViewAttribute(snapshot, oldField, newField));
@@ -391,9 +393,10 @@ export function setField(
 export function createNewField(
   snapshot: ISnapshot,
   field: IField,
-  options?: { viewId?: string; index?: number; fieldId?: string, offset?: number, hiddenColumn?: boolean }
+  options?: { viewId?: string; index?: number; fieldId?: string, offset?: number, hiddenColumn?: boolean, forceColumnVisible?: boolean }
 ) {
   if (!field.property) {
+    // @ts-ignore
     field.property = getFieldClass(field.type).defaultProperty();
   }
 
@@ -403,6 +406,7 @@ export function createNewField(
     fieldId: options && options.fieldId,
     offset: options && options.offset,
     hiddenColumn: options && options.hiddenColumn,
+    forceColumnVisible: options?.forceColumnVisible,
     field,
   });
 
@@ -454,10 +458,10 @@ export function createNewBrotherField(state: IReduxState, newField: ILinkField, 
 export function clearOldBrotherField(
   context: ICollaCommandExecuteContext, oldField: ILinkField, deleteField?: boolean,
 ): ILinkedActions | null {
-  const { model: state } = context;
+  const { state: state } = context;
 
   // If the old field is not associated with a sibling field, no additional operations are required
-  if (!oldField.property.brotherFieldId) {
+  if (!oldField.property?.brotherFieldId) {
     return {
       datasheetId: '',
       actions: [],
@@ -472,7 +476,7 @@ export function clearOldBrotherField(
   const foreignFieldMap = foreignSnapshot.meta.fieldMap;
   const foreignOldField = foreignFieldMap[oldField.property.brotherFieldId] as ILinkField;
 
-  if (!foreignOldField || foreignOldField.property.brotherFieldId !== oldField.id) {
+  if (!foreignOldField || foreignOldField.property?.brotherFieldId !== oldField.id) {
     return null;
   }
 

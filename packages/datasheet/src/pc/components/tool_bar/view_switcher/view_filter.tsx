@@ -26,38 +26,21 @@ interface IViewFilterProps {
   [key: string]: any;
 }
 
-export const ViewFilter: FC<React.PropsWithChildren<IViewFilterProps>> = props => {
+export const ViewFilter: FC<React.PropsWithChildren<IViewFilterProps>> = (props) => {
   const { viewsList, ...rest } = props;
 
   return (
     <>
-      {
-        viewsList.length > 0 &&
+      {viewsList.length > 0 && (
         <div className={styles.viewList}>
-          {
-            viewsList.map((view, index) => (
-              <div
-                className={styles.viewItem}
-                key={view.id}
-              >
-                <ViewItem
-                  currentViewId={view.id}
-                  currentViewName={view.name}
-                  currentViewIndex={index}
-                  viewType={view.type}
-                  {...rest as any}
-                />
-              </div>
-            ))
-          }
+          {viewsList.map((view, index) => (
+            <div className={styles.viewItem} key={view.id}>
+              <ViewItem currentViewId={view.id} currentViewName={view.name} currentViewIndex={index} viewType={view.type} {...(rest as any)} />
+            </div>
+          ))}
         </div>
-      }
-      {
-        !viewsList.length &&
-        <div className={styles.viewListEmpty}>
-          {t(Strings.no_view_find)}
-        </div>
-      }
+      )}
+      {!viewsList.length && <div className={styles.viewListEmpty}>{t(Strings.no_view_find)}</div>}
     </>
   );
 };

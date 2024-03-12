@@ -16,6 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useCreation, useMount, useUpdate, useUpdateEffect } from 'ahooks';
+import classNames from 'classnames';
+import dayjs from 'dayjs';
+import { isEqual } from 'lodash';
+import { FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isMobile as isTouchDevice } from 'react-device-detect';
+import { shallowEqual } from 'react-redux';
+import { batchActions } from 'redux-batched-actions';
 import { useTheme } from '@apitable/components';
 import {
   BasicValueType,
@@ -39,9 +47,7 @@ import {
   t,
   ViewType,
 } from '@apitable/core';
-import { useCreation, useMount, useUpdate, useUpdateEffect } from 'ahooks';
-import classNames from 'classnames';
-import { isEqual } from 'lodash';
+import { Message, VikaSplitPanel } from 'pc/components/common';
 import {
   cancelTimeout,
   GanttCoordinate,
@@ -74,15 +80,12 @@ import {
 import { useDispatch, useResponsive, useSetState } from 'pc/hooks';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getStorage, setStorage, StorageName } from 'pc/utils/storage/storage';
-import { FC, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isMobile as isTouchDevice } from 'react-device-detect';
-import { shallowEqual, useSelector } from 'react-redux';
-import { batchActions } from 'redux-batched-actions';
-import { VikaSplitPanel } from '../common';
 import { ScreenSize } from '../common/component_display/enum';
 import { IContainerEdit } from '../editors/interface';
 import { useWxTitleMap } from '../konva_grid/hooks/use_wx_title_map';
+import { useDisabledOperateWithMirror } from '../tool_bar/hooks';
 import { GanttExport, SettingPanel } from './components';
 import { CreateFieldModal } from './components/create_field_modal';
 import { GANTT_HEADER_HEIGHT, GANTT_MONTH_HEADER_HEIGHT } from './constant';
@@ -101,11 +104,8 @@ import {
   ITaskLineSetting,
   ITargetTaskInfo,
 } from './interface';
-import styles from './style.module.less';
 import { getAllTaskLine, detectCyclesStack, autoTaskScheduling, getCollapsedLinearRows, getGanttViewStatusWithDefault } from './utils';
-import { Message } from 'pc/components/common';
-import { useDisabledOperateWithMirror } from '../tool_bar/hooks';
-import dayjs from 'dayjs';
+import styles from './style.module.less';
 
 interface IGanttViewProps {
   height: number;
@@ -122,7 +122,7 @@ export const DEFAULT_SCROLL_STATE = {
   isScrolling: false,
 };
 
-export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(props => {
+export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo((props) => {
   const { width: _containerWidth, height: containerHeight } = props;
   const {
     datasheetId,
@@ -169,7 +169,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     mirrorId,
     isViewLock,
     exportViewId,
-  } = useSelector(state => {
+  } = useAppSelector((state) => {
     const datasheetId = Selectors.getActiveDatasheetId(state)!;
     const view = Selectors.getCurrentView(state)! as IGanttViewProperty;
     const rowHeightLevel = view.rowHeightLevel || RowHeightLevel.Short;
@@ -236,8 +236,8 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
         datasheetId,
         viewId,
         mirrorId,
-        isViewLock
-      })
+        isViewLock,
+      }),
     };
   }, [datasheetId, cacheGanttViewStatus, isViewLock, mirrorId, spaceId, viewId]);
   const {
@@ -249,7 +249,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
   const { visualizationEditable, editable } = permissions;
   const settingPanelVisible = (visualizationEditable || editable) && _settingPanelVisible;
   const settingPanelWidth = isMobile ? 0 : _settingPanelWidth;
-  const containerWidth = _containerWidth; 
+  const containerWidth = _containerWidth;
   const ganttViewWidth = settingPanelVisible ? containerWidth - settingPanelWidth : containerWidth;
   const gridVisible = !isMobile && _gridVisible;
 
@@ -267,12 +267,12 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
    * Previous logic.
    * If no date field is detected, a pop-up will be created for the date
    * Current compatibility.
-   * The compatible user does not have access to the corresponding date column, 
+   * The compatible user does not have access to the corresponding date column,
    * but there is no need to pop up the pop-up at this point, as the date column exists
    */
   const dateTimeTypeFields = useMemo(
     () =>
-      Object.values(entityFieldMap).filter(field => {
+      Object.values(entityFieldMap).filter((field) => {
         return [Field.bindModel(field).basicValueType, Field.bindModel(field).innerBasicValueType].includes(BasicValueType.DateTime);
       }),
     [entityFieldMap],
@@ -375,7 +375,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     // Calculation of group header information for graphic areas under grouping only
     if (!groupCount) return dataMap;
 
-    ganttLinearRows.forEach(row => {
+    ganttLinearRows.forEach((row) => {
       const { recordId, type, depth } = row;
       if (type === CellType.GroupTab) {
         if (depth === 0) firstGroupId = getGanttGroupId(recordId, depth);
@@ -453,10 +453,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
   );
 
   const { totalWidth: ganttTotalWidth, todayIndex, columnThreshold, unitType, rowInitSize } = ganttInstance;
-  const totalHeight = Math.max(
-    ganttInstance.totalHeight + GRID_SCROLL_REMAIN_SPACING, 
-    containerHeight - rowInitSize - GRID_BOTTOM_STAT_HEIGHT
-  );
+  const totalHeight = Math.max(ganttInstance.totalHeight + GRID_SCROLL_REMAIN_SPACING, containerHeight - rowInitSize - GRID_BOTTOM_STAT_HEIGHT);
   const { realTargetName, areaType } = pointPosition;
   const { isOverflow } = cellScrollState;
 
@@ -484,7 +481,11 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     pointAreaType: isMobile ? AreaType.Gantt : areaType,
   });
 
-  const { onMouseEnter, clearTooltip: clearScrollbarTooltip, tooltip: scrollbarTooltip } = useScrollbarTip({
+  const {
+    onMouseEnter,
+    clearTooltip: clearScrollbarTooltip,
+    tooltip: scrollbarTooltip,
+  } = useScrollbarTip({
     horizontalBarRef: ganttHorizontalBarRef,
     containerWidth,
     totalWidth: ganttTotalWidth,
@@ -796,7 +797,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
       datasheetId,
       viewId,
       mirrorId,
-      isViewLock
+      isViewLock,
     });
 
     dispatch(
@@ -811,7 +812,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
 
     // set gantt default timeZone to start field timeZone
     const startField = fieldMap[startFieldId];
-    const timeZone = startField?.property.timeZone;
+    const timeZone = startField?.property?.timeZone;
     if (timeZone) {
       dayjs.tz.setDefault(timeZone);
     }
@@ -856,6 +857,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     }
   }, [clearTooltipInfo, isScrolling]);
   const theme = useTheme();
+  const activeNodePrivate = useAppSelector(Selectors.getActiveNodePrivate);
 
   const linkCycleEdges = useMemo(() => {
     if (!linkFieldId) {
@@ -868,7 +870,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     // target adjacency list
     const targetAdj = {};
     const nodeIdMap: string[] = [];
-    visibleRows.forEach(row => {
+    visibleRows.forEach((row) => {
       const linkCellValue = Selectors.getCellValue(state, snapshot, row.recordId, linkFieldId) || [];
       if (linkCellValue.length > 0) {
         targetAdj[row.recordId] = linkCellValue;
@@ -901,7 +903,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
     const groupingCollapseSet = new Set<string>(groupCollapseIds);
 
     const cellValueMap = {};
-    visibleRows.forEach(row => {
+    visibleRows.forEach((row) => {
       const startTime = Selectors.getCellValue(state, snapshot, row.recordId, startFieldId);
       const endTime = Selectors.getCellValue(state, snapshot, row.recordId, endFieldId);
 
@@ -929,7 +931,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
   }, [visibleRows, linkFieldId, groupCollapseIds, rowsIndexMap, startFieldId, endFieldId, state, snapshot, ganttLinearRowsAfterCollapseMap]);
 
   // Automatic scheduling of single-task modifications
-  const autoSingleTask = (endData: { recordId: string, endTime: number }) => {
+  const autoSingleTask = (endData: { recordId: string; endTime: number }) => {
     if (!linkFieldId || !startFieldId || !endFieldId) {
       return;
     }
@@ -950,6 +952,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
 
   const konvaGridContext = {
     theme,
+    activeNodePrivate,
     tooltipInfo,
     setTooltipInfo,
     clearTooltipInfo,
@@ -976,7 +979,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
   };
 
   const { unitTitleMap } = useWxTitleMap();
-  const cacheTheme = useSelector(Selectors.getTheme);
+  const cacheTheme = useAppSelector(Selectors.getTheme);
 
   const gridViewContext = {
     snapshot,
@@ -1076,13 +1079,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
                       setPointPosition={setPointPosition}
                       scrollIntoView={scrollIntoView}
                     />
-                    {
-                      exportViewId != null && 
-                      exportViewId === viewId && 
-                      <GanttExport 
-                        dateUnitType={dateUnitType}
-                      />
-                    }
+                    {exportViewId != null && exportViewId === viewId && <GanttExport dateUnitType={dateUnitType} />}
                   </KonvaGanttViewContext.Provider>
                 </KonvaGridViewContext.Provider>
               </div>
@@ -1151,13 +1148,9 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
           }
           panelRight={
             <div style={{ width: '100%', height: '100%' }}>
-              {
-                !isMobile && settingPanelVisible && 
-                <SettingPanel
-                  ganttViewStatus={ganttViewStatus}
-                />
-              }
-            </div>}
+              {!isMobile && settingPanelVisible && <SettingPanel ganttViewStatus={ganttViewStatus} />}
+            </div>
+          }
           primary="second"
           split="vertical"
           onChange={onPanelSizeChange}
@@ -1179,11 +1172,11 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo(prop
         />
 
         {/* Gantt Chart DOM Coordinate System */}
-        <DomGantt 
-          containerWidth={ganttViewWidth} 
-          containerHeight={containerHeight} 
-          gridWidth={gridWidth} 
-          gridVisible={gridVisible} 
+        <DomGantt
+          containerWidth={ganttViewWidth}
+          containerHeight={containerHeight}
+          gridWidth={gridWidth}
+          gridVisible={gridVisible}
           dateUnitType={dateUnitType}
         />
 

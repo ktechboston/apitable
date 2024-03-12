@@ -4,7 +4,7 @@ import { IDropdownProps } from './index';
 
 const DROP_DOWN_OFFSET = 11;
 
-const setIndex = (zIndex: number) => {
+export const setIndex = (zIndex: number) => {
   return {
     name: 'setIndexPlugin',
     fn(state: MiddlewareState) {
@@ -16,19 +16,20 @@ const setIndex = (zIndex: number) => {
   };
 };
 
-const CONST_INITIAL_DROPDOWN_INDEX = 1002;
-export const useFloatUiDropdown = (options: {
-    isOpen: boolean
+export const CONST_INITIAL_DROPDOWN_INDEX = 1202;
+export const useFloatUiDropdown: any = (
+  options: {
+    isOpen: boolean;
     setOpen: (v: boolean) => void;
-    arrowRef: React.MutableRefObject<any>
-    middleware?: Array<Middleware>,
-} & IDropdownProps['options']) => {
-
+    arrowRef: React.MutableRefObject<any>;
+    middleware?: Array<Middleware>;
+  } & IDropdownProps['options']
+) => {
   const { isOpen, setOpen } = options;
   const hasArrow = options.arrow ?? true;
-  const offsetParameter = hasArrow ? DROP_DOWN_OFFSET:4;
+  const offsetParameter = hasArrow ? DROP_DOWN_OFFSET : 4;
 
-  const arrowEnabled = options.arrow?? true;
+  const arrowEnabled = options.arrow ?? true;
 
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
@@ -36,28 +37,30 @@ export const useFloatUiDropdown = (options: {
     placement: options?.placement ?? 'bottom',
     middleware: [
       setIndex(options?.zIndex ?? CONST_INITIAL_DROPDOWN_INDEX),
-      ...(
-        options?.autoWidth === true ? [
-          size({
-            apply({ rects,elements }) {
-              Object.assign(elements.floating.style, {
-                width: `${rects.reference.width}px`,
-              });
-            },
-          })]: []),
+      ...(options?.autoWidth === true
+        ? [
+            size({
+              apply({ rects, elements }) {
+                Object.assign(elements.floating.style, {
+                  width: `${rects.reference.width}px`,
+                });
+              },
+            }),
+          ]
+        : []),
       offset(options?.offset ?? offsetParameter),
       flip({ fallbackAxisSideDirection: 'end' }),
-      ...(
-        arrowEnabled ? [
-          arrow({
-            element: options.arrowRef,
-          })
-        ]: []
-      ),
-      shift()
+      ...(arrowEnabled
+        ? [
+            arrow({
+              element: options.arrowRef,
+            }),
+          ]
+        : []),
+      shift(),
     ].concat(options?.middleware ?? []),
-    whileElementsMounted: autoUpdate
+    whileElementsMounted: autoUpdate,
   });
-  
+
   return { refs, floatingStyles, context };
 };

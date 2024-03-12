@@ -29,8 +29,11 @@ import com.apitable.shared.holder.SpaceHolder;
 import com.apitable.space.dto.GetSpaceListFilterCondition;
 import com.apitable.space.entity.SpaceEntity;
 import com.apitable.space.enums.SpaceResourceGroupCode;
+import com.apitable.space.vo.SeatUsage;
+import com.apitable.space.vo.SpaceSubscribeVo;
 import com.apitable.space.vo.SpaceVO;
 import com.apitable.user.entity.UserEntity;
+import com.apitable.workspace.enums.NodeType;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -57,7 +60,8 @@ public class SpaceServiceImplTest extends AbstractIntegrationTest {
         SpaceHolder.set(mockUserSpace.getSpaceId());
         // check no exceptions
         assertThatNoException().isThrownBy(
-            () -> iSpaceService.checkMemberIsAdmin(mockUserSpace.getSpaceId(), mockUserSpace.getMemberId()));
+            () -> iSpaceService.checkMemberIsAdmin(mockUserSpace.getSpaceId(),
+                mockUserSpace.getMemberId()));
     }
 
     @Test
@@ -121,4 +125,98 @@ public class SpaceServiceImplTest extends AbstractIntegrationTest {
         iSpaceService.checkUserInSpace(user.getId(), userSpace.getSpaceId(),
             status -> assertThat(status).isNotNull().isFalse());
     }
+
+    @Test
+    void testGetNodeCountExcludeFolder() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        String rootNodeId = iNodeService.getRootNodeIdBySpaceId(userSpace.getSpaceId());
+        initNodeTreeMockData(userSpace.getSpaceId(), rootNodeId);
+        long count =
+            iSpaceService.getNodeCountBySpaceId(userSpace.getSpaceId(), NodeType::isFolder);
+        assertThat(count).isNotZero().isEqualTo(5L);
+    }
+
+    @Test
+    void testGetNodeCountExcludeFolderWhenNone() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        long count =
+            iSpaceService.getNodeCountBySpaceId(userSpace.getSpaceId(), NodeType::isFolder);
+        assertThat(count).isZero();
+    }
+
+    @Test
+    void testCheckFileNumOverLimitWithThrownException() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        String rootNodeId = iNodeService.getRootNodeIdBySpaceId(userSpace.getSpaceId());
+        initNodeTreeMockData(userSpace.getSpaceId(), rootNodeId);
+        assertThatThrownBy(() -> iSpaceService.checkFileNumOverLimit(userSpace.getSpaceId()))
+            .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void testCheckFileNumOverLimitWithoutException() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        assertThatNoException().isThrownBy(
+            () -> iSpaceService.checkFileNumOverLimit(userSpace.getSpaceId()));
+    }
+
+    @Test
+    void testGetSpaceSubscriptionInfo() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        SpaceSubscribeVo spaceSubscribeVo =
+            iSpaceService.getSpaceSubscriptionInfo(userSpace.getSpaceId());
+        assertThat(spaceSubscribeVo).isNotNull();
+        assertThat(spaceSubscribeVo.getProduct()).isEqualTo("CE");
+        assertThat(spaceSubscribeVo.getPlan()).isEqualTo("ce_unlimited");
+        assertThat(spaceSubscribeVo.getOnTrial()).isFalse();
+        assertThat(spaceSubscribeVo.getExpireAt()).isNull();
+        assertThat(spaceSubscribeVo.getDeadline()).isNull();
+        assertThat(spaceSubscribeVo.getMaxSeats()).isEqualTo(2L);
+        assertThat(spaceSubscribeVo.getMaxCapacitySizeInBytes()).isEqualTo(1024 * 1024 * 1024L);
+        assertThat(spaceSubscribeVo.getMaxSheetNums()).isEqualTo(5L);
+        assertThat(spaceSubscribeVo.getMaxRowsPerSheet()).isEqualTo(100L);
+        assertThat(spaceSubscribeVo.getMaxRowsInSpace()).isEqualTo(250L);
+        assertThat(spaceSubscribeVo.getMaxAdminNums()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxMirrorNums()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxApiCall()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxGalleryViewsInSpace()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxKanbanViewsInSpace()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxFormViewsInSpace()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxGanttViewsInSpace()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxCalendarViewsInSpace()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getFieldPermissionNums()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getNodePermissionNums()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxMessageCredits()).isEqualTo(0L);
+        assertThat(spaceSubscribeVo.getMaxRemainTimeMachineDays()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxRemainRecordActivityDays()).isEqualTo(-1L);
+        assertThat(spaceSubscribeVo.getMaxAuditQueryDays()).isEqualTo(0);
+        assertThat(spaceSubscribeVo.getAuditQuery()).isFalse();
+        assertThat(spaceSubscribeVo.getRainbowLabel()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getWatermark()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getIntegrationFeishu()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getIntegrationDingtalk()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getIntegrationWeCom()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getIntegrationOfficePreview()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingAddressListIsolation()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingApplyJoinSpace()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingExport()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingCatalogManagement()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingDownloadFile()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingMobile()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingCopyCellData()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingInviteMember()).isEqualTo(false);
+        assertThat(spaceSubscribeVo.getSecuritySettingShare()).isEqualTo(false);
+    }
+
+    @Test
+    void testGetSeatUsage() {
+        MockUserSpace userSpace = createSingleUserAndSpace();
+        // create ai node
+        SeatUsage seatUsage = iSpaceService.getSeatUsage(userSpace.getSpaceId());
+        assertThat(seatUsage).isNotNull();
+        assertThat(seatUsage.getMemberCount()).isEqualTo(1L);
+        assertThat(seatUsage.getTotal()).isEqualTo(1L);
+    }
+
+
 }

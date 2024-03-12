@@ -16,12 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { StoreActions, CacheManager } from '@apitable/core';
+import { CacheManager, StoreActions } from '@apitable/core';
+import { updateSubscription } from 'modules/billing';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
-import { memberStash } from '../../../modules/space/member_stash/member_stash';
-// @ts-ignore
-import { updateSubscription } from 'enterprise';
 
 let spaceId: string | null;
 
@@ -41,10 +39,9 @@ store.subscribe(function spaceIdChange() {
   CacheManager.clear();
   resourceService.instance?.destroy();
   resourceService.instance?.init();
-  memberStash.loadMemberList(spaceId);
+  // memberStash.loadMemberList(spaceId);
 
   store.dispatch(StoreActions.resetUnitInfo());
   // Request subscription information
   updateSubscription?.(spaceId);
 });
-

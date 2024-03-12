@@ -16,15 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useDispatch } from 'react-redux';
+import { IReduxState, StoreActions, Selectors, ConfigConstant, t, Strings, ResourceIdPrefix } from '@apitable/core';
 import { useRequest } from 'pc/hooks';
-
-import {
-  IReduxState, StoreActions, Selectors,
-  ConfigConstant, t, Strings, ResourceIdPrefix,
-} from '@apitable/core';
-import { useSelector, useDispatch } from 'react-redux';
-import { useCatalogTreeRequest } from './use_catalogtree_request';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getPropertyByTree } from 'pc/utils';
+import { useCatalogTreeRequest } from './use_catalogtree_request';
 
 export enum NodeChangeInfoType {
   Create = 'nodeCreate',
@@ -37,20 +34,28 @@ export enum NodeChangeInfoType {
 }
 
 export const useCatalog = () => {
-  const { treeNodesMap, rootId, expandedKeys, editNodeId } = useSelector((state: IReduxState) => state.catalogTree);
-  const activeNodeId = useSelector(state => Selectors.getNodeId(state));
+  const {
+    treeNodesMap, rootId, expandedKeys, editNodeId,
+    privateTreeNodesMap, privateEditNodeId
+  } = useAppSelector((state: IReduxState) => state.catalogTree);
+  const activeNodeId = useAppSelector((state) => Selectors.getNodeId(state));
+  const catalogTreeActiveType = useAppSelector((state) => state.catalogTree.activeType);
+  const isPrivate = catalogTreeActiveType === ConfigConstant.Modules.PRIVATE;
+  const nodesMap = isPrivate ? privateTreeNodesMap : treeNodesMap;
+  const userUnitId = useAppSelector((state) => state.user.info?.unitId);
   const { addNodeReq } = useCatalogTreeRequest();
   const dispatch = useDispatch();
   const { run: addNode, loading: addNodeLoading } = useRequest(addNodeReq, { manual: true });
 
   const checkRepeat = (nodeId: string, str: string, type?: number): boolean => {
-    const parentNodeId = treeNodesMap[nodeId].parentId;
-    const names = getPropertyByTree(treeNodesMap, parentNodeId, [editNodeId], 'nodeName');
+    const _editNodeId = isPrivate ? privateEditNodeId : editNodeId;
+    const parentNodeId = nodesMap[nodeId].parentId;
+    const names = getPropertyByTree(nodesMap, parentNodeId, [_editNodeId], 'nodeName');
     if (type) {
-      const types = getPropertyByTree(treeNodesMap, parentNodeId, [editNodeId], 'type');
-      return ((names.filter((item, index) => item === str && types[index] === type).length >= 1));
+      const types = getPropertyByTree(nodesMap, parentNodeId, [_editNodeId], 'type');
+      return names.filter((item, index) => item === str && types[index] === type).length >= 1;
     }
-    return names.filter(item => item === str).length >= 1;
+    return names.filter((item) => item === str).length >= 1;
   };
 
   const addTreeNode = (
@@ -63,25 +68,29 @@ export const useCatalog = () => {
       return;
     }
     if (!parentNodeId) {
-      parentNodeId = activeNodeId ? treeNodesMap[activeNodeId].parentId : rootId;
+      parentNodeId = activeNodeId ? nodesMap[activeNodeId].parentId : rootId;
     }
     if (parentNodeId !== rootId) {
-      dispatch(StoreActions.setExpandedKeys([...expandedKeys, parentNodeId]));
+      dispatch(StoreActions.setExpandedKeys([...expandedKeys, parentNodeId], catalogTreeActiveType));
     }
-    const childNodes = treeNodesMap[parentNodeId]?.children || [];
-    if (!nodeName && type === ConfigConstant.NodeType.FORM) {
-      const existForm = childNodes.reduce((acc, item) => {
-        if (item.startsWith(ResourceIdPrefix.Form)) {
-          return acc + 1;
-        }
-        return acc;
-      }, 0);
-      nodeName = existForm ? `${t(Strings.view_form)}${existForm + 1}` : t(Strings.view_form);
-    }
-    if (type === ConfigConstant.NodeType.DATASHEET) {
+    const childNodes = nodesMap[parentNodeId]?.children || [];
+    if (type === ConfigConstant.NodeType.FORM) {
+      if (!nodeName) {
+        const existForm = childNodes.reduce((acc, item) => {
+          if (item.startsWith(ResourceIdPrefix.Form)) {
+            return acc + 1;
+          }
+          return acc;
+        }, 0);
+        nodeName = existForm ? `${t(Strings.view_form)}${existForm + 1}` : t(Strings.view_form);
+      }
+    } else if (type === ConfigConstant.NodeType.DATASHEET) {
       extra = { viewName: t(Strings.default_view) };
+    } else if (type === ConfigConstant.NodeType.AI) {
+      // nodeName = t(Strings.ai_new_chatbot);
     }
-    addNode(parentNodeId, type, nodeName, undefined, extra);
+    const unitId = catalogTreeActiveType === ConfigConstant.Modules.PRIVATE ? userUnitId : undefined;
+    addNode(parentNodeId, type, nodeName, undefined, extra, unitId);
   };
 
   return {

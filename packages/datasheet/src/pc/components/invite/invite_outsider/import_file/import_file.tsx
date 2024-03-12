@@ -16,14 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import * as React from 'react';
+import { FC, useEffect, useState } from 'react';
 import { Api, StatusCode, Strings, t } from '@apitable/core';
 import { Message } from 'pc/components/common';
 import { secondStepVerify } from 'pc/hooks/utils';
-import * as React from 'react';
-import { FC, useEffect, useState } from 'react';
 import { BeforeUpload, Fail, FileSelected, Processing, Success } from '../components';
 import { IErrorInfo, IKidType, IUploadFileResponse, KidType } from '../interface';
 import styles from './style.module.less';
+// @ts-ignore
 
 let reqToken: () => void;
 
@@ -67,8 +68,8 @@ export const ImportFile: FC<React.PropsWithChildren<IImportFileProps>> = ({ setM
     setMemberInvited(true);
   };
 
-  const onUploadProgress = (progressEvent: { loaded: number; total: number; }) => {
-    const value = Math.floor(progressEvent.loaded / progressEvent.total * 100);
+  const onUploadProgress = (progressEvent: { loaded: number; total: number }) => {
+    const value = Math.floor((progressEvent.loaded / progressEvent.total) * 100);
     setPercent(value);
   };
 
@@ -82,24 +83,29 @@ export const ImportFile: FC<React.PropsWithChildren<IImportFileProps>> = ({ setM
     nvcVal && formData.append('data', nvcVal);
     Api.uploadMemberFile(formData, onUploadProgress, (c: () => void) => {
       setReqToken(c);
-    }).then(res => {
-      const { success, data, message, code } = res.data;
-      setResponseInfo(data);
-      if (success) {
-        setKid(KidType.Success);
-        updateSpaceMember && updateSpaceMember();
-        setErr('');
-        secondVerify && setSecondVerify(null);
-        setFile(undefined);
-      } else {
-        setKid(KidType.Fail);
-        setErr(message);
-        if (secondStepVerify(code) || code === StatusCode.COMMON_ERR) {
+    })
+      .then((res) => {
+        const { success, data, message, code } = res.data;
+        setResponseInfo(data);
+        if (success) {
+          setKid(KidType.Success);
+          updateSpaceMember && updateSpaceMember();
+          setErr('');
+          secondVerify && setSecondVerify(null);
           setFile(undefined);
+        } else {
+          setKid(KidType.Fail);
+          setErr(message);
+          if (secondStepVerify(code) || code === StatusCode.COMMON_ERR) {
+            setFile(undefined);
+          }
         }
-
-      }
-    });
+      })
+      .catch((e: any) => {
+        setKid(KidType.Fail);
+        setErr(e.message);
+        setFile(undefined);
+      });
   };
 
   useEffect(() => {
@@ -113,23 +119,9 @@ export const ImportFile: FC<React.PropsWithChildren<IImportFileProps>> = ({ setM
   const kidNode = (type: IKidType) => {
     switch (type) {
       case KidType.BeforeUpload:
-        return (
-          <BeforeUpload
-            setFile={(file) => setFile(file)}
-            setKid={setKid}
-            setPreviewList={setPreviewList}
-            setErr={setErr}
-          />
-        );
+        return <BeforeUpload setFile={(file) => setFile(file)} setKid={setKid} setPreviewList={setPreviewList} setErr={setErr} />;
       case KidType.FileSelected:
-        return (
-          <FileSelected
-            init={init}
-            file={file}
-            previewList={previewList}
-            confirmImport={confirmImport}
-          />
-        );
+        return <FileSelected init={init} file={file} previewList={previewList} confirmImport={confirmImport} />;
       case KidType.Processing:
         return <Processing percent={percent} cancel={cancelImport} file={file} />;
       case KidType.Fail:
@@ -141,9 +133,5 @@ export const ImportFile: FC<React.PropsWithChildren<IImportFileProps>> = ({ setM
     }
   };
 
-  return (
-    <div className={styles.importFile}>
-      {kidNode(kid)}
-    </div>
-  );
+  return <div className={styles.importFile}>{kidNode(kid)}</div>;
 };

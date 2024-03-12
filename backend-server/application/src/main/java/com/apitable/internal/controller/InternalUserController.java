@@ -42,11 +42,11 @@ import com.apitable.user.vo.UserBaseInfoVo;
 import com.google.common.collect.Lists;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,7 +57,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @ApiResource(path = "/internal")
-@Tag(name = "Internal Service - User Interface")
+@Tag(name = "Internal")
 public class InternalUserController {
 
     @Resource
@@ -102,8 +102,8 @@ public class InternalUserController {
         false, requiredLogin = false)
     @Operation(summary = "get cooling off users", description = "get cooling off users")
     public ResponseData<List<UserInPausedDto>> getPausedUsers() {
-        List<UserInPausedDto> pausedUserDtos = userService.getPausedUserDtos(null);
-        return ResponseData.success(pausedUserDtos);
+        List<UserInPausedDto> pausedUsers = userService.getPausedUserDtos(null);
+        return ResponseData.success(pausedUsers);
     }
 
     /**
@@ -113,7 +113,7 @@ public class InternalUserController {
         "/getUserHistories", requiredPermission = false, requiredLogin = false)
     @Operation(summary = "get the cooling-off period user operation record", description = "get "
         + "the cooling-off period user operation record")
-    public ResponseData<List<PausedUserHistoryDto>> getUserHistoryDtos(
+    public ResponseData<List<PausedUserHistoryDto>> getUserHistories(
         @RequestBody PausedUserHistoryRo userHistoryRo) {
         LocalDateTime now = ClockManager.me().getLocalDateTimeNow();
         LocalDateTime createdBefore = now.minusDays(30 + userHistoryRo.getLimitDays());
@@ -133,7 +133,7 @@ public class InternalUserController {
             return ResponseData.success(Lists.newArrayList());
         }
         List<Long> pausedUserIds =
-            userDtos.stream().map(UserInPausedDto::getUserId).collect(Collectors.toList());
+            userDtos.stream().map(UserInPausedDto::getUserId).toList();
         // Filter out non-cooling-off accounts (cancelled and cancelled).
         List<PausedUserHistoryDto> pausedUserHistoryDtos = userHistoryDtos
             .stream().filter(historyDto -> pausedUserIds.contains(historyDto.getUserId()))

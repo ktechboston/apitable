@@ -24,11 +24,11 @@ const App = () => {
   return null;
 };
 
-export const getServerSideProps = async(context: NextPageContext) => {
+export const getServerSideProps = async (context: NextPageContext) => {
   axios.defaults.baseURL = getBaseUrl(context);
 
   if (!context.req?.url) {
-    return { props: {}};
+    return { props: {} };
   }
   const cookie = context.req?.headers.cookie;
   const headers: Record<string, string> = {};
@@ -59,9 +59,7 @@ export const getServerSideProps = async(context: NextPageContext) => {
 };
 
 export const config = {
-  unstable_includeFiles: [
-    '../../node_modules/next/dist/compiled/@edge-runtime/primitives/**/*.+(js|json)'
-  ],
+  unstable_includeFiles: ['../../node_modules/next/dist/compiled/@edge-runtime/primitives/**/*.+(js|json)'],
 };
 
 export default App;

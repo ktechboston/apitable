@@ -16,17 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ConfigConstant, Navigation, t, Strings } from '@apitable/core';
-import { AddOutlined, TriangleRightFilled } from '@apitable/icons';
 import { isEmpty, isEqual, xor } from 'lodash';
 import * as React from 'react';
 import { forwardRef, memo, ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-
+import { Button, LinkButton, Typography } from '@apitable/components';
+import { ConfigConstant, Navigation, t, Strings } from '@apitable/core';
+import { AddOutlined, TriangleRightFilled } from '@apitable/icons';
+import { TComponent } from 'pc/components/common/t_component';
+import { Router } from '../../../route_manager/router';
 import { TreeItem } from '../tree_item';
 import TreeViewContext from '../tree_view_context';
 import styles from './style.module.less';
-import { Button, Typography } from '@apitable/components';
-import { Router } from '../../../route_manager/router';
 
 export type ExpandAction = false | 'click';
 
@@ -44,7 +44,7 @@ export interface ITreeViewProps {
   loadData?: (nodeId: string) => Promise<any>;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   onSelect?: (e: React.MouseEvent, selectedKeys: string[] | string) => void;
-  onDoubleClick?: (e: React.MouseEvent, data: { key: string, level: string }) => void;
+  onDoubleClick?: (e: React.MouseEvent, data: { key: string; level: string }) => void;
   onFocus?: (e: React.MouseEvent, nodeId: string) => void;
   onExpand?: (nodeIds: string[]) => void;
   onRightClick?: (e: React.MouseEvent, nodeId: string) => void;
@@ -58,29 +58,32 @@ export interface ITreeViewRef {
   setLoadingNodeId(nodeId: string): void;
 }
 
-export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeViewProps> = ({
-  module,
-  className,
-  switcherIcon = <TriangleRightFilled size={12} />,
-  expandedKeys = [],
-  selectedKeys = [],
-  treeData,
-  indent = 24,
-  expandAction = false,
-  multiple = false,
-  draggable = false,
-  loadData,
-  onKeyDown,
-  onSelect,
-  onFocus,
-  onExpand,
-  onRightClick,
-  onLoad,
-  onDragOver,
-  onDrop,
-  onDoubleClick,
-  children,
-}, ref) => {
+export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeViewProps> = (
+  {
+    module,
+    className,
+    switcherIcon = <TriangleRightFilled size={12} />,
+    expandedKeys = [],
+    selectedKeys = [],
+    treeData,
+    indent = 24,
+    expandAction = false,
+    multiple = false,
+    draggable = false,
+    loadData,
+    onKeyDown,
+    onSelect,
+    onFocus,
+    onExpand,
+    onRightClick,
+    onLoad,
+    onDragOver,
+    onDrop,
+    onDoubleClick,
+    children,
+  },
+  ref,
+) => {
   const expandedIdsRef = useRef<string[]>(expandedKeys || []);
   const selectedIdsRef = useRef<string[]>(selectedKeys || []);
   const [focusedNodeId, setFocusedNodeId] = useState('');
@@ -90,12 +93,12 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
   const [loadingNodeId, setLoadingNodeId] = useState<string>('');
 
   useImperativeHandle(ref, () => ({
-    setLoadingNodeId: (nodeId: string) => setLoadingNodeId(nodeId)
+    setLoadingNodeId: (nodeId: string) => setLoadingNodeId(nodeId),
   }));
 
   useEffect(() => {
     const difference = xor(expandedKeys, expandedIdsRef.current);
-    difference.forEach(nodeId => toggleExpansion(nodeId, true));
+    difference.forEach((nodeId) => toggleExpansion(nodeId, true));
     // eslint-disable-next-line
   }, [expandedKeys]);
 
@@ -106,15 +109,9 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
     selectedIdsRef.current = selectedKeys;
   }, [selectedKeys]);
 
-  const isExpanded = useCallback(
-    (id: string) => expandedIdsRef.current.indexOf(id) !== -1,
-    []
-  );
+  const isExpanded = useCallback((id: string) => expandedIdsRef.current.indexOf(id) !== -1, []);
 
-  const isSelected = useCallback(
-    (id: string) => selectedIdsRef.current.indexOf(id) !== -1,
-    []
-  );
+  const isSelected = useCallback((id: string) => selectedIdsRef.current.indexOf(id) !== -1, []);
 
   const isFocused = (id: string) => focusedNodeId === id;
 
@@ -127,13 +124,13 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
 
   /**
    * Expand/Collapse Nodes
-   * @param nodeId 
+   * @param nodeId
    * @param passive Is it a passive operation
    */
   const toggleExpansion = (nodeId: string = focusedNodeId, passive = false): Promise<any> | undefined => {
     // Putting away operations
     if (expandedIdsRef.current.includes(nodeId)) {
-      const newExpandedIds = expandedIdsRef.current.filter(id => id !== nodeId);
+      const newExpandedIds = expandedIdsRef.current.filter((id) => id !== nodeId);
       expandedIdsRef.current = newExpandedIds;
       if (!passive) {
         onExpand?.(newExpandedIds);
@@ -160,6 +157,10 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
       pos,
     };
 
+    if(child === null) {
+      return null;
+    }
+
     return React.cloneElement(child, cloneProps);
   };
 
@@ -172,22 +173,13 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
   const renderTree = (children: any[], parentNode = null, level = '0') => {
     return children.map((node, index) => {
       if (node.children && node.children.length) {
-        return <TreeItem
-          key={node.nodeId}
-          nodeId={node.nodeId}
-          label={node.label}
-          pos={`${level}-${index}`}
-          parentNode={parentNode}
-        >
-          {renderTree(node.children, node, level)}
-        </TreeItem>;
+        return (
+          <TreeItem key={node.nodeId} nodeId={node.nodeId} label={node.label} pos={`${level}-${index}`} parentNode={parentNode}>
+            {renderTree(node.children, node, level)}
+          </TreeItem>
+        );
       }
-      return <TreeItem
-        key={node.nodeId}
-        nodeId={node.nodeId}
-        label={node.label}
-        parentNode={parentNode}
-      />;
+      return <TreeItem key={node.nodeId} nodeId={node.nodeId} label={node.label} parentNode={parentNode} />;
     });
   };
 
@@ -207,11 +199,11 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
     onKeyDown && onKeyDown(e);
   };
 
-  const dragStart = (treeNode: { id: React.SetStateAction<string>; }) => {
+  const dragStart = (treeNode: { id: React.SetStateAction<string> }) => {
     setDragNodesId(treeNode.id);
   };
 
-  const dragOver = (treeNode: { id: any; }) => {
+  const dragOver = (treeNode: { id: any }) => {
     onDragOver && onDragOver({ dragNodeId, targetNodeId: treeNode.id, ...treeNode });
   };
 
@@ -253,21 +245,30 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
         drop,
       }}
     >
-      <ul
-        role="tree"
-        aria-labelledby="tree_label"
-        className={`${className} treeViewRoot`}
-        onKeyDown={keyDownHandler}
-        tabIndex={0}
-      >
-        {treeData ? renderTree(treeData) : isEmpty(children) ? (
+      <ul role="tree" aria-labelledby="tree_label" className={`${className} treeViewRoot`} onKeyDown={keyDownHandler} tabIndex={0}>
+        {treeData ? (
+          renderTree(treeData)
+        ) : isEmpty(children) ? (
           <div className={styles.empty}>
             <Typography variant="body2">
-              {t(Strings.catalog_empty_tips)}
+              {module === ConfigConstant.Modules.PRIVATE ? (
+                <TComponent
+                  tkey={t(Strings.create_private_node_tip)}
+                  params={{
+                    link: (
+                      <LinkButton
+                        href={t(Strings.private_help_link)}
+                      >
+                        {t(Strings.know_more)}
+                      </LinkButton>
+                    ),
+                  }}
+                />
+              ) : t(Strings.catalog_empty_tips)}
             </Typography>
             <Button
               color="primary"
-              prefixIcon={<AddOutlined/>}
+              prefixIcon={<AddOutlined />}
               block
               onClick={() => {
                 Router.push(Navigation.TEMPLATE);
@@ -276,10 +277,11 @@ export const TreeViewBase: React.ForwardRefRenderFunction<ITreeViewRef, ITreeVie
               {t(Strings.catalog_add_from_template_btn_title)}
             </Button>
           </div>
-        ) : React.Children.map(children, renderTreeItem)}
+        ) : (
+          React.Children.map(children, renderTreeItem)
+        )}
       </ul>
     </TreeViewContext.Provider>
-
   );
 };
 

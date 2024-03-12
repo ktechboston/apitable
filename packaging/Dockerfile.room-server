@@ -3,46 +3,46 @@ FROM apitable/node:v16.15.0 AS deps
 
 WORKDIR /app
 
-COPY .yarn ./.yarn
-
 # install packages can use cache
-COPY ./.yarnrc.yml ./package.json ./yarn.lock ./common-tsconfig.json ./
+COPY ./pnpm-workspace.yaml ./package.json ./pnpm-lock.yaml ./common-tsconfig.json ./
 
 COPY packages/i18n-lang/package.json ./packages/i18n-lang/
 
 COPY packages/core/package.json ./packages/core/
 
-COPY packages/databus-wasm/package.json ./packages/databus-wasm/
+COPY packages/databus-wasm-web/package.json ./packages/databus-wasm-web/
+COPY packages/databus-wasm-nodejs/package.json ./packages/databus-wasm-nodejs/
 
 COPY packages/room-server/package.json ./packages/room-server/
 
-RUN yarn workspaces focus @apitable/room-server root
+RUN pnpm install --filter @apitable/room-server --filter root
 
 # stage builder
-FROM apitable/room-server-builder:v16.15.0 AS builder
+FROM apitable/node:v16.15.0 AS builder
 
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/i18n-lang/node_modules ./packages/i18n-lang/node_modules
+COPY --from=deps /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=deps /app/packages/room-server/node_modules ./packages/room-server/node_modules
 
-COPY .yarn ./.yarn
-
-COPY ./.yarnrc.yml ./package.json ./yarn.lock ./common-tsconfig.json ./
+COPY ./pnpm-workspace.yaml ./package.json ./pnpm-lock.yaml ./common-tsconfig.json ./nx.json ./
 
 COPY packages/i18n-lang ./packages/i18n-lang
 
-COPY packages/databus-wasm ./packages/databus-wasm
+COPY packages/databus-wasm-web ./packages/databus-wasm-web
+COPY packages/databus-wasm-nodejs ./packages/databus-wasm-nodejs
 
 COPY packages/core ./packages/core
 
 COPY packages/room-server ./packages/room-server
 
-RUN yarn build:sr
+RUN pnpm run build:sr
 
 ARG KEEP_DEV_DEP
 
-RUN if [ "$KEEP_DEV_DEP" = "" ] ; then yarn workspaces focus @apitable/room-server --production; fi
+RUN if [ "$KEEP_DEV_DEP" = "" ] ; then pnpm install --filter @apitable/room-server; fi
 
 # stage runner
 FROM apitable/node:v16.15.0 AS runner
@@ -70,7 +70,7 @@ EXPOSE 3333
 EXPOSE 3334
 # socket:notification
 EXPOSE 3002
-# socket:datasheet
+# socket:workdoc
 EXPOSE 3006
 # socket:room
 EXPOSE 3005

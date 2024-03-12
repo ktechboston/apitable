@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { memo } from 'react';
 import { withTheme } from '../core';
-// import { withTheme } from '@rjsf/core';
 import { theme } from './theme';
-export const MagicVariableForm = withTheme(theme as any);
+export const MagicVariableForm = memo(withTheme(theme as any));

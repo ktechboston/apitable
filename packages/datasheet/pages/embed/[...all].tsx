@@ -15,48 +15,41 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 import { NextPageContext } from 'next';
 import dynamic from 'next/dynamic';
-import { getRegResult, embedIdReg } from 'pc/hooks';
 import React from 'react';
+import { getRegResult, embedIdReg } from 'pc/hooks';
 // @ts-ignore
-import { IEmbedProps } from 'enterprise';
+import { IEmbedProps } from 'enterprise/embed/embed';
 
-// @ts-ignore
-const DynamicComponentWithNoSSR = dynamic(() => import('enterprise').then((components) => {
-  return components.Embed;
-}), { ssr: false });
+const DynamicComponentWithNoSSR = dynamic(
+  () =>
+    // @ts-ignore
+    import('enterprise/embed/embed').then((components) => {
+      return components.Embed;
+    }),
+  { ssr: false },
+);
 
 const App = (props: IEmbedProps) => {
   return DynamicComponentWithNoSSR && <DynamicComponentWithNoSSR {...props} />;
 };
 
 export const getServerSideProps = (context: NextPageContext) => {
-
   if (!context.req?.url) {
-    return { props: {}};
+    return { props: {} };
   }
 
   const embedId = getRegResult(context.req.url, embedIdReg);
 
   if (!embedId) {
-    return { props: {}};
-  }
-
-  const cookie = context.req?.headers.cookie;
-
-  const headers: Record<string, string> = {};
-
-  if (cookie) {
-    headers.cookie = cookie;
+    return { props: {} };
   }
 
   return {
     props: {
       embedId,
-      headers
-    }
+    },
   };
 };
 

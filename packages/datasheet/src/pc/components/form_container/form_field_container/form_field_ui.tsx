@@ -16,24 +16,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { colorVars, IconButton, useContextMenu } from '@apitable/components';
-import { ConfigConstant, Selectors, Strings, t } from '@apitable/core';
-import { AddOutlined, MoreOutlined } from '@apitable/icons';
 import classnames from 'classnames';
 import isNumber from 'lodash/isNumber';
+import * as React from 'react';
+// @ts-ignore
+import Clamp from 'react-multiline-clamp';
+import { colorVars, IconButton, LinkButton, useContextMenu } from '@apitable/components';
+import { ConfigConstant, Selectors, Strings, t } from '@apitable/core';
+import { AddOutlined, MoreOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Tooltip } from 'pc/components/common';
 import { useAppendField } from 'pc/components/expand_record/hooks/use_append_field';
 import { useEditDesc } from 'pc/components/expand_record/hooks/use_edit_desc';
 import { useEditField } from 'pc/components/expand_record/hooks/use_edit_field';
-
 import { FormContext } from 'pc/components/form_container/form_context';
-import { UrlDiscern } from 'pc/components/multi_grid/cell/cell_text/url_discern';
+import { useAppSelector } from 'pc/store/react-redux';
 import { isTouchDevice } from 'pc/utils';
-import * as React from 'react';
-import { useSelector } from 'react-redux';
-
 import styles from './style.module.less';
+
+const DESC_MAX_LINES = 5;
 
 interface IFormFieldUIProps {
   index: number;
@@ -60,14 +61,14 @@ export const FormFieldUI: React.FC<React.PropsWithChildren<IFormFieldUIProps>> =
   editable,
 }) => {
   const { formProps } = React.useContext(FormContext);
-  const formState = useSelector(state => Selectors.getForm(state));
+  const formState = useAppSelector((state) => Selectors.getForm(state));
 
   const { show: showMenu } = useContextMenu({ id: ConfigConstant.ContextMenuType.FORM_FIELD_OP });
   const onEditField = useEditField({ datasheetId, fieldId, colIndex });
   const onEditDesc = useEditDesc({ datasheetId, fieldId, colIndex });
   const onAppendField = useAppendField(datasheetId);
 
-  const descIsEmpty = React.useMemo(() => isNumber(desc) ? false : !desc, [desc]);
+  const descIsEmpty = React.useMemo(() => (isNumber(desc) ? false : !desc), [desc]);
 
   const onShowMenu = (e: any) => {
     e.persist();
@@ -78,7 +79,7 @@ export const FormFieldUI: React.FC<React.PropsWithChildren<IFormFieldUIProps>> =
         onInsertBelow: () => onAppendField(e, Number(colIndex)),
         onEdit: editable ? () => onEditField(e) : null,
         onEditDesc: () => onEditDesc(e),
-      }
+      },
     });
   };
 
@@ -118,7 +119,28 @@ export const FormFieldUI: React.FC<React.PropsWithChildren<IFormFieldUIProps>> =
         )}
       </h4>
       {/* {errorMsg && <div className={styles.errorMsg}>{errorMsg}</div>} */}
-      {!descIsEmpty && <pre className={styles.fieldDesc}><UrlDiscern value={desc} /></pre>}
+      {!descIsEmpty && (
+        <Clamp
+          lines={DESC_MAX_LINES}
+          maxLines={1000}
+          withToggle
+          withTooltip={false}
+          showMoreElement={({ toggle }: { toggle: (e: React.MouseEvent) => void }) => (
+            <LinkButton underline={false} onClick={toggle} className={styles.showMore}>
+              {t(Strings.see_more)}
+            </LinkButton>
+          )}
+          showLessElement={({ toggle }: { toggle: (e: React.MouseEvent) => void }) => (
+            <LinkButton underline={false} onClick={toggle} className={styles.showLess}>
+              {t(Strings.collapse)}
+            </LinkButton>
+          )}
+        >
+          <pre className={styles.fieldDesc}>
+            {desc}
+          </pre>
+        </Clamp>
+      )}
       {children}
     </div>
   );

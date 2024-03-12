@@ -25,13 +25,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as Sentry from '@sentry/node';
 import * as Tracing from '@sentry/tracing';
 import { Client } from '@sentry/types';
-import { disableHSTS, enableSocket, enableSwagger, isDevMode, PROJECT_DIR } from 'app.environment';
+import { disableHSTS, enableHocuspocus, enableSocket, enableSwagger, isDevMode, PROJECT_DIR } from 'app.environment';
 import { DatabaseModule } from 'database/database.module';
 import { DeveloperService } from 'developer/services/developer.service';
 import { FastifyInstance } from 'fastify';
 import helmet from 'fastify-helmet';
 import fastifyMultipart from 'fastify-multipart';
 import {
+  ButtonFieldPropertyDto,
   CheckboxFieldPropertyDto,
   CurrencyFieldPropertyDto,
   DateTimeFieldPropertyDto,
@@ -50,9 +51,10 @@ import { HelmetOptions } from 'helmet';
 import { NodeRepository } from 'node/repositories/node.repository';
 import path, { join } from 'path';
 import { APPLICATION_NAME, BootstrapConstants } from 'shared/common/constants/bootstrap.constants';
-import { SocketConstants } from 'shared/common/constants/socket.module.constants';
+import { GatewayConstants, SocketConstants } from 'shared/common/constants/socket.module.constants';
 import { RedisIoAdapter } from 'socket/adapter/redis/redis-io.adapter';
 import { SocketIoService } from 'socket/services/socket-io/socket-io.service';
+import { HocuspocusBaseService } from 'workdoc/services/hocuspocus.base.service';
 import {
   AUTHORIZATION_PREFIX,
   DATASHEET_ENRICH_SELECT_FIELD,
@@ -99,15 +101,16 @@ export const initSwagger = (app: INestApplication) => {
         LinkFieldPropertyDto,
         LookupFieldPropertyDto,
         FormulaFieldPropertyDto,
+        ButtonFieldPropertyDto,
       ],
     });
     SwaggerModule.setup('nest/v1/docs', app, document);
   }
 };
 
-export const initFastify = async(): Promise<FastifyAdapter> => {
+export const initFastify = async (): Promise<FastifyAdapter> => {
   const fastifyAdapter = new FastifyAdapter({ logger: isDevMode, bodyLimit: GRPC_MAX_PACKAGE_SIZE });
-  await fastifyAdapter.register(fastifyMultipart);
+  await fastifyAdapter.register(fastifyMultipart as any);
   // register helmet in fastify to avoid conflict with swagger
   let helmetOptions: HelmetOptions = {
     // update script-src to be compatible with swagger
@@ -128,9 +131,9 @@ export const initFastify = async(): Promise<FastifyAdapter> => {
     },
   };
   if (disableHSTS) {
-    helmetOptions = { ...helmetOptions, hsts: false };
+    helmetOptions = { ...helmetOptions, hsts: false } as any;
   }
-  await fastifyAdapter.register(helmet, helmetOptions);
+  await fastifyAdapter.register(helmet as any, helmetOptions);
 
   return fastifyAdapter;
 };
@@ -147,12 +150,12 @@ export const initHttpHook = (app: INestApplication) => {
   fastify.decorateRequest(REQUEST_ID, null);
   fastify.decorateRequest(REQUEST_AT, null);
 
-  fastify.addHook('preHandler', async(request) => {
+  fastify.addHook('preHandler', async (request) => {
     request[REQUEST_AT] = Date.now();
     request[REQUEST_ID] = generateRandomString();
     if (request.headers.authorization && request.headers.authorization.startsWith(AUTHORIZATION_PREFIX)) {
       const developerService = app.select(DatabaseModule).get(DeveloperService);
-      const apiKey =request.headers.authorization.slice(AUTHORIZATION_PREFIX.length);
+      const apiKey = request.headers.authorization.slice(AUTHORIZATION_PREFIX.length);
       request[USER_HTTP_DECORATE] = await developerService.getUserInfoByApiKey(apiKey);
     }
     if ((request.params as any)['spaceId']) {
@@ -277,4 +280,13 @@ export const initRedisIoAdapter = (app: INestApplication) => {
   // Reduce the number of connections to redis, there is no need to establish a handshake, just establish a connection
   app.useWebSocketAdapter(new RedisIoAdapter(app, socketIoService));
   return app;
+};
+
+export const initHocuspocus = (app: INestApplication) => {
+  if (!enableHocuspocus) {
+    return;
+  }
+  const hocuspocusBaseService = app.get(HocuspocusBaseService);
+  const server = hocuspocusBaseService.init(GatewayConstants.DOCUMENT_PORT);
+  server.listen();
 };

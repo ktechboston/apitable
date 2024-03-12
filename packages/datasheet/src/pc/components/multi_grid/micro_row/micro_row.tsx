@@ -16,20 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { IGridViewColumn, Selectors, Strings, t, StoreActions } from '@apitable/core';
-import { store } from 'pc/store';
 import { Modal } from 'antd';
 import * as React from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
+import { shallowEqual } from 'react-redux';
+import { IGridViewColumn, Selectors, Strings, t, StoreActions } from '@apitable/core';
+import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { CellValue } from '../cell/cell_value';
 import styles from './styles.module.less';
+
 const { getSnapshot, getVisibleColumns, getGridViewDragState } = Selectors;
 
 const MicroRowBase: React.FC<React.PropsWithChildren<unknown>> = () => {
-  const {
-    snapshot, recordRanges, rowsIndexMap,
-    visibleColumn, dragTarget, datasheetId,
-  } = useSelector(state => {
+  const { snapshot, recordRanges, rowsIndexMap, visibleColumn, dragTarget, datasheetId } = useAppSelector((state) => {
     const { dragTarget } = getGridViewDragState(state);
     return {
       snapshot: getSnapshot(state)!,
@@ -45,7 +44,7 @@ const MicroRowBase: React.FC<React.PropsWithChildren<unknown>> = () => {
   const recordDataCollection: string[] = [];
   const isExistInQueue = recordRanges && recordRanges.includes(recordId);
 
-  if (recordId && !(rowsIndexMap.has(recordId))) {
+  if (recordId && !rowsIndexMap.has(recordId)) {
     // Determine if the current record being dragged has been deleted by the collaborator
     store.dispatch(StoreActions.setDragTarget(datasheetId, {}));
     Modal.error({
@@ -77,15 +76,13 @@ const MicroRowBase: React.FC<React.PropsWithChildren<unknown>> = () => {
 
   return (
     <div className={styles.microRowWrapper}>
-      {
-        recordDataCollection.slice(0, 3).map(recordId => {
-          return (
-            <div className={styles.microRowLine} key={recordId}>
-              {CellElement(recordId)}
-            </div>
-          );
-        })
-      }
+      {recordDataCollection.slice(0, 3).map((recordId) => {
+        return (
+          <div className={styles.microRowLine} key={recordId}>
+            {CellElement(recordId)}
+          </div>
+        );
+      })}
     </div>
   );
 };

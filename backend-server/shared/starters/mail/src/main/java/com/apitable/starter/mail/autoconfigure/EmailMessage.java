@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * <p>
- * Mail Message Template
+ * Mail Message Template.
  * </p>
  *
  * @author Benson Cheung
@@ -32,12 +32,14 @@ import java.util.Map;
 public class EmailMessage {
 
     /**
-     * Sender Personalized Name
+     * Sender Personalized Name.
      */
     private String personal;
 
+    private String from;
+
     /**
-     * Recipient list (multiple supported)
+     * Recipient list (multiple supported).
      */
     private List<String> to;
 
@@ -52,27 +54,27 @@ public class EmailMessage {
     private List<String> cc;
 
     /**
-     * Message subject
+     * Message subject.
      */
     private String subject;
 
     /**
-     * Plain text content
+     * Plain text content.
      */
     private String plainText;
 
     /**
-     * html text
+     * html text.
      */
     private String htmlText;
 
     /**
-     * Embedded resources (pictures, files, etc.)
+     * Embedded resources (pictures, files, etc.).
      */
     private Map<String, InputStream> inlines;
 
     /**
-     * attaches resources
+     * attaches resources.
      */
     private List<EmailAttach> attaches;
 
@@ -82,6 +84,14 @@ public class EmailMessage {
 
     public void setPersonal(String personal) {
         this.personal = personal;
+    }
+
+    public String getFrom() {
+        return from;
+    }
+
+    public void setFrom(String from) {
+        this.from = from;
     }
 
     public List<String> getTo() {
@@ -144,6 +154,9 @@ public class EmailMessage {
         this.attaches = attaches;
     }
 
+    /**
+     * email attch class.
+     */
     public static class EmailAttach {
 
         private String attachName;

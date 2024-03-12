@@ -16,23 +16,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useCallback, useMemo, useState } from 'react';
 import { Message } from '@apitable/components';
 import { Api, ApiInterface } from '@apitable/core';
-import { useCallback, useMemo, useState } from 'react';
 
 export type IRoleItem = ApiInterface.IGetRoleListResponseItem;
 
 export const useRoleRequest = (): {
   data: {
     isOpen: boolean;
-    roles: IRoleItem[]
+    roles: IRoleItem[];
   };
   run: () => Promise<ApiInterface.IGetRoleListResponse | undefined>;
 } => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [roles, setRoles] = useState<IRoleItem[]>([]);
 
-  const getRoleList = useCallback(async() => {
+  const getRoleList = useCallback(async () => {
     const res = await Api.getRoleList();
     const { data } = res;
     if (!data.success) {

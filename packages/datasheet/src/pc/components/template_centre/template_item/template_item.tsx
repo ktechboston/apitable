@@ -16,17 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import classNames from 'classnames';
+import React, { useState } from 'react';
+import { shallowEqual } from 'react-redux';
 import { Typography, useThemeColors } from '@apitable/components';
 import { ConfigConstant, IReduxState, Strings, t } from '@apitable/core';
 import { DeleteOutlined, MoreOutlined, PlanetOutlined } from '@apitable/icons';
-import classNames from 'classnames';
 import { Avatar, AvatarSize } from 'pc/components/common/avatar';
 import { ButtonBase } from 'pc/components/common/button_base/button_base';
 import { ComponentDisplay, ScreenSize } from 'pc/components/common/component_display';
 import { Tag } from 'pc/components/common/tag/tag';
 import { MyTrigger } from 'pc/components/multi_grid/format/trigger';
-import React, { useState } from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
+import { useAppSelector } from 'pc/store/react-redux';
 import AvatarBgIcon from 'static/icon/template/template_img_cardbg.svg';
 import styles from './style.module.less';
 
@@ -63,7 +64,7 @@ export interface ITemplateItemProps {
   onClick?: ({ event, templateId }: { event: React.MouseEvent; templateId: string }) => void;
 }
 
-export const TemplateItem: React.FC<React.PropsWithChildren<ITemplateItemProps>> = props => {
+export const TemplateItem: React.FC<React.PropsWithChildren<ITemplateItemProps>> = (props) => {
   const colors = useThemeColors();
   const {
     img,
@@ -83,7 +84,7 @@ export const TemplateItem: React.FC<React.PropsWithChildren<ITemplateItemProps>>
     bannerType = ConfigConstant.BannerType.LARGE,
   } = props;
   const [showPopup, setShowPopup] = useState(false);
-  const { user, spaceResource } = useSelector(
+  const { user, spaceResource } = useAppSelector(
     (state: IReduxState) => ({
       user: state.user.info,
       spaceResource: state.spacePermissionManage.spaceResource,
@@ -192,30 +193,33 @@ export const TemplateItem: React.FC<React.PropsWithChildren<ITemplateItemProps>>
 
   return (
     <div className={classNames(styles.templateItem, { [styles.card]: type == Types.CARD })} onClick={handleClick}>
-      {isAction && <div onClick={stopPropagation}>
-        <ComponentDisplay minWidthCompatible={ScreenSize.md}>
-          <MyTrigger
-            className={styles.moreBtnWrapper}
-            showPopup={showPopup}
-            setShowPopup={setShowPopup}
-            popup={menu()}
-            popupStyle={{
-              width: 240,
-              zIndex: 101,
-            }}
-            popupAlign={{
-              points: ['tl', 'tl'],
-              offset: [0, 40],
-              overflow: {
-                adjustX: true,
-                adjustY: true,
-              },
-            }}
-            trigger={<ButtonBase size="x-small" shape="circle" shadow icon={<MoreOutlined color={colors.secondLevelText}/>}
-              className={styles.moreBtn}/>}
-          />
-        </ComponentDisplay>
-      </div>}
+      {isAction && (
+        <div onClick={stopPropagation}>
+          <ComponentDisplay minWidthCompatible={ScreenSize.md}>
+            <MyTrigger
+              className={styles.moreBtnWrapper}
+              showPopup={showPopup}
+              setShowPopup={setShowPopup}
+              popup={menu()}
+              popupStyle={{
+                width: 240,
+                zIndex: 101,
+              }}
+              popupAlign={{
+                points: ['tl', 'tl'],
+                offset: [0, 40],
+                overflow: {
+                  adjustX: true,
+                  adjustY: true,
+                },
+              }}
+              trigger={
+                <ButtonBase size="x-small" shape="circle" shadow icon={<MoreOutlined color={colors.secondLevelText} />} className={styles.moreBtn} />
+              }
+            />
+          </ComponentDisplay>
+        </div>
+      )}
       <div
         className={classNames(styles.wrapper, {
           [styles.banner]: type === Types.BANNER,

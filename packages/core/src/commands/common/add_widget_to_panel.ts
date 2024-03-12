@@ -19,8 +19,9 @@
 import { CollaCommandName } from 'commands/index';
 import { ExecuteResult, ICollaCommandDef, ICollaCommandExecuteContext } from 'command_manager';
 import { IJOTAction } from 'engine';
-import { DatasheetActions } from 'model';
-import { getResourceWidgetPanels, getResourceWidgetPanelStatus } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { getResourceWidgetPanels, getResourceWidgetPanelStatus } from 'modules/database/store/selectors/resource';
+
 import { ResourceType } from 'types';
 import { addWidgetPanel } from 'commands/common/add_widget_panel';
 
@@ -35,7 +36,7 @@ export const addWidgetToPanel: ICollaCommandDef<IAddWidgetToPanel> = {
   undoable: false,
 
   execute(context: ICollaCommandExecuteContext, options) {
-    const { model: state } = context;
+    const { state: state } = context;
     const { widgetId, resourceId, resourceType } = options;
     const widgetPanels = getResourceWidgetPanels(state, resourceId, resourceType);
     let panelIndex = 0;

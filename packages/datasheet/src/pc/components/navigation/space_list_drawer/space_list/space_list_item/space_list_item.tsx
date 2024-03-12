@@ -16,16 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useThemeColors } from '@apitable/components';
-import { IReduxState, ISpaceInfo, IUserInfo, Navigation, Strings, t } from '@apitable/core';
-import { LogoutOutlined, MoreStandOutlined, SettingOutlined } from '@apitable/icons';
 import { useUpdateEffect } from 'ahooks';
 import { Popover } from 'antd';
 import classnames from 'classnames';
-// @ts-ignore
-import { isSocialPlatformEnabled, SocialPlatformMap } from 'enterprise';
 import { truncate } from 'lodash';
 import Image from 'next/image';
+import * as React from 'react';
+import { FC, useContext, useState } from 'react';
+import { useThemeColors } from '@apitable/components';
+import { IReduxState, ISpaceInfo, IUserInfo, Navigation, Strings, t } from '@apitable/core';
+import { LogoutOutlined, MoreStandOutlined, SettingOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Avatar, AvatarSize, AvatarType, ButtonPlus, ContextmenuItem, Modal, Tooltip } from 'pc/components/common';
 import { ScreenSize } from 'pc/components/common/component_display';
@@ -33,9 +33,11 @@ import { TComponent } from 'pc/components/common/t_component';
 import { NavigationContext } from 'pc/components/navigation/navigation_context';
 import { Router } from 'pc/components/route_manager/router';
 import { useNotificationCreate, useResponsive } from 'pc/hooks';
-import * as React from 'react';
-import { FC, useContext, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from 'pc/store/react-redux';
+// @ts-ignore
+import { SocialPlatformMap } from 'enterprise/home/social_platform/config';
+// @ts-ignore
+import { isSocialPlatformEnabled } from 'enterprise/home/social_platform/utils';
 import styles from './style.module.less';
 
 export interface ISpaceListItemProps {
@@ -45,16 +47,11 @@ export interface ISpaceListItemProps {
   refreshList?: () => void;
 }
 
-export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = ({
-  spaceInfo,
-  actived = false,
-  managable = false,
-  refreshList
-}) => {
+export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = ({ spaceInfo, actived = false, managable = false, refreshList }) => {
   const colors = useThemeColors();
   const [visible, setVisible] = useState(false);
   const { closeSpaceListDrawer } = useContext(NavigationContext);
-  const user = useSelector((state: IReduxState) => state.user.info) as IUserInfo;
+  const user = useAppSelector((state: IReduxState) => state.user.info) as IUserInfo;
   const { memberQuitSpaceAndNotice } = useNotificationCreate({ fromUserId: user.uuid, spaceId: user.spaceId });
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
@@ -65,7 +62,7 @@ export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = (
   useUpdateEffect(() => {
     if (user) {
       closeSpaceListDrawer();
-      Router.push(Navigation.SPACE_MANAGE, { params: { spaceId: user.spaceId }});
+      Router.push(Navigation.SPACE_MANAGE, { params: { spaceId: user.spaceId } });
     }
   }, [user.spaceId]);
 
@@ -76,7 +73,7 @@ export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = (
   const jumpSpaceManagement = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     e.stopPropagation();
     if (user.spaceId === spaceId) {
-      Router.push(Navigation.SPACE_MANAGE, { params: { spaceId }});
+      Router.push(Navigation.SPACE_MANAGE, { params: { spaceId } });
     } else {
       window.location.href = `${domain}/management?spaceId=${spaceId}`;
     }
@@ -129,7 +126,7 @@ export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = (
       <div className={styles.leftItem}>
         <div className={styles.name}>{name}</div>
         {isSocialPlatformEnabled?.(spaceInfo) && (
-          <Tooltip title={SocialPlatformMap?.[spaceInfo.social.platform].toolTipInSpaceListItem || ''} placement='top'>
+          <Tooltip title={SocialPlatformMap?.[spaceInfo.social.platform].toolTipInSpaceListItem || ''} placement="top">
             <span className={styles.platformTag}>
               <Image src={SocialPlatformMap?.[spaceInfo.social.platform].logo || ''} alt={''} />
             </span>
@@ -146,8 +143,8 @@ export const SpaceListItem: FC<React.PropsWithChildren<ISpaceListItemProps>> = (
         !isSocialPlatformEnabled?.(spaceInfo) && (
           <Popover
             overlayClassName={styles.menu}
-            trigger='click'
-            placement='right'
+            trigger="click"
+            placement="right"
             align={{ offset: [25] }}
             visible={visible}
             mouseLeaveDelay={0}

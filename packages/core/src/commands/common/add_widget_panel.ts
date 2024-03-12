@@ -19,9 +19,10 @@
 import { CollaCommandName } from 'commands/index';
 import { ExecuteResult, ICollaCommandDef, ICollaCommandExecuteContext } from 'command_manager';
 import { Strings, t } from '../../exports/i18n';
-import { DatasheetActions } from 'model';
-import { IMirrorSnapshot, ISnapshot, IWidgetPanel } from '../../exports/store';
-import { getMirrorSnapshot, getSnapshot } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { IMirrorSnapshot, ISnapshot, IWidgetPanel } from 'exports/store/interfaces';
+import { getSnapshot } from 'modules/database/store/selectors/resource/datasheet/base';
+import { getMirrorSnapshot } from 'modules/database/store/selectors/resource/mirror';
 import { ResourceType } from 'types';
 import { getNewId, getUniqName, IDPrefix } from 'utils';
 
@@ -35,7 +36,7 @@ export const addWidgetPanel: ICollaCommandDef<IAddWidgetPanel> = {
   undoable: false,
 
   execute(context: ICollaCommandExecuteContext, options: IAddWidgetPanel) {
-    const { model: state } = context;
+    const { state: state } = context;
     const { resourceId, resourceType } = options;
     const snapshot = resourceType === ResourceType.Datasheet ? getSnapshot(state, resourceId)! : getMirrorSnapshot(state, resourceId)!;
     const widgetPanels = (resourceType === ResourceType.Datasheet ? (snapshot as ISnapshot).meta.widgetPanels :

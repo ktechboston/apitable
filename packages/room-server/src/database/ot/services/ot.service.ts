@@ -51,7 +51,7 @@ import { ResourceService } from 'database/resource/services/resource.service';
 import { RoomResourceRelService } from 'database/resource/services/room.resource.rel.service';
 import { RobotEventService } from 'database/robot/services/robot.event.service';
 import { DatasheetRecordSubscriptionBaseService } from 'database/subscription/datasheet.record.subscription.base.service';
-import { GrpcSocketClient } from 'grpc/client/grpc.socket.client';
+import { SocketGrpcClient } from 'grpc/client/socket.grpc.client';
 import { difference, intersection, isEqual, isNil, sortBy, union } from 'lodash';
 import { NodePermissionService } from 'node/services/node.permission.service';
 import { NodeService } from 'node/services/node.service';
@@ -79,6 +79,7 @@ import {
 } from '../interfaces/ot.interface';
 import { FormOtService } from './form.ot.service';
 import { ResourceChangeHandler } from './resource.change.handler';
+import { OTEventService } from 'shared/event/ot.event.service';
 
 class CellActionMap {
   readonly map: Map<string, Map<string, IJOTAction>> = new Map();
@@ -136,9 +137,8 @@ export class OtService {
     private readonly datasheetService: DatasheetService,
     private readonly datasheetChangesetService: DatasheetChangesetService,
     private readonly datasheetChangesetSourceService: DatasheetChangesetSourceService,
-    private readonly datasheetRecordSubscriptionService: DatasheetRecordSubscriptionBaseService,
     private readonly relService: RoomResourceRelService,
-    private readonly grpcSocketClient: GrpcSocketClient,
+    private readonly socketGrpcClient: SocketGrpcClient,
     private readonly changesetService: ChangesetService,
     private readonly resourceMetaService: MetaService,
     private readonly mirrorService: MirrorService,
@@ -155,6 +155,7 @@ export class OtService {
     private readonly eventService: RobotEventService,
     private readonly nodeService: NodeService,
     private readonly recordSubscriptionService: DatasheetRecordSubscriptionBaseService,
+    private readonly otEventService: OTEventService,
   ) {
   }
 
@@ -163,7 +164,7 @@ export class OtService {
    *
    * @param nodeId node ID.
    */
-  private getNodeRole = async(
+  private getNodeRole = async (
     nodeId: string,
     auth: IAuthHeader,
     shareId?: string,
@@ -175,6 +176,10 @@ export class OtService {
     switch (sourceType) {
       case SourceTypeEnum.FORM:
         // Datasheet resource OP resulted from form submitting, use permission of form
+        const { userId, uuid } = await this.userService.getMeNullable(auth.cookie!);
+        if (!shareId && !userId) {
+          return { hasRole: true, role: ConfigConstant.permission.editor, ...DEFAULT_EDITOR_PERMISSION };
+        }
         const fieldPermissionMap = await this.restService.getFieldPermission(auth, roomId!, shareId);
         const defaultPermission = { fieldPermissionMap, hasRole: true, role: ConfigConstant.permission.editor, ...DEFAULT_EDITOR_PERMISSION };
         const { fillAnonymous } = await this.resourceMetaService.selectMetaByResourceId(roomId!);
@@ -183,7 +188,6 @@ export class OtService {
           return defaultPermission;
         }
         // Fill in user info
-        const { userId, uuid } = await this.userService.getMe(auth);
         return { userId, uuid, ...defaultPermission };
       case SourceTypeEnum.MIRROR:
         if (nodeId !== sourceDatasheetId) {
@@ -268,7 +272,7 @@ export class OtService {
         `room:[${message.roomId}] ====> parseChanges Finished, duration: ${parseEndTime - beginTime}ms. General transaction start......`,
       );
       // ======== multiple-resource operation transaction BEGIN ========
-      await getManager().transaction(async(manager: EntityManager) => {
+      await getManager().transaction(async (manager: EntityManager) => {
         for (const { transaction, effectMap, commonData, resultSet } of transactions) {
           await transaction(manager, effectMap, commonData, resultSet);
           let remoteChangeset = effectMap.get(EffectConstantName.RemoteChangeset);
@@ -321,8 +325,7 @@ export class OtService {
       this.logger.info('applyRoomChangeset-robot-event-end', { roomId: message.roomId, msgIds });
     }
 
-    // User subscription record change event
-    void this.datasheetRecordSubscriptionService.handleChangesets(results, context);
+    void this.otEventService.handleChangesets(results, context);
 
     // clear cached selectors, will remove after release/1.0.0
     clearCachedSelectors();
@@ -355,6 +358,7 @@ export class OtService {
 
     const { resourceType } = changeset;
 
+    const revisionBeginTime = +new Date();
     // If no revision exists, default to latest revision of the datasheet
     if (changeset.baseRevision == null) {
       changeset.baseRevision = (await this.changesetService.getMaxRevision(resourceId, resourceType))!;
@@ -383,7 +387,10 @@ export class OtService {
     const effectMap = new Map<string, any>();
 
     // Transform operations submitted by client into correct changeset
+    const transformBeginTime = +new Date();
     const remoteChangeset = await this.transform(changeset, resourceRevision, effectMap);
+    this.logger.info(`[${resourceId}] ====> Get remote changeset......duration: ${+new Date() - transformBeginTime}ms`);
+
     effectMap.set(EffectConstantName.RemoteChangeset, remoteChangeset);
     // Map that needs notification
     effectMap.set(EffectConstantName.MentionedMessages, []);
@@ -404,11 +411,15 @@ export class OtService {
     if (!isEqual) {
       throw new ServerException(OtException.MATCH_VERSION_ERROR);
     }
+    this.logger.info(`[${resourceId}] ====> Get Revision......duration: ${+new Date() - revisionBeginTime}ms`);
+
     // Obtain permission, if editable is enabled, don't query node/permission, set permission to editor direcly,
     // and obtain userId
+    const permissionBeginTime = +new Date();
     const permission = internalAuth
       ? { ...this.permissionServices.getDefaultManagerPermission(), userId: internalAuth.userId, uuid: internalAuth.uuid }
       : await this.getNodeRole(nodeId, auth, shareId, roomId, sourceDatasheetId, sourceType, allowAllEntrance);
+    this.logger.info(`[${resourceId}] ====> Get Permission......duration: ${+new Date() - permissionBeginTime}ms`);
 
     // Traverse operations from client, there may be multiple operations, but applied on the same resource.
     const beginTime = +new Date();
@@ -546,7 +557,7 @@ export class OtService {
       changedFieldIds = new Set();
 
       for (const fieldId in fieldMap) {
-        if (fieldMap[fieldId]!.type === FieldType.Link) {
+        if (fieldMap[fieldId]!.type === FieldType.Link || fieldMap[fieldId]!.type === FieldType.OneWayLink) {
           linkFieldIds.add(fieldId);
         }
       }
@@ -586,14 +597,14 @@ export class OtService {
           const fieldId = action.p[2] as string;
           // field type change
           if ('od' in action && 'oi' in action && action.od.type !== action.oi.type) {
-            if (action.oi.type === FieldType.Link) {
+            if (action.oi.type === FieldType.Link || action.oi.type === FieldType.OneWayLink) {
               linkFieldIds.delete(fieldId);
-            } else if (action.od.type === FieldType.Link) {
+            } else if (action.od.type === FieldType.Link || action.od.type === FieldType.OneWayLink) {
               linkFieldIds.add(fieldId);
             }
-          } else if (!('od' in action) && 'oi' in action && action.oi.type === FieldType.Link) {
+          } else if (!('od' in action) && 'oi' in action && (action.oi.type === FieldType.Link || action.oi.type === FieldType.OneWayLink)) {
             linkFieldIds.delete(fieldId);
-          } else if ('od' in action && !('oi' in action) && action.od.type === FieldType.Link) {
+          } else if ('od' in action && !('oi' in action) && (action.od.type === FieldType.Link || action.od.type === FieldType.OneWayLink)) {
             linkFieldIds.add(fieldId);
           }
         }
@@ -804,7 +815,7 @@ export class OtService {
    */
   public async nestRoomChange(roomId: string, changesets: IRemoteChangeset[]) {
     const data = await this.relService.getRoomChangeResult(roomId, changesets);
-    await this.grpcSocketClient.nestRoomChange(roomId, data);
+    await this.socketGrpcClient.nestRoomChange(roomId, data);
   }
 
   async applyChangesets(roomId: string, changesets: ILocalChangeset[], auth: IAuthHeader, shareId?: string) {

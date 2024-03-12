@@ -17,13 +17,13 @@
  */
 
 /**
- * Purpose: advance calculation of information that needs to be processed based on the underlying metadata to be obtained 
+ * Purpose: advance calculation of information that needs to be processed based on the underlying metadata to be obtained
  * during UI rendering in the main thread, and caching it in the main thread
  */
 
-import { ActionConstants, CacheManager, DispatchToStore, IReduxState, Selectors, ViewType } from '@apitable/core';
 import { AnyAction, Store } from 'redux';
 import { BATCH, batchActions } from 'redux-batched-actions';
+import { ActionConstants, CacheManager, DispatchToStore, IReduxState, Selectors, ViewType } from '@apitable/core';
 
 import { computeService, TComputeDesc } from './compute';
 import { ComputeServices } from './constants';
@@ -52,13 +52,16 @@ let workerSelf: any;
       workerSelf.addEventListener('error', (err: any) => {
         const errInfo = String(err);
 
-        const resources = Object.keys(processingMap).filter(item => item !== DEFAULT_NAMESPACE);
+        const resources = Object.keys(processingMap).filter((item) => item !== DEFAULT_NAMESPACE);
         const actions = resources.reduce((acc, id) => {
-          acc.push({
-            type: ActionConstants.UPDATE_DATASHEET_COMPUTED,
-            datasheetId: id,
-            payload: {}
-          }, generateStatusAction(id, Business.Wide, false));
+          acc.push(
+            {
+              type: ActionConstants.UPDATE_DATASHEET_COMPUTED,
+              datasheetId: id,
+              payload: {},
+            },
+            generateStatusAction(id, Business.Wide, false),
+          );
           return acc;
         }, [] as AnyAction[]);
         postActionMessageToLocalStore(batchActions(actions));
@@ -75,20 +78,24 @@ const requestFormLocalMap = new Map<string, number>();
 // Temporarily do not break down each scene
 enum Business {
   Wide = 'computing',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   Search = 'computing', // 'searching',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   Group = 'computing', // 'grouping',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   Filter = 'computing', // 'filtering',
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   Sort = 'computing', // 'sorting'
 }
 
-// At this stage, the cache to be calculated is not broken down by scenario, 
+// At this stage, the cache to be calculated is not broken down by scenario,
 // as long as the action that will trigger the calculation comes in will all be calculated once
 const allCompute = [
   ComputeServices.PureVisibleRows,
   // ComputeServices.VisibleColumns,
   ComputeServices.SearchResultArray,
   ComputeServices.LinearRows,
-  ComputeServices.GroupBreakpoint
+  ComputeServices.GroupBreakpoint,
 ];
 
 interface IExecuteMeta {
@@ -108,17 +115,19 @@ interface IProcessingMap {
   };
 }
 
-// It is used to store the worker currently being computed, where the stored worker instances are classified according to the scenario, 
+// It is used to store the worker currently being computed, where the stored worker instances are classified according to the scenario,
 // and a worker will generally compute multiple cached results
 const processingMap: IProcessingMap = {};
 const DEFAULT_NAMESPACE = 'DEFAULT_NAMESPACE';
 let lastActiveRow: string | null = null;
 
 const postActionMessageToLocalStore = (action: AnyAction) => {
-  workerSelf.postMessage(JSON.stringify({
-    action: { ...action, dispatchToStore: DispatchToStore.Local },
-    postTime: Date.now()
-  }));
+  workerSelf.postMessage(
+    JSON.stringify({
+      action: { ...action, dispatchToStore: DispatchToStore.Local },
+      postTime: Date.now(),
+    }),
+  );
 };
 
 const requestResourceFromLocalStore = (datasheetId: string) => {
@@ -126,7 +135,7 @@ const requestResourceFromLocalStore = (datasheetId: string) => {
 };
 
 const generateStatusAction = (datasheetId: string, key: string, status: boolean) => {
-  return { type: ActionConstants.SET_DATASHEET_COMPUTED_STATUS, datasheetId, payload: { [key]: status }};
+  return { type: ActionConstants.SET_DATASHEET_COMPUTED_STATUS, datasheetId, payload: { [key]: status } };
 };
 
 const addComputeId = (datasheetId: string) => {
@@ -145,7 +154,7 @@ const getComputeId = (datasheetId: string) => {
   return res;
 };
 
-/** 
+/**
  * The action map that needs to trigger the calculation
  * The computeDesc parameter indicates which cache results need to be computed
  */
@@ -207,7 +216,7 @@ export const TriggerComputeActions: { [key: string]: (action: AnyAction) => IExe
       business: Business.Search,
       computeDesc: allCompute,
       preCompute: () => generateStatusAction(action.datasheetId, Business.Search, true),
-      afterCompute: () => generateStatusAction(action.datasheetId, Business.Search, false)
+      afterCompute: () => generateStatusAction(action.datasheetId, Business.Search, false),
     };
   },
   [ActionConstants.SET_GROUPING_COLLAPSE]: (action) => {
@@ -229,7 +238,7 @@ export const TriggerComputeActions: { [key: string]: (action: AnyAction) => IExe
       business: Business.Wide,
       computeDesc: allCompute,
       preCompute: () => generateStatusAction(action.datasheetId, Business.Wide, true),
-      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false)
+      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false),
     };
   },
   [ActionConstants.CLEAR_ACTIVE_ROW_INFO]: (action) => {
@@ -241,7 +250,7 @@ export const TriggerComputeActions: { [key: string]: (action: AnyAction) => IExe
       business: Business.Wide,
       computeDesc: allCompute,
       preCompute: () => generateStatusAction(action.datasheetId, Business.Wide, true),
-      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false)
+      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false),
     };
   },
   [ActionConstants.UPDATE_SNAPSHOT]: (action) => {
@@ -249,9 +258,9 @@ export const TriggerComputeActions: { [key: string]: (action: AnyAction) => IExe
       business: Business.Wide,
       computeDesc: allCompute,
       preCompute: () => generateStatusAction(action.datasheetId, Business.Wide, true),
-      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false)
+      afterCompute: () => generateStatusAction(action.datasheetId, Business.Wide, false),
     };
-  }
+  },
 };
 
 const abortProcessing = (namespace: string, business: Business) => {
@@ -263,7 +272,7 @@ const abortProcessing = (namespace: string, business: Business) => {
 };
 
 const addProcessing = (computeMeta: IExecuteMeta, state: IReduxState, datasheetId: string, callback: (params: any) => any) => {
-  // Turning on a subworker to compute separately is not worth the effort 
+  // Turning on a subworker to compute separately is not worth the effort
   // when the amount of data is relatively small (transfer time > computation time).
   // TODO: Solve the initialization problem when subworkers have different domains.
   // TODO: Automatically switch whether to use sub-workers for computation based on the result of computation time consumption
@@ -323,7 +332,7 @@ const executeComputeIfNeed = (action: AnyAction, state: IReduxState) => {
         let postAction: AnyAction = {
           type: ActionConstants.UPDATE_DATASHEET_COMPUTED,
           datasheetId: action.datasheetId,
-          payload: data
+          payload: data,
         };
         if (afterCompute) {
           postAction = batchActions([postAction, afterCompute()]);
@@ -334,7 +343,6 @@ const executeComputeIfNeed = (action: AnyAction, state: IReduxState) => {
         postActionMessageToLocalStore(postAction);
       });
     }
-
   }
 };
 
@@ -372,6 +380,6 @@ export const withCompute = (store: Store<Partial<IReduxState>>) => {
 
   return {
     ...store,
-    removeCache
+    removeCache,
   };
 };

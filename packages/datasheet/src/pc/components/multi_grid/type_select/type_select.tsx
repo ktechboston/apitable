@@ -16,19 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Typography, useThemeColors } from '@apitable/components';
-import { FieldGroup, FieldType, FieldTypeDescriptionMap, Strings, t } from '@apitable/core';
-import { useMount, useSize, useUnmount } from 'ahooks';
+import { useMount, useUnmount } from 'ahooks';
 import classNames from 'classnames';
 import debounce from 'lodash/debounce';
+import * as React from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { Typography, useThemeColors } from '@apitable/components';
+import { FieldGroup, FieldType, FieldTypeDescriptionMap, Strings, t } from '@apitable/core';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { LineSearchInput } from 'pc/components/list/common_list/line_search_input';
 import { useResponsive } from 'pc/hooks';
-import * as React from 'react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { getEnvVariables } from 'pc/utils/env';
 import { getFieldTypeIcon } from '../field_setting';
-import styles from './styles.module.less';
 import { useShowTip } from './use_show_tip';
+import styles from './styles.module.less';
 
 interface ITypeSelect {
   onClick: (type: number) => void;
@@ -42,6 +43,7 @@ const fieldSequence: FieldType[] = [
   FieldType.Text,
   FieldType.SingleSelect,
   FieldType.MultiSelect,
+  FieldType.OneWayLink,
   FieldType.Link,
   FieldType.LookUp,
   FieldType.Formula,
@@ -62,6 +64,8 @@ const fieldSequence: FieldType[] = [
   FieldType.Phone,
   FieldType.Email,
   FieldType.Cascader,
+  FieldType.WorkDoc,
+  FieldType.Button
 ];
 
 interface ITypeSelectItemProps extends ITypeSelect {
@@ -72,7 +76,7 @@ interface ITypeSelectItemProps extends ITypeSelect {
   style?: React.CSSProperties;
 }
 
-const TypeSelectItem: React.FC<React.PropsWithChildren<ITypeSelectItemProps>> = props => {
+const TypeSelectItem: React.FC<React.PropsWithChildren<ITypeSelectItemProps>> = (props) => {
   const { fieldList, fieldType, index, setInfo, style } = props;
   const colors = useThemeColors();
   const divRef = useRef<HTMLDivElement>(null);
@@ -88,7 +92,7 @@ const TypeSelectItem: React.FC<React.PropsWithChildren<ITypeSelectItemProps>> = 
     clearTipNode();
   });
 
-  const { title, subTitle } = FieldTypeDescriptionMap[fieldType];
+  const { title, subTitle, isBeta, isNew } = FieldTypeDescriptionMap[fieldType];
 
   const onMouseEnter = debounce(() => {
     if (divRef.current) {
@@ -135,10 +139,12 @@ const TypeSelectItem: React.FC<React.PropsWithChildren<ITypeSelectItemProps>> = 
       ref={divRef}
       style={style}
     >
-      <div className={styles.icon}>{getFieldTypeIcon(fieldType, isActiveFieldType ? colors.primaryColor : colors.thirdLevelText, 24, 24)}</div>
+      <div className={styles.icon}>{getFieldTypeIcon(fieldType, isActiveFieldType ? colors.primaryColor : colors.textCommonTertiary, 16, 16)}</div>
       <div className={styles.desc}>
         <div className={styles.title}>{title}</div>
       </div>
+      {isBeta && <div className={styles.beta}>Beta</div>}
+      {isNew && <div className={styles.new}>New</div>}
     </div>
   );
 };
@@ -151,7 +157,8 @@ function filterAdvanceGroup(fieldType: FieldType) {
   return FieldTypeDescriptionMap[fieldType] && FieldTypeDescriptionMap[fieldType].fieldGroup === FieldGroup.Advanced;
 }
 
-export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = props => {
+export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = (props) => {
+  const { IS_ENTERPRISE, ENABLE_WORKDOC_FIELD, IS_SELFHOST } = getEnvVariables();
   const colors = useThemeColors();
   const divRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -160,17 +167,18 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
   const [keyword, setKeyword] = React.useState('');
   const inputRef = useRef<{ focus(): void }>(null);
 
-  const wrapperWidth = useSize(document.body)?.width;
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
-  const itemWidth = isMobile ? (wrapperWidth! - 80) / 3 : '';
-  const itemStyle: React.CSSProperties = {
-    width: itemWidth,
-    height: itemWidth,
-  };
 
   React.useEffect(() => {
     inputRef.current!.focus();
+  }, []);
+
+  useEffect(() => {
+    setTimeout(() => {
+      const selectedItemElement = divRef.current?.querySelector(`.${styles.active}`);
+      selectedItemElement?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 20);
   }, []);
 
   const setSplitLineStyle = (hidden = true) => {
@@ -178,7 +186,7 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
     if (!doms.length) {
       return;
     }
-    doms.forEach(dom => {
+    doms.forEach((dom) => {
       dom.setAttribute('style', hidden ? 'display:none;' : '');
     });
   };
@@ -192,11 +200,14 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
   });
 
   function filterPrimaryType(fieldType: FieldType) {
+    if (fieldType === FieldType.WorkDoc) {
+      return IS_ENTERPRISE && (ENABLE_WORKDOC_FIELD || IS_SELFHOST) && props.fieldIndex !== 0;
+    }
     if (props.fieldIndex !== 0) return true;
     return FieldTypeDescriptionMap[fieldType] && FieldTypeDescriptionMap[fieldType].canBePrimaryField;
   }
 
-  const onScroll = ({ scrollTop, height, scrollHeight }: { scrollTop: number, height: number, scrollHeight: number }) => {
+  const onScroll = ({ scrollTop, height, scrollHeight }: { scrollTop: number; height: number; scrollHeight: number }) => {
     const shadowEle = scrollShadowRef.current;
     if (!shadowEle) return;
     if (scrollTop + height > scrollHeight - 10) {
@@ -233,8 +244,7 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
       const scrollHeight = scrollRef.current.clientHeight;
       const totalHeight = height - scrollHeight + scrollRef.current.scrollHeight;
       const spaceHeight = clientHeight - 2 * LIMIT;
-      const resultHeight = Math.min(spaceHeight, totalHeight);
-      eleHeight = resultHeight;
+      eleHeight = Math.min(spaceHeight, totalHeight);
       divEle.style.height = eleHeight + 'px';
       parentNode.style.top = `-${diff}px`;
     }
@@ -267,21 +277,15 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
     return fieldTitle.toLowerCase().includes(keyword.trim().toLowerCase());
   };
 
-  const basicFieldList = fieldSequence
-    .filter(filterPrimaryType)
-    .filter(filterCommonGroup)
-    .filter(filterByKeyword);
+  const basicFieldList = fieldSequence.filter(filterPrimaryType).filter(filterCommonGroup).filter(filterByKeyword);
 
-  const advanceFieldList = fieldSequence
-    .filter(filterPrimaryType)
-    .filter(filterAdvanceGroup)
-    .filter(filterByKeyword);
+  const advanceFieldList = fieldSequence.filter(filterPrimaryType).filter(filterAdvanceGroup).filter(filterByKeyword);
 
   return (
     <div className={styles.typeSelect} ref={divRef}>
       {!isMobile && <h1>{t(Strings.select_one_field)}</h1>}
       {props.fieldIndex === 0 && (
-        <div style={{ padding: '0 24px', marginBottom: 8 }}>
+        <div style={{ padding: '0 16px', marginBottom: 8 }}>
           <Typography variant="body4" color={colors.fc3}>
             {t(Strings.tooltip_primary_field_type_select)}
           </Typography>
@@ -294,7 +298,7 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
             <h2>{t(Strings.basis)}</h2>
             <main>
               {basicFieldList.map((item, index, array) => {
-                return <TypeSelectItem {...props} setInfo={setInfo} index={index} key={index} fieldType={item} fieldList={array} style={itemStyle} />;
+                return <TypeSelectItem {...props} setInfo={setInfo} index={index} key={index} fieldType={item} fieldList={array} />;
               })}
             </main>
           </section>
@@ -304,7 +308,7 @@ export const TypeSelectBase: React.FC<React.PropsWithChildren<ITypeSelect>> = pr
             <h2>{t(Strings.advanced)}</h2>
             <main>
               {advanceFieldList.map((item, index, array) => {
-                return <TypeSelectItem {...props} setInfo={setInfo} index={index} key={index} fieldType={item} fieldList={array} style={itemStyle} />;
+                return <TypeSelectItem {...props} setInfo={setInfo} index={index} key={index} fieldType={item} fieldList={array} />;
               })}
             </main>
           </section>

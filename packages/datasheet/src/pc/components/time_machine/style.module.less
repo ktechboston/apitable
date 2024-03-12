@@ -33,7 +33,8 @@
       padding-left: 8px;
       padding-right: 8px;
     }
-    .ant-tabs-content, .ant-tabs-tabpane {
+    .ant-tabs-content,
+    .ant-tabs-tabpane {
       height: 100%;
     }
   }
@@ -65,9 +66,12 @@
 }
 
 .content {
-  padding-bottom: 16px;
+  display: flex;
+  padding: 0 8px 16px 8px;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: scroll;
   height: 100%;
-  overflow: auto;
 }
 .bottomTip {
   height: 36px;
@@ -76,35 +80,36 @@
 }
 
 .listItem {
-  padding: 8px 4px;
+  cursor:pointer;
+  padding: 8px;
   border-radius: 4px;
-  border-bottom: 1px solid var(--lineColor);
-  &[data-active="true"] {
-    background-color: rgba(237,234,255, 0.5);
+  .title {
+    color: var(--textCommonSecondary);
+    font-size: 14px;
+    margin-bottom: 4px;
+    span {
+      line-height: 22px;
+    }
   }
+  &[data-active='true']{
+    background-color: var(--bgBglessActive);
+  }
+  &:hover {
+    background-color: var(--bgBglessHover);
+  }
+  &:active {
+    background-color: var(--bgBrandLightDefault);
+  }
+}
+
+.timestamp {
+  color: var(--textCommonTertiary);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .danger {
   color: red;
-}
-
-.operationWrap {
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
-  justify-content: space-between;
-}
-
-.cmdText {
-  max-width: 40%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.operation {
-  display: flex;
-  align-items: center;
 }
 
 .noList {

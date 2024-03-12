@@ -18,27 +18,23 @@
 
 package com.apitable.space.service.impl;
 
-import java.util.Collections;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
+import static com.apitable.organization.enums.OrganizationException.INVITE_EXPIRE;
+import static com.apitable.space.enums.SpaceException.NO_ALLOW_OPERATE;
 
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.extern.slf4j.Slf4j;
-
 import com.apitable.control.infrastructure.role.RoleConstants.Node;
 import com.apitable.control.service.IControlRoleService;
-import com.apitable.interfaces.billing.facade.EntitlementServiceFacade;
-import com.apitable.interfaces.billing.model.EntitlementRemark;
+import com.apitable.core.util.ExceptionUtil;
+import com.apitable.core.util.HttpContextUtil;
 import com.apitable.interfaces.user.facade.UserServiceFacade;
-import com.apitable.organization.mapper.MemberMapper;
-import com.apitable.organization.mapper.TeamMapper;
+import com.apitable.interfaces.user.model.InvitationCode;
+import com.apitable.organization.entity.MemberEntity;
 import com.apitable.organization.service.IMemberService;
+import com.apitable.organization.service.ITeamService;
 import com.apitable.organization.service.IUnitService;
 import com.apitable.shared.component.TaskManager;
 import com.apitable.shared.context.SessionContext;
@@ -48,26 +44,26 @@ import com.apitable.space.enums.InviteType;
 import com.apitable.space.mapper.InvitationMapper;
 import com.apitable.space.mapper.SpaceApplyMapper;
 import com.apitable.space.service.IInvitationService;
-import com.apitable.space.service.ISpaceInviteLinkService;
 import com.apitable.space.service.ISpaceService;
 import com.apitable.space.vo.SpaceGlobalFeature;
 import com.apitable.space.vo.SpaceLinkInfoVo;
-import com.apitable.user.mapper.UserMapper;
 import com.apitable.workspace.service.INodeRoleService;
 import com.apitable.workspace.service.INodeService;
-import com.apitable.core.constants.RedisConstants;
-import com.apitable.core.util.ExceptionUtil;
-import com.apitable.core.util.HttpContextUtil;
-
-import org.springframework.data.redis.core.RedisTemplate;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpSession;
+import java.util.Collections;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import static com.apitable.organization.enums.OrganizationException.INVITE_EXPIRE;
-import static com.apitable.space.enums.SpaceException.NO_ALLOW_OPERATE;
-
+/**
+ * Invitation service implement.
+ */
 @Slf4j
 @Service
-public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, InvitationEntity> implements IInvitationService {
+public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, InvitationEntity>
+    implements IInvitationService {
     @Resource
     private InvitationMapper invitationMapper;
 
@@ -75,25 +71,16 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
     private ISpaceService iSpaceService;
 
     @Resource
-    private TeamMapper teamMapper;
+    private INodeService iNodeService;
 
     @Resource
-    private INodeService iNodeService;
+    private ITeamService iTeamService;
 
     @Resource
     private IMemberService iMemberService;
 
     @Resource
-    private ISpaceInviteLinkService iSpaceInviteLinkService;
-
-    @Resource
     private SpaceApplyMapper spaceApplyMapper;
-
-    @Resource
-    private MemberMapper memberMapper;
-
-    @Resource
-    private UserMapper userMapper;
 
     @Resource
     private INodeRoleService iNodeRoleService;
@@ -107,19 +94,14 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
     @Resource
     private IControlRoleService iControlRoleService;
 
-    @Resource
-    private EntitlementServiceFacade entitlementServiceFacade;
-
-    @Resource
-    private RedisTemplate<String, Object> redisTemplate;
-
-
     @Override
     public SpaceLinkInfoVo getInvitationInfo(String spaceId, Long creator) {
+        MemberEntity member = iMemberService.getById(creator);
         SpaceLinkInfoVo infoVo = SpaceLinkInfoVo.builder()
-                .spaceId(spaceId)
-                .memberName(memberMapper.selectMemberNameById(creator))
-                .spaceName(iSpaceService.getNameBySpaceId(spaceId)).build();
+            .spaceId(spaceId)
+            .memberName(member.getMemberName())
+            .spaceName(iSpaceService.getNameBySpaceId(spaceId))
+            .build();
         // determine if the user is logged in
         HttpSession session = HttpContextUtil.getSession(false);
         if (ObjectUtil.isNotNull(session)) {
@@ -129,43 +111,54 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
             infoVo.setIsExist(BooleanUtil.isTrue(null != memberId));
             infoVo.setIsLogin(true);
         }
-        Long creatorUserId = memberMapper.selectUserIdByMemberId(creator);
         // get the link creator's personal invitation code
-        String inviteCode = userServiceFacade.getUserInvitationCode(creatorUserId).getCode();
-        infoVo.setInviteCode(inviteCode);
+        InvitationCode invitationCode =
+            userServiceFacade.getUserInvitationCode(member.getUserId());
+        infoVo.setInviteCode(invitationCode.getCode());
+        infoVo.setSeatAvailable(iSpaceService.getSpaceSeatAvailableStatus(spaceId));
         return infoVo;
     }
 
     @Override
     public void asyncActionsForSuccessJoinSpace(InvitationUserDTO dto) {
+        Long userId = iMemberService.getUserIdByMemberId(dto.getCreator());
         // Send invitation notification, asynchronous operation
-        TaskManager.me().execute(() -> {
-            Long creatorUserId = memberMapper.selectUserIdByMemberId(dto.getCreator());
-            iMemberService.sendInviteNotification(creatorUserId, ListUtil.toList(dto.getMemberId()), dto.getSpaceId(), true);
-        });
+        TaskManager.me().execute(
+            () -> iMemberService.sendInviteNotification(userId, ListUtil.toList(dto.getMemberId()),
+                dto.getSpaceId(), true));
         // To invalidate the application to actively join the space
-        TaskManager.me().execute(() -> spaceApplyMapper.invalidateTheApply(ListUtil.toList(dto.getUserId()), dto.getSpaceId(), InviteType.LINK_INVITE.getType()));
-        if (!StrUtil.isEmpty(dto.getNodeId())) {
-            Long controlOwnerUnitId = iControlRoleService.getUnitIdByControlIdAndRoleCode(dto.getNodeId(), Node.OWNER);
-            // set owner role
-            if (null == controlOwnerUnitId) {
-                Long nodeCreator = iNodeService.getCreatedMemberId(dto.getNodeId());
-                if (null == nodeCreator) {
-                    nodeCreator = dto.getCreator();
-                }
-                Long ownerUserId = memberMapper.selectUserIdByMemberId(nodeCreator);
-                iNodeRoleService.enableNodeRole(ownerUserId, dto.getSpaceId(), dto.getNodeId(), true);
-            }
-            // add update role
-            Long roleAddUserId = memberMapper.selectUserIdByMemberId(dto.getCreator());
-            Long invitedUnitId = iUnitService.getUnitIdByRefId(dto.getMemberId());
-            iNodeRoleService.addNodeRole(roleAddUserId, dto.getNodeId(), Node.UPDATER, Collections.singletonList(invitedUnitId));
+        TaskManager.me().execute(
+            () -> spaceApplyMapper.invalidateTheApply(ListUtil.toList(dto.getUserId()),
+                dto.getSpaceId(), InviteType.LINK_INVITE.getType()));
+        if (StrUtil.isEmpty(dto.getNodeId())) {
+            return;
         }
+        Long controlOwnerUnitId =
+            iControlRoleService.getUnitIdByControlIdAndRoleCode(dto.getNodeId(), Node.OWNER);
+        // set owner role
+        if (null == controlOwnerUnitId) {
+            Long nodeCreator = iNodeService.getCreatedMemberId(dto.getNodeId());
+            if (null == nodeCreator) {
+                nodeCreator = dto.getCreator();
+            }
+            Long ownerUserId = iMemberService.getUserIdByMemberId(nodeCreator);
+            iNodeRoleService.enableNodeRole(ownerUserId, dto.getSpaceId(), dto.getNodeId(), true);
+        }
+        // add update role
+        Long invitedUnitId = iUnitService.getUnitIdByRefId(dto.getMemberId());
+        iNodeRoleService.addNodeRole(userId, dto.getNodeId(), Node.UPDATER,
+            Collections.singletonList(invitedUnitId));
     }
 
     @Override
     public void closeMemberInvitationBySpaceId(String spaceId) {
         invitationMapper.updateStatusBySpaceIdAndNodeIdNotEmpty(spaceId, false);
+    }
+
+    @Override
+    public InvitationEntity getByMemberIdAndSpaceIdAndNodeId(Long memberId, String spaceId,
+                                                             String nodeId) {
+        return invitationMapper.selectByMemberIdAndSpaceIdAndNodeId(memberId, spaceId, nodeId);
     }
 
     @Override
@@ -176,7 +169,7 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
         // check if node exists and doesn't span spaces
         iNodeService.checkNodeIfExist(spaceId, nodeId);
         // teamId must be root teamId, so there is no need to query by teamId
-        InvitationEntity entity = invitationMapper.selectByMemberIdAndSpaceIdAndNodeId(memberId, spaceId, nodeId);
+        InvitationEntity entity = getByMemberIdAndSpaceIdAndNodeId(memberId, spaceId, nodeId);
         if (entity == null) {
             return this.createMemberInvitationTokenByNodeId(memberId, spaceId, nodeId);
         }
@@ -189,26 +182,30 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
     }
 
     @Override
-    public String createMemberInvitationTokenByNodeId(Long memberId, String spaceId, String nodeId) {
+    public String createMemberInvitationTokenByNodeId(Long memberId, String spaceId,
+                                                      String nodeId) {
         String token = IdUtil.fastSimpleUUID();
+        Long rootTeamId = iTeamService.getRootTeamId(spaceId);
         InvitationEntity entity = InvitationEntity.builder()
-                .spaceId(spaceId)
-                .teamId(teamMapper.selectRootIdBySpaceId(spaceId))
-                .creator(memberId)
-                .inviteToken(token)
-                .nodeId(nodeId)
-                .build();
+            .spaceId(spaceId)
+            .teamId(rootTeamId)
+            .creator(memberId)
+            .inviteToken(token)
+            .nodeId(nodeId)
+            .build();
         invitationMapper.insert(entity);
         return token;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public InvitationUserDTO invitedUserJoinSpaceByToken(Long userId, String token) {
         InvitationEntity entity = invitationMapper.selectByInviteToken(token);
         // 1. if the information of the link does not exist or the status is 0, it is determined to be
         // invalid.
         ExceptionUtil.isFalse(entity == null || !entity.getStatus(), INVITE_EXPIRE);
         String spaceId = entity.getSpaceId();
+        iSpaceService.checkSeatOverLimit(spaceId);
         SpaceGlobalFeature feature = iSpaceService.getSpaceGlobalFeature(spaceId);
         // 2. member invitation expired
         ExceptionUtil.isTrue(Boolean.TRUE.equals(feature.getInvitable()), INVITE_EXPIRE);
@@ -222,11 +219,12 @@ public class InvitationServiceImpl extends ServiceImpl<InvitationMapper, Invitat
         // The link accumulates the number of successful invitees and creates an audit invitation record
         invitationMapper.updateInviteNumByInviteToken(token);
         return InvitationUserDTO.builder()
-                .userId(userId)
-                .memberId(newMemberId)
-                .creator(entity.getCreator())
-                .nodeId(entity.getNodeId())
-                .spaceId(spaceId).build();
+            .userId(userId)
+            .memberId(newMemberId)
+            .creator(entity.getCreator())
+            .nodeId(entity.getNodeId())
+            .spaceId(spaceId)
+            .build();
     }
 
     @Override

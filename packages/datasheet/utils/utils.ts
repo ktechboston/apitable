@@ -41,7 +41,7 @@ export const getRequestHeaders = (context: NextPageContext) => {
  * The lang value exists only as a request header parameter for the api and the front-end is not allowed to call
  */
 export const setClientCookie = (cookies: string[], ctx: NextPageContext) => {
-  cookies.map(item => {
+  cookies.map((item) => {
     let key: string = '';
     let value: string = '';
     const optional: Record<string, string | Date> = {};
@@ -65,4 +65,8 @@ export const setClientCookie = (cookies: string[], ctx: NextPageContext) => {
     deleteCookie('sensorsdata2015jssdkcross', { req: ctx.req, res: ctx.res });
     setCookie(key, value, { req: ctx.req, res: ctx.res, ...optional });
   });
+};
+
+export const isEmbedPage = () => {
+  return window.location.href.indexOf('embed') > -1;
 };

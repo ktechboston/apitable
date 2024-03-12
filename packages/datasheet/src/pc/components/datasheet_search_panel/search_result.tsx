@@ -16,29 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { INode, Strings, t, ThemeName } from '@apitable/core';
 import Image from 'next/image';
+import * as React from 'react';
+import { INode, Strings, t, ThemeName, ConfigConstant } from '@apitable/core';
 import { TComponent } from 'pc/components/common/t_component';
 import { File, Folder } from 'pc/components/datasheet_search_panel/components';
+import { ISearchOptions } from 'pc/components/datasheet_search_panel/interface';
 import styles from 'pc/components/datasheet_search_panel/style.module.less';
-import * as React from 'react';
+import { checkNodeDisable } from 'pc/components/datasheet_search_panel/utils/check_node_disabled';
+import { useAppSelector } from 'pc/store/react-redux';
 import NotDataImgDark from 'static/icon/datasheet/empty_state_dark.png';
 import NotDataImgLight from 'static/icon/datasheet/empty_state_light.png';
-import { useSelector } from 'react-redux';
-import { checkNodeDisable } from 'pc/components/datasheet_search_panel/utils/check_node_disabled';
 
 interface ISearchResultProps {
-  searchResult: { folders: INode[], files: INode[] } | string
-  onlyShowAvailable: boolean,
+  searchResult: { folders: INode[]; files: INode[] } | string;
+  onlyShowAvailable: boolean;
 
-  onNodeClick(nodeType: 'Mirror' | 'Datasheet' | 'View' | 'Folder', id: string): void,
+  onNodeClick(nodeType: 'Mirror' | 'Datasheet' | 'View' | 'Folder' | 'Form', id: string): void;
 
-  noCheckPermission?: boolean,
+  options?: ISearchOptions;
+  noCheckPermission?: boolean;
 }
 
 export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>> = (props) => {
-  const { searchResult, noCheckPermission, onlyShowAvailable, onNodeClick } = props;
-  const themeName = useSelector(state => state.theme);
+  const { searchResult, noCheckPermission, options, onlyShowAvailable, onNodeClick } = props;
+  const themeName = useAppSelector((state) => state.theme);
   const EmptyResultImage = themeName === ThemeName.Light ? NotDataImgLight : NotDataImgDark;
   if (typeof searchResult === 'string') {
     return (
@@ -47,12 +49,14 @@ export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>>
           <Image src={EmptyResultImage} alt={t(Strings.no_search_result)} width={200} height={150} />
         </span>
         <p className={styles.emptyText}>
-          {<TComponent
-            tkey={t(Strings.not_found_record_contains_value)}
-            params={{
-              searchValueSpan: <span>{searchResult}</span>,
-            }}
-          />}
+          {
+            <TComponent
+              tkey={t(Strings.not_found_record_contains_value)}
+              params={{
+                searchValueSpan: <span>{searchResult}</span>,
+              }}
+            />
+          }
         </p>
       </div>
     );
@@ -66,14 +70,9 @@ export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>>
       <>
         <h4 className={styles.nodeTitle}>{t(Strings.folder)}</h4>
         <div className={styles.nodeListContent}>
-          {folders.map(node => {
+          {folders.map((node) => {
             return (
-              <Folder
-                key={node.nodeId}
-                id={node.nodeId}
-                richContent
-                onClick={id => onNodeClick('Folder', id)}
-              >
+              <Folder key={node.nodeId} id={node.nodeId} richContent onClick={(id) => onNodeClick('Folder', id)}>
                 {node.nodeName}
               </Folder>
             );
@@ -83,9 +82,9 @@ export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>>
     );
   };
 
-  const _checkNodeDisable = (node: INode) => {
+  const _checkNodeDisable = (node: INode, needPermission: 'manageable' | 'editable' | undefined) => {
     if (noCheckPermission) return;
-    return checkNodeDisable(node);
+    return checkNodeDisable(node, needPermission);
   };
 
   const FileList = (files: INode[]) => {
@@ -96,14 +95,21 @@ export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>>
       <>
         <h4 className={styles.nodeTitle}>{t(Strings.system_configuration_product_name)}</h4>
         <div className={styles.nodeListContent}>
-          {files.map(node => {
+          {files.map((node) => {
             return (
               <File
+                nodeType={node.type}
                 key={node.nodeId}
                 id={node.nodeId}
-                onClick={id => onNodeClick('Datasheet', id)}
+                onClick={(id) => {
+                  if (node.type === ConfigConstant.NodeType.FORM) {
+                    onNodeClick('Form', id);
+                  } else {
+                    onNodeClick('Datasheet', id);
+                  }
+                }}
                 richContent
-                disable={_checkNodeDisable(node)}
+                disable={_checkNodeDisable(node, options?.needPermission)}
               >
                 {node.nodeName}
               </File>
@@ -115,8 +121,7 @@ export const SearchResult: React.FC<React.PropsWithChildren<ISearchResultProps>>
   };
 
   const folders = searchResult.folders;
-  const files = onlyShowAvailable ?
-    searchResult.files.filter(node => !_checkNodeDisable(node)) : searchResult.files;
+  const files = onlyShowAvailable ? searchResult.files.filter((node) => !_checkNodeDisable(node, options?.needPermission)) : searchResult.files;
   return (
     <div className={styles.searchResult}>
       {FolderList(folders)}

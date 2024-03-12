@@ -54,10 +54,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
         INTERCEPTOR_IGNORE_PATHS.add("/swagger-ui/**");
         INTERCEPTOR_IGNORE_PATHS.add("/swagger-ui.html");
         INTERCEPTOR_IGNORE_PATHS.add("/v3/api-docs/**");
+        INTERCEPTOR_IGNORE_PATHS.add("/node/readShareInfo/**");
     }
 
     public WebMvcConfig(ResourceInterceptor resourceInterceptor,
-        I18nInterceptor i18nInterceptor) {
+                        I18nInterceptor i18nInterceptor) {
         this.resourceInterceptor = resourceInterceptor;
         this.i18nInterceptor = i18nInterceptor;
     }

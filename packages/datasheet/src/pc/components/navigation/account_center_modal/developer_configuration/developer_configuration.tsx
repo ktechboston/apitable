@@ -16,31 +16,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Button, ButtonGroup, useThemeColors } from '@apitable/components';
-import { ConfigConstant, IReduxState, StoreActions, Strings, t } from '@apitable/core';
 import { Input } from 'antd';
-import { IdentifyingCodeInput, WithTipWrapper } from 'pc/components/common/input';
-import { Message } from 'pc/components/common/message';
-import { Modal } from 'pc/components/common/modal';
-import { BaseModal } from 'pc/components/common/modal/base_modal';
-// eslint-disable-next-line no-restricted-imports
-import { Tooltip } from 'pc/components/common/tooltip';
-import { useRequest, useSetState, useUserRequest } from 'pc/hooks';
-import { copy2clipBoard } from 'pc/utils';
 import * as React from 'react';
 import { FC, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import { Button, ButtonGroup, useThemeColors } from '@apitable/components';
+import { ConfigConstant, IReduxState, StoreActions, Strings, t } from '@apitable/core';
+import { AddOutlined, CopyOutlined, ReloadOutlined } from '@apitable/icons';
+import { IdentifyingCodeInput } from 'pc/components/common/input/identifying_code_input/identifying_code_input';
+import { WithTipWrapper } from 'pc/components/common/input/with_tip_wrapper/with_tip_wrapper';
+import { Message } from 'pc/components/common/message';
+import { BaseModal } from 'pc/components/common/modal/base_modal';
+import { Modal } from 'pc/components/common/modal/modal/modal';
+// eslint-disable-next-line no-restricted-imports
+import { Tooltip } from 'pc/components/common/tooltip';
+import { useRequest } from 'pc/hooks/use_request';
+import { useSetState } from 'pc/hooks/use_set_state';
+import { useUserRequest } from 'pc/hooks/use_user_request';
+import { useAppSelector } from 'pc/store/react-redux';
+import { copy2clipBoard } from 'pc/utils/dom';
+import { getEnvVariables } from 'pc/utils/env';
 import { getMaskToken, getVerifyData, IRefreshConfigConfig, VerifyTypes } from '../utils';
 import styles from './style.module.less';
-import { getEnvVariables } from 'pc/utils/env';
-import { AddOutlined, CopyOutlined, ReloadOutlined } from '@apitable/icons';
 
 export interface IDeveloperConfigProps {
   setActiveItem: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfigProps>> = ({ setActiveItem }) => {
-  const user = useSelector((state: IReduxState) => state.user.info);
+  const user = useAppSelector((state: IReduxState) => state.user.info);
   const colors = useThemeColors();
   const [identifyingCode, setIdentifyingCode] = useState('');
   const [inputValue, setInputValue] = useState(user!.apiKey);
@@ -61,7 +65,7 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
     setOpenCheckModal(true);
   };
 
-  const createToken = async() => {
+  const createToken = async () => {
     if (!user!.email) {
       Modal.confirm({
         title: t(Strings.please_note),
@@ -84,19 +88,17 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
   };
 
   const copyToken = () => {
-
     if (!inputValue) {
       return;
     }
     copy2clipBoard(inputValue, () => Message.success({ content: t(Strings.copy_token_toast) }));
   };
 
-  const onOk = async() => {
+  const onOk = async () => {
     if (!identifyingCode || !user) {
       return;
     }
-    const type = user.mobile ? ConfigConstant.CodeTypes.SMS_CODE :
-      ConfigConstant.CodeTypes.EMAIL_CODE;
+    const type = user.mobile ? ConfigConstant.CodeTypes.SMS_CODE : ConfigConstant.CodeTypes.EMAIL_CODE;
     const result = await refreshApiKey(identifyingCode, type);
     if (!result.success) {
       setErrMsg({ identifyingCodeErrMsg: result.message });
@@ -106,26 +108,26 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
     setOpenCheckModal(false);
   };
 
-  const handleIdentifyingCodeChange = React.useCallback((
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (errMsg.identifyingCodeErrMsg) {
-      setErrMsg({ identifyingCodeErrMsg: '' });
-    }
+  const handleIdentifyingCodeChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (errMsg.identifyingCodeErrMsg) {
+        setErrMsg({ identifyingCodeErrMsg: '' });
+      }
 
-    const value = e.target.value.trim();
-    setIdentifyingCode(value);
-  }, [setErrMsg, errMsg.identifyingCodeErrMsg]);
+      const value = e.target.value.trim();
+      setIdentifyingCode(value);
+    },
+    [setErrMsg, errMsg.identifyingCodeErrMsg],
+  );
 
   const CodeContent = React.useMemo(() => {
     if (!user || !(user?.email || user?.mobile)) return null;
-    const { codeMode, title, smsType, emailType, areaCode, verifyAccount } =
-      getVerifyData({ key: VerifyTypes.REFRESH_TOKEN }) as IRefreshConfigConfig;
+    const { codeMode, title, smsType, emailType, areaCode, verifyAccount } = getVerifyData({
+      key: VerifyTypes.REFRESH_TOKEN,
+    }) as IRefreshConfigConfig;
     return (
       <>
-        <div className={styles.tip}>
-          {title}
-        </div>
+        <div className={styles.tip}>{title}</div>
         <WithTipWrapper tip={errMsg.identifyingCodeErrMsg} captchaVisible>
           <IdentifyingCodeInput
             data={{ areaCode, account: verifyAccount }}
@@ -135,10 +137,7 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
             onChange={handleIdentifyingCodeChange}
             setErrMsg={setErrMsg}
             error={Boolean(errMsg.identifyingCodeErrMsg)}
-            disabled={Boolean(
-              errMsg.accountErrMsg ||
-              errMsg.identifyingCodeErrMsg
-            )}
+            disabled={Boolean(errMsg.accountErrMsg || errMsg.identifyingCodeErrMsg)}
           />
         </WithTipWrapper>
       </>
@@ -154,43 +153,27 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
       <div className={styles.title}>{t(Strings.developer_configuration)}</div>
       <div className={styles.label}>{t(Strings.token_value)}</div>
       <div className={styles.tokenWrapper}>
-        <Input
-          className={styles.token}
-          placeholder={t(Strings.developer_token_placeholder)}
-          id="developerToken"
-          value={maskAPIToken}
-          disabled
-        />
+        <Input className={styles.token} placeholder={t(Strings.developer_token_placeholder)} id="developerToken" value={maskAPIToken} disabled />
         <ButtonGroup withSeparate>
-          {(env.REGENERATE_API_TOKEN_VISIBLE || !user!.apiKey) && <Tooltip
-            title={!user!.apiKey ? t(Strings.generating_token_value) : t(Strings.rebuild_token_value)}
-            placement="top"
-          >
-            <Button
-              disabled={createKeyLoading}
-              onClick={!user!.apiKey ? createToken : rebuildToken}
-            >
-              {
-                !user!.apiKey ?
-                  <AddOutlined color={colors.thirdLevelText} size={15} /> :
-                  <ReloadOutlined color={colors.thirdLevelText} size={15} />
-              }
-            </Button>
-          </Tooltip>}
+          {(env.REGENERATE_API_TOKEN_VISIBLE || !user!.apiKey) && (
+            <Tooltip title={!user!.apiKey ? t(Strings.generating_token_value) : t(Strings.rebuild_token_value)} placement="top">
+              <Button disabled={createKeyLoading} onClick={!user!.apiKey ? createToken : rebuildToken}>
+                {!user!.apiKey ? <AddOutlined color={colors.thirdLevelText} size={15} /> : <ReloadOutlined color={colors.thirdLevelText} size={15} />}
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip title={t(Strings.copy_token)} placement="top">
-            <Button
-              onClick={copyToken}
-            >
+            <Button onClick={copyToken}>
               <CopyOutlined color={colors.thirdLevelText} size={15} />
             </Button>
           </Tooltip>
         </ButtonGroup>
       </div>
-      {openCheckModal &&
+      {openCheckModal && (
         <BaseModal
           width={400}
           className={styles.checkModal}
-          title={(user?.mobile) ? t(Strings.modal_title_check_original_phone) : t(Strings.modal_title_check_mail)}
+          title={user?.mobile ? t(Strings.modal_title_check_original_phone) : t(Strings.modal_title_check_mail)}
           onOk={onOk}
           onCancel={() => setOpenCheckModal(false)}
           okButtonProps={{
@@ -198,11 +181,9 @@ export const DeveloperConfiguration: FC<React.PropsWithChildren<IDeveloperConfig
             disabled: !identifyingCode,
           }}
         >
-          <div className={styles.content}>
-            {CodeContent}
-          </div>
+          <div className={styles.content}>{CodeContent}</div>
         </BaseModal>
-      }
+      )}
     </div>
   );
 };

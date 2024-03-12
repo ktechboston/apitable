@@ -1,11 +1,17 @@
-@import "~pc/styles/lib_var.less";
-@import "~pc/styles/lib_mixins.less";
+@import '~pc/styles/lib_var.less';
+@import '~pc/styles/lib_mixins.less';
+@import '~pc/styles/lib_screen.less';
 
 .formContainer {
   height: 100%;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
+
+  .formContentWrapper {
+    overflow: auto;
+    height: 100%;
+  }
 
   .formContent {
     display: flex;
@@ -76,6 +82,16 @@
           height: 20px;
           display: inline-block;
           vertical-align: middle;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
 
         .addIcon {
@@ -118,7 +134,7 @@
 
       &::before,
       &::after {
-        content: "";
+        content: '';
         width: 100px;
         height: 1px;
         position: absolute;
@@ -200,5 +216,15 @@
     width: 134px;
     height: 24px;
     cursor: pointer;
+  }
+}
+
+@media screen and (max-width: @w-lg) {
+  .mobilePreFill {
+    :global {
+      .ant-drawer-body {
+        padding: 0;
+      }
+    }
   }
 }

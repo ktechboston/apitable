@@ -16,18 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Strings, t } from '@apitable/core';
 import { Tooltip } from 'antd';
-import { resourceService } from 'pc/resource_service';
 import * as React from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
-import styles from '../style.module.less';
+import { shallowEqual } from 'react-redux';
+import { IconButton, useThemeColors } from '@apitable/components';
+import { Strings, t } from '@apitable/core';
+import { RedoOutlined, UndoOutlined } from '@apitable/icons';
+import { ShortcutActionName } from 'modules/shared/shortcut_key';
+import { getShortcutKeyString } from 'modules/shared/shortcut_key/keybinding_config';
 import { notify } from 'pc/components/common/notify';
 import { NotifyKey } from 'pc/components/common/notify/notify.interface';
-import { getShortcutKeyString } from 'modules/shared/shortcut_key/keybinding_config';
-import { ShortcutActionName } from 'modules/shared/shortcut_key';
-import { IconButton, useThemeColors } from '@apitable/components';
-import { RedoOutlined, UndoOutlined } from '@apitable/icons';
+import { resourceService } from 'pc/resource_service';
+import { useAppSelector } from 'pc/store/react-redux';
+import styles from '../style.module.less';
 
 export const Undo: React.FC<React.PropsWithChildren<{ className?: string }>> = ({ className }) => {
   const colors = useThemeColors();
@@ -45,7 +46,7 @@ export const Undo: React.FC<React.PropsWithChildren<{ className?: string }>> = (
     }
   };
 
-  const { undoLength, redoLength } = useSelector(() => {
+  const { undoLength, redoLength } = useAppSelector(() => {
     return {
       undoLength: resourceService.instance!.undoManager?.getStockLength('undo'),
       redoLength: resourceService.instance!.undoManager?.getStockLength('redo'),

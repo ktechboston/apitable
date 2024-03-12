@@ -31,11 +31,12 @@ export interface IRenderContentBase {
     background?: string;
     color?: string;
     textAlign?: 'left' | 'center' | 'right';
-    textDecoration?: 'underline' | 'line-through',
+    textDecoration?: 'underline' | 'line-through';
     fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter';
   };
   textData?: IWrapTextDataProps;
   favicon?: string;
+  disabled?: boolean;
 }
 export interface IRenderData {
   width: number;

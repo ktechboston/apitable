@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ResourceType, StoreActions } from '@apitable/core';
+import { batchActions } from 'redux-batched-actions';
+import { ResourceType, StoreActions, WasmApi } from '@apitable/core';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
 import { getStorage, StorageName } from 'pc/utils/storage/storage';
-import { batchActions } from 'redux-batched-actions';
 import { expandRecordManager } from '../../../modules/database/expand_record_manager';
 
 let datasheetId: string | undefined;
@@ -32,10 +32,10 @@ store.subscribe(function datasheetIdChange() {
   if (!spaceId && !shareId && !templateId && !embedId) {
     return;
   }
-  if ((shareId && (!spaceId || !resourceService.instance?.initialized))) {
+  if (shareId && (!spaceId || !resourceService.instance?.initialized)) {
     return;
   }
-  if ((embedId && (!spaceId || !resourceService.instance?.initialized || !state.embedInfo?.spaceId))) {
+  if (embedId && (!spaceId || !resourceService.instance?.initialized || !state.embedInfo?.spaceId)) {
     return;
   }
 
@@ -74,9 +74,22 @@ store.subscribe(function datasheetIdChange() {
   }
 
   setTimeout(() => {
-    resourceService.instance?.initialized && resourceService.instance?.switchResource({
-      from: previousDatasheetId, to: datasheetId as string, resourceType: ResourceType.Datasheet,
-    });
+    if (WasmApi.getBrowserDatabusApiEnabled()) {
+      WasmApi.initializeDatabusWasm().then(() => {
+        resourceService.instance?.initialized &&
+          resourceService.instance?.switchResource({
+            from: previousDatasheetId,
+            to: datasheetId as string,
+            resourceType: ResourceType.Datasheet,
+          });
+      });
+      return;
+    }
+    resourceService.instance?.initialized &&
+      resourceService.instance?.switchResource({
+        from: previousDatasheetId,
+        to: datasheetId as string,
+        resourceType: ResourceType.Datasheet,
+      });
   }, 200);
- 
 });

@@ -16,39 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { isEqual } from 'lodash';
+import { useRef, useState } from 'react';
+import { shallowEqual } from 'react-redux';
 import { CellType, FieldType, Selectors } from '@apitable/core';
-import { shallowEqual, useSelector } from 'react-redux';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { UploadManager } from 'pc/utils';
 import { GRID_ROW_HEAD_WIDTH } from '../constant';
-import { useRef, useState } from 'react';
-import { isEqual } from 'lodash';
 
 interface IAttachmentEvent {
   instance: any;
-  gridBound: { x: number, y: number };
+  gridBound: { x: number; y: number };
   scrollTop: number;
   scrollLeft: number;
   offsetX: number;
 }
 
 export const useAttachmentEvent = (props: IAttachmentEvent) => {
-  const { 
-    instance, 
-    gridBound, 
-    scrollTop, 
-    scrollLeft, 
-    offsetX, 
-  } = props;
+  const { instance, gridBound, scrollTop, scrollLeft, offsetX } = props;
 
-  const {
-    datasheetId,
-    visibleColumns,
-    fieldMap,
-    linearRows,
-    snapshot,
-  } = useSelector((state) => {
+  const { datasheetId, visibleColumns, fieldMap, linearRows, snapshot } = useAppSelector((state) => {
     const datasheetId = Selectors.getActiveDatasheetId(state)!;
     return {
       datasheetId,
@@ -60,7 +49,7 @@ export const useAttachmentEvent = (props: IAttachmentEvent) => {
   }, shallowEqual);
 
   const wheelingRef = useRef<number | null>(null);
-  const [draggingOutlineInfo, setDraggingOutlineInfo] = useState<{ rowIndex: number; columnIndex: number; } | null>(null);
+  const [draggingOutlineInfo, setDraggingOutlineInfo] = useState<{ rowIndex: number; columnIndex: number } | null>(null);
   const { frozenColumnWidth } = instance;
 
   const getCellInfoByPosition = (e: any) => {
@@ -73,12 +62,12 @@ export const useAttachmentEvent = (props: IAttachmentEvent) => {
     const { recordId, type } = linearRows[rowIndex];
     const { fieldId } = visibleColumns[columnIndex];
     const { type: fieldType } = fieldMap[fieldId];
-    if (fieldType !== FieldType.Attachment || type !== CellType.Record) return null; 
+    if (fieldType !== FieldType.Attachment || type !== CellType.Record) return null;
     return {
       recordId,
       fieldId,
       rowIndex,
-      columnIndex
+      columnIndex,
     };
   };
 
@@ -97,9 +86,7 @@ export const useAttachmentEvent = (props: IAttachmentEvent) => {
     fileDataList.forEach(({ file, fileId }) => {
       uploadManager.register(
         cellId,
-        uploadManager.generateSuccessFn(
-          recordId, fieldId, { name: file.name, id: fileId }, datasheetId
-        ),
+        uploadManager.generateSuccessFn(recordId, fieldId, { name: file.name, id: fileId }, datasheetId),
         UploadManager.generateFormData(file, datasheetId),
         fileId,
       );
@@ -113,7 +100,7 @@ export const useAttachmentEvent = (props: IAttachmentEvent) => {
     wheelingRef.current = window.requestAnimationFrame(() => {
       const cellInfo = getCellInfoByPosition(e);
       wheelingRef.current = null;
-      if (cellInfo == null) return setDraggingOutlineInfo(null); 
+      if (cellInfo == null) return setDraggingOutlineInfo(null);
       const { rowIndex, columnIndex } = cellInfo;
       if (!isEqual(draggingOutlineInfo, { rowIndex, columnIndex })) {
         setDraggingOutlineInfo({ rowIndex, columnIndex });
@@ -125,6 +112,6 @@ export const useAttachmentEvent = (props: IAttachmentEvent) => {
     onDrop,
     onDragOver,
     draggingOutlineInfo,
-    setDraggingOutlineInfo
+    setDraggingOutlineInfo,
   };
 };

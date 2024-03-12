@@ -125,18 +125,18 @@
         text-overflow: ellipsis;
         line-height: 28px;
         font-size: 12px;
-        border: 1px solid var(--borderCommonDefault);
-        background: var(--bgCommonHigh);
+        border: 1px solid var(--borderOnbrandLight);
+        background: linear-gradient(0deg, var(--bgBrandLightDefault) 0%, var(--bgBrandLightDefault) 100%), var(--bgCommonDefault);
         &.mobile {
           line-height: 24px;
           padding: 0;
         }
         &:hover {
-          border: 1px solid var(--deepPurple_500);
+          border: 1px solid var(--borderBrandDefault);
           background-color: var(--bgCommonHigh);
         }
         &.highlight {
-          background-color: var(--warnLight);
+          background: linear-gradient(0deg, var(--bgWarnLightDefault) 0%, var(--bgWarnLightDefault) 100%), var(--bgCommonDefault);
         }
       }
       .task {
@@ -149,7 +149,7 @@
           right: 8px;
         }
         &.isMove .list {
-          background-color: var(--bgWarnLightDefault);
+          border: 1px solid var(--deepPurple_500);
         }
       }
     }

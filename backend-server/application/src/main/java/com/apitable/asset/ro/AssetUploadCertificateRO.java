@@ -19,9 +19,10 @@
 package com.apitable.asset.ro;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -36,8 +37,9 @@ public class AssetUploadCertificateRO {
     @Max(value = 20, message = "max wrong count")
     private Integer count = 1;
 
-    @Schema(description = "Type (0: user avatar; 1: space logo; 2: number table attachment; 3: "
-        + "cover image; 4: node description)", example = "0", required = true)
+    @Schema(description = "Asset Type(0:user avatar;1:space logo;2:datasheet;"
+        + " 3:cover image;4:node description;5:document)",
+        example = "0", requiredMode = RequiredMode.REQUIRED)
     @NotNull(message = "Type cannot be null")
     private Integer type;
 

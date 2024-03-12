@@ -2,7 +2,7 @@ import {
   cloneElement,
   isValidElement,
   ReactElement,
-  useCallback,
+  useCallback, useEffect,
   useRef,
   useState
 } from 'react';
@@ -18,6 +18,7 @@ import {
 } from '@floating-ui/react';
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { useFloatUiDropdown } from './useFloatUiDropdown';
+export { setIndex } from './useFloatUiDropdown';
 import { Middleware } from '@floating-ui/dom';
 
 type IDropdownTriggerProps = { visible: boolean, toggle?: () => void };
@@ -39,6 +40,9 @@ export interface IDropdownProps {
       offset?: number;
       autoWidth?: boolean;
       selectedIndex?:number;
+      stopPropagation?: boolean;
+      visible?: boolean;
+      disableClick?: boolean;
     },
     setTriggerRef?: (ref: HTMLElement|null) => void;
     middleware?: Array<Middleware>,
@@ -51,10 +55,10 @@ export interface IDropdownControl {
     close: () => void;
     open: () => void;
     toggle: (open: Boolean) => void;
+    resetIndex ?:() => void;
 }
 
-const CONST_INITIAL_DROPDOWN_INDEX = 1002;
-
+const CONST_INITIAL_DROPDOWN_INDEX = 1202;
 export const Dropdown = forwardRef<IDropdownControl, IDropdownProps>((props, ref) => {
   const { trigger, children, onVisibleChange, options= {
     zIndex: CONST_INITIAL_DROPDOWN_INDEX
@@ -63,18 +67,24 @@ export const Dropdown = forwardRef<IDropdownControl, IDropdownProps>((props, ref
   const arrowEnabled = options.arrow?? true;
   const disabled = options.disabled?? false;
   const [isOpen, setOpenValue] = useState(false);
-  
+
+  useEffect(() => {
+    if(options?.visible != null) {
+      setOpenValue(options.visible);
+    }
+  }, [options?.visible]);
+
   const setOpen = useCallback((isOpenState: boolean) => {
     if(disabled) {
       return;
     }
+    onVisibleChange?.(isOpenState);
     setOpenValue(isOpenState);
-  }, [setOpenValue, disabled]);
+  }, [disabled, onVisibleChange]);
 
   const toggle = useCallback(() => {
     setOpen(!isOpen);
-    onVisibleChange?.(!isOpen);
-  }, [isOpen, onVisibleChange, setOpen]);
+  }, [isOpen, setOpen]);
 
   const open = useCallback(() => {
     setOpen(true);
@@ -105,9 +115,9 @@ export const Dropdown = forwardRef<IDropdownControl, IDropdownProps>((props, ref
   const click = useClick(context);
   const dismiss = useDismiss(context);
   const role = useRole(context);
-  
+
   const { getReferenceProps, getFloatingProps } = useInteractions([
-    click,
+    ...(options?.disableClick === true ? []: [click]),
     dismiss,
     role
   ]);
@@ -124,7 +134,9 @@ export const Dropdown = forwardRef<IDropdownControl, IDropdownProps>((props, ref
       <>
         {
           // @ts-ignore
-          cloneElement(triggerEl, { ref: setRef, ...getReferenceProps() })
+          cloneElement(triggerEl, { ref: setRef, ...getReferenceProps(options?.stopPropagation ? {
+            onClick: e => e.stopPropagation()
+          }: {}) })
         }
         {isOpen && (
           <FloatingPortal>

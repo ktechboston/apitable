@@ -18,21 +18,23 @@
 
 package com.apitable.shared.util.page;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.apitable.base.enums.ParameterException;
+import com.apitable.core.util.ExceptionUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>
- * page helper util
+ * page helper util.
  * </p>
  *
  * @author Shawn Deng
@@ -51,9 +53,16 @@ public class PageHelper {
 
     private static final String ASC = "asc";
 
-
+    /**
+     * convert string to page.
+     *
+     * @param stringObjectParams string params
+     * @param <T>                type
+     * @return page
+     */
     public static <T> Page<T> convert(String stringObjectParams) {
-
+        ExceptionUtil.isTrue(JSONUtil.isTypeJSONObject(stringObjectParams),
+            ParameterException.INCORRECT_ARG);
         JSONObject json = JSONUtil.parseObj(stringObjectParams);
 
         int pageNo = 1;
@@ -94,6 +103,8 @@ public class PageHelper {
                 String updateTime = "updateTime";
                 for (int i = 0; i < sorts.length; i++) {
                     String order = orders[i];
+                    ExceptionUtil.isTrue(ReUtil.isMatch("^[a-zA-Z_.]*$", order.trim()),
+                        ParameterException.INCORRECT_ARG);
                     if (createTime.equals(order)) {
                         order = "createdAt";
                     }
@@ -114,10 +125,11 @@ public class PageHelper {
     }
 
     public static <T> PageInfo<T> build(IPage<T> page) {
-        return new PageInfo<>((int) page.getCurrent(), (int) page.getSize(), (int) page.getTotal(), page.getRecords());
+        return new PageInfo<>(page.getCurrent(), page.getSize(), page.getTotal(),
+            page.getRecords());
     }
 
-    public static <T> PageInfo<T> build(int pageNum, int pageSize, int total, List<T> records) {
+    public static <T> PageInfo<T> build(long pageNum, long pageSize, long total, List<T> records) {
         return new PageInfo<>(pageNum, pageSize, total, records);
     }
 }

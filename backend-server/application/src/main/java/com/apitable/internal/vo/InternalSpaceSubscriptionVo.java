@@ -35,6 +35,10 @@ public class InternalSpaceSubscriptionVo {
     @JsonSerialize(nullsUsing = NullNumberSerializer.class)
     private Long maxRowsPerSheet;
 
+    @Schema(description = "Maximum number of archived rows in a single table (unit: row)")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long maxArchivedRowsPerSheet;
+
     @Schema(description = "The maximum number of rows of the space station (unit: row)")
     @JsonSerialize(nullsUsing = NullNumberSerializer.class)
     private Long maxRowsInSpace;
@@ -54,6 +58,18 @@ public class InternalSpaceSubscriptionVo {
     @Schema(description = "Maximum number of calendar views (unit: pieces)", example = "10")
     @JsonSerialize(nullsUsing = NullNumberSerializer.class)
     private Long maxCalendarViewsInSpace;
+
+    @Schema(description = "the maximum credit number for ai query(unit: int)", example = "1000")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long maxMessageCredits;
+
+    @Schema(description = "Maximum number of widget of the space station")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long maxWidgetNums;
+
+    @Schema(description = "Maximum number of automation runs of the space station")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long maxAutomationRunsNums;
 
     @Schema(description = "allow use embed", example = "true")
     @JsonSerialize(nullsUsing = NullBooleanSerializer.class)

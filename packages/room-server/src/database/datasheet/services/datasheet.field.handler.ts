@@ -34,7 +34,7 @@ import {
 } from '@apitable/core';
 import { Span } from '@metinseylan/nestjs-opentelemetry';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { isEmpty } from 'class-validator';
+import { isArray, isEmpty } from 'class-validator';
 import { RoomResourceRelService } from 'database/resource/services/room.resource.rel.service';
 import { difference } from 'lodash';
 import { NodeService } from 'node/services/node.service';
@@ -234,6 +234,7 @@ export class DatasheetFieldHandler {
         this.logger.debug('Field type:' + fieldType);
       }
       switch (fieldType) {
+        case FieldType.OneWayLink:
         case FieldType.Link:
           const fieldProperty = fieldInfo.property;
           const linkDatasheetId = fieldProperty.foreignDatasheetId;
@@ -252,7 +253,7 @@ export class DatasheetFieldHandler {
             continue;
           }
           // Linked field is not link field, skip
-          if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link) {
+          if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link && fieldMap[relatedLinkFieldId]!.type !== FieldType.OneWayLink) {
             continue;
           }
           // Get referenced linked datasheet ID
@@ -464,10 +465,9 @@ export class DatasheetFieldHandler {
       const recordData = record!.data;
       for (const [fieldId, foreignDstId] of fieldLinkDstMap) {
         let linkedRecordIds = recordData[fieldId];
-        if (!linkedRecordIds) {
+        if (!linkedRecordIds || !isArray(linkedRecordIds)) {
           continue;
         }
-
         linkedRecordIds = (linkedRecordIds as ILinkIds).filter((recId) => typeof recId === 'string');
         if (linkedRecordIds.length) {
           let foreignRecIds = foreignDstIdRecordIdsMap[foreignDstId];
@@ -559,7 +559,7 @@ export class DatasheetFieldHandler {
     // datasheet ID -> processed field ID set
     const dstIdToProcessedFldIdsMap: { [dstId: string]: string[] } = {};
     // Parse main datasheet, obtain all referenced resources
-    const specialFieldTypes = [FieldType.Link, FieldType.LookUp, FieldType.Formula];
+    const specialFieldTypes = [FieldType.Link, FieldType.OneWayLink, FieldType.LookUp, FieldType.Formula];
     const refFieldIds = Object.values(fieldMap).reduce((pre, field) => {
       if (specialFieldTypes.includes(field.type)) {
         pre.push(field.id);
@@ -710,7 +710,7 @@ export class DatasheetFieldHandler {
         continue;
       }
       // Referenced field is not field type, skip
-      if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link) {
+      if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link && fieldMap[relatedLinkFieldId]!.type !== FieldType.OneWayLink) {
         continue;
       }
       const { foreignDatasheetId } = fieldMap[relatedLinkFieldId]!.property;
@@ -779,6 +779,7 @@ export class DatasheetFieldHandler {
         continue;
       }
       switch (fieldInfo.type) {
+        case FieldType.OneWayLink:
         case FieldType.Link:
           const fieldProperty = fieldInfo.property as ILinkFieldProperty;
           const linkDatasheetId = fieldProperty.foreignDatasheetId;
@@ -804,7 +805,7 @@ export class DatasheetFieldHandler {
             break;
           }
           // Linked field is not a link field, skip
-          if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link) {
+          if (fieldMap[relatedLinkFieldId]!.type !== FieldType.Link && fieldMap[relatedLinkFieldId]!.type !== FieldType.OneWayLink) {
             break;
           }
           // Get linked datasheet ID

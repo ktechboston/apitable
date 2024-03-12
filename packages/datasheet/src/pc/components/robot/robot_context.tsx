@@ -15,95 +15,37 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+import { IRobotAction, IRobotTrigger } from 'pc/components/robot/interface';
 
-import produce from 'immer';
-import { createContext, useReducer } from 'react';
-import { IRobotContext } from './interface';
+export interface UpdatedBy {
+  uuid: string;
+  nickName: string;
+  avatar: string;
+}
 
-const initState = {
-  triggerTypes: [],
-  actionTypes: [],
-  robotList: [],
-  isNewRobotModalOpen: false,
-  isEditingRobotName: false,
-  isEditingRobotDesc: false,
-};
+export interface IAutomationRobotDetailItem {
+  robotId: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  isOverLimit: boolean;
+  recentlyRunCount?: number;
+  updatedBy: UpdatedBy;
+  updatedAt: string;
+  props: Props;
+  triggers: Trigger[];
+  actions: Action[];
+  relatedResources: RelatedResource[];
+}
 
-export const RobotContext = createContext<{
-  state: IRobotContext,
-  dispatch: React.Dispatch<any>
-}>({
-  state: initState, dispatch: () => {
-  },
-});
+export interface Props {
+  failureNotifyEnable: boolean;
+}
 
-const reducer = (state: IRobotContext, action: any) => {
-  switch (action.type) {
-    case 'setIsEditingRobotName':
-      return produce(state, draft => {
-        draft.isEditingRobotName = action.payload;
-      });
-    case 'setIsEditingRobotDesc':
-      return produce(state, draft => {
-        draft.isEditingRobotDesc = action.payload;
-      });
-    case 'setTriggerTypes':
-      return {
-        ...state,
-        triggerTypes: action.payload.triggerTypes,
-      };
-    case 'setActionTypes':
-      return {
-        ...state,
-        actionTypes: action.payload.actionTypes,
-      };
-    case 'toggleNewRobotModal':
-      return {
-        ...state,
-        isNewRobotModalOpen: !state.isNewRobotModalOpen,
-      };
-    case 'setCurrentRobotId':
-      return {
-        ...state,
-        currentRobotId: action.payload.currentRobotId,
-      };
-    case 'setIsHistory':
-      return {
-        ...state,
-        isHistory: action.payload.isHistory,
-      };
-    case 'updateRobot':
-      const { robotList } = state;
-      const { robot } = action.payload;
-      const newRobotList = produce(robotList, draft => {
-        const robotIndex = draft.findIndex(item => item.robotId === robot.robotId);
-        if (robotIndex > -1) {
-          const oldRobot = draft[robotIndex];
-          draft[robotIndex] = {
-            ...oldRobot,
-            ...robot,
-          };
-        }
-        return draft;
-      });
-      return {
-        ...state,
-        robotList: newRobotList,
-      };
-    case 'updateRobotList':
-      return {
-        ...state,
-        robotList: action.payload.robotList,
-      };
-    default:
-      throw new Error('error action type');
-  }
-};
-
-export const RobotContextProvider = (props: { children: React.ReactElement }) => {
-  const [state, dispatch] = useReducer(reducer, initState);
-
-  return <RobotContext.Provider value={{ state, dispatch }}>
-    {props.children}
-  </RobotContext.Provider>;
-};
+export type Trigger = IRobotTrigger;
+export type Action = IRobotAction;
+export interface RelatedResource {
+  nodeId: string;
+  nodeName: string;
+  icon: string;
+}

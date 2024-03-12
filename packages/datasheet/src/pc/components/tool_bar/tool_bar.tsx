@@ -16,32 +16,67 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { colorVars, TextButton, useThemeColors } from '@apitable/components';
-import {
-  CollaCommandName, DATASHEET_ID, Events, ExecuteResult, FieldType, IDatasheetClientState, IGalleryViewProperty, IGridViewProperty,
-  IKanbanViewProperty, IViewProperty, LayoutType, Player, ResourceType, RowHeightLevel, Selectors, StoreActions, Strings, t, UN_GROUP, ViewType,
-} from '@apitable/core';
-import {
-  AddCircleOutlined, ApiOutlined, ChevronDownOutlined, EyeOpenOutlined, FilterOutlined, GalleryOutlined, GroupOutlined, HistoryFilled, ListOutlined,
-  RankOutlined, RobotOutlined, SettingFilled, SettingOutlined, ShareOutlined, StyleOutlined, WidgetOutlined,
-} from '@apitable/icons';
 import { useMount, useSize, useThrottleFn } from 'ahooks';
 import classNames from 'classnames';
 import { get } from 'lodash';
+import * as React from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { isMobile } from 'react-device-detect';
+import { shallowEqual, useDispatch } from 'react-redux';
+import { colorVars, TextButton, useThemeColors } from '@apitable/components';
+import {
+  CollaCommandName,
+  DATASHEET_ID,
+  Events,
+  ExecuteResult,
+  FieldType,
+  IDatasheetClientState,
+  IGalleryViewProperty,
+  IGridViewProperty,
+  IKanbanViewProperty,
+  IViewProperty,
+  LayoutType,
+  Player,
+  ResourceType,
+  RowHeightLevel,
+  Selectors,
+  StoreActions,
+  Strings,
+  t,
+  UN_GROUP,
+  ViewType,
+} from '@apitable/core';
+import {
+  AddCircleOutlined,
+  ApiOutlined,
+  AutomationOutlined,
+  ChevronDownOutlined,
+  EyeOpenOutlined,
+  FilterOutlined,
+  GalleryOutlined,
+  GroupOutlined,
+  HistoryFilled,
+  ListOutlined,
+  RankOutlined,
+  RobotOutlined,
+  SettingFilled,
+  SettingOutlined,
+  ShareOutlined,
+  StyleOutlined,
+  WidgetOutlined,
+} from '@apitable/icons';
 import { ShortcutActionManager, ShortcutActionName } from 'modules/shared/shortcut_key';
-import { closeAllExpandRecord } from 'pc/components/expand_record/utils';
+import { ArchivedRecords } from 'pc/components/archive_record';
 import { MirrorList } from 'pc/components/mirror/mirror_list';
 import { getFieldTypeIcon } from 'pc/components/multi_grid/field_setting';
 import { SideBarClickType, SideBarType, useSideBar } from 'pc/context';
 import { useResponsive } from 'pc/hooks';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables, isIframe } from 'pc/utils/env';
 import { setStorage, StorageName } from 'pc/utils/storage/storage';
-import * as React from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isMobile } from 'react-device-detect';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
+import { createdBySubscritionMessage } from '../../utils/created_by_subscrition_message';
 import { Share } from '../catalog/share';
 import { Collapse, ICollapseFunc } from '../common/collapse';
 import { ScreenSize } from '../common/component_display';
@@ -53,10 +88,9 @@ import { Find } from './find';
 import { ForeignForm } from './foreign_form';
 import { useDisabledOperateWithMirror } from './hooks';
 import { ToolHandleType } from './interface';
-import styles from './style.module.less';
 import { ToolItem } from './tool_item';
 import { Undo } from './undo';
-import { createdBySubscritionMessage } from '../../utils/created_by_subscrition_message';
+import styles from './style.module.less';
 
 // Toolbar label and icon adaptation rules when in-table lookup is activated.
 // width:[1180,+infinity) -> Show all.
@@ -91,7 +125,7 @@ const ToolbarBase = () => {
   const [isFindOpen, setIsFindOpen] = useState(false);
   const [iconRotation, setIconRotation] = useState(false);
   const [winWidth, setWinWidth] = useState(0);
-  const { shareId, templateId, datasheetId, viewId, mirrorId, embedId } = useSelector(state => {
+  const { shareId, templateId, datasheetId, viewId, mirrorId, embedId } = useAppSelector((state) => {
     const { shareId, templateId, datasheetId, viewId, mirrorId, embedId } = state.pageParams;
     return {
       shareId,
@@ -99,19 +133,19 @@ const ToolbarBase = () => {
       datasheetId,
       viewId,
       mirrorId,
-      embedId
+      embedId,
     };
   }, shallowEqual);
 
-  const fieldMap = useSelector(state => Selectors.getFieldMap(state, datasheetId))!;
-  const spaceId = useSelector(state => state.space.activeId);
-  const treeNodesMap = useSelector(state => state.catalogTree.treeNodesMap);
-  const activeView: IViewProperty = useSelector(state => Selectors.getCurrentView(state))!;
+  const fieldMap = useAppSelector((state) => Selectors.getFieldMap(state, datasheetId))!;
+  const spaceId = useAppSelector((state) => state.space.activeId);
+  const { treeNodesMap, privateTreeNodesMap } = useAppSelector((state) => state.catalogTree);
+  const activeView: IViewProperty = useAppSelector((state) => Selectors.getCurrentView(state))!;
   const actualColumnCount = activeView.columns.length;
-  const ganttViewStatus = useSelector(state => Selectors.getGanttViewStatus(state));
-  const calendarViewStatus = useSelector(state => Selectors.getCalendarViewStatus(state));
-  const orgChartViewStatus = useSelector(state => Selectors.getOrgChartViewStatus(state));
-  const kanbanViewStatus = useSelector(state => Selectors.getKanbanViewStatus(state));
+  const ganttViewStatus = useAppSelector((state) => Selectors.getGanttViewStatus(state));
+  const calendarViewStatus = useAppSelector((state) => Selectors.getCalendarViewStatus(state));
+  const orgChartViewStatus = useAppSelector((state) => Selectors.getOrgChartViewStatus(state));
+  const kanbanViewStatus = useAppSelector((state) => Selectors.getKanbanViewStatus(state));
   const hiddenGroupMap = (activeView as IKanbanViewProperty).style?.hiddenGroupMap;
   const isGalleryView = activeView && activeView.type === ViewType.Gallery;
   const isKanbanView = activeView && activeView.type === ViewType.Kanban;
@@ -119,21 +153,23 @@ const ToolbarBase = () => {
   const isGanttView = activeView && activeView.type === ViewType.Gantt;
   const isCalendarView = activeView && activeView.type === ViewType.Calendar;
   const isOrgView = activeView && activeView.type === ViewType.OrgChart;
-  const visibleColumnsCount = useSelector(state =>
+  const visibleColumnsCount = useAppSelector((state) =>
     isCalendarView ? Selectors.getCalendarVisibleColumnCount(state) : Selectors.getVisibleColumnCount(state),
   );
-  const visibleGanttColumnsCount = useSelector(state => (isGanttView ? Selectors.getGanttVisibleColumnCount(state) : 0));
+  const visibleGanttColumnsCount = useAppSelector((state) => (isGanttView ? Selectors.getGanttVisibleColumnCount(state) : 0));
   const isExitGroup = 'groupInfo' in activeView && activeView.groupInfo?.length;
-  const permissions = useSelector(state => Selectors.getPermissions(state, datasheetId));
-  const activeNodeId = useSelector(state => Selectors.getNodeId(state));
-  const isApiPanelOpen = useSelector(state => state.space.isApiPanelOpen);
-  const isWidgetPanel = useSelector(state => {
+  const permissions = useAppSelector((state) => Selectors.getPermissions(state, datasheetId));
+  const activeNodeId = useAppSelector((state) => Selectors.getNodeId(state));
+  const activeNodePrivate = useAppSelector((state) => Selectors.getActiveNodePrivate(state));
+  const activeNode = activeNodePrivate ? privateTreeNodesMap[activeNodeId] : treeNodesMap[activeNodeId];
+  const isApiPanelOpen = useAppSelector((state) => state.space.isApiPanelOpen);
+  const isWidgetPanel = useAppSelector((state) => {
     const { mirrorId, datasheetId } = state.pageParams;
     const resourceType = mirrorId ? ResourceType.Mirror : ResourceType.Datasheet;
     const resourceId = mirrorId || datasheetId || '';
     return Selectors.getResourceWidgetPanelStatus(state, resourceId, resourceType)?.opening;
   });
-  const widgetCount = useSelector(state => {
+  const widgetCount = useAppSelector((state) => {
     const { datasheetId, mirrorId } = state.pageParams;
     const resourceId = mirrorId || datasheetId;
     const resourceType = mirrorId ? ResourceType.Mirror : ResourceType.Datasheet;
@@ -148,13 +184,13 @@ const ToolbarBase = () => {
     }
     return widgetPanel.reduce((total, item) => total + item.widgets.length, 0);
   });
-  const { isRobotPanelOpen, isTimeMachinePanelOpen } = useSelector(state => {
+  const { isRobotPanelOpen, isTimeMachinePanelOpen, isCopilotPanelOpen } = useAppSelector((state) => {
     const clientState = Selectors.getDatasheetClient(state);
     return clientState || ({} as IDatasheetClientState);
   });
-  const isSideRecordOpen = useSelector(state => state.space.isSideRecordOpen);
+  const isSideRecordOpen = useAppSelector((state) => state.space.isSideRecordOpen);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const nodeShared = useSelector(state => {
+  const nodeShared = useAppSelector((state) => {
     if (mirrorId) {
       return Boolean(Selectors.getMirror(state, mirrorId)?.nodeShared);
     }
@@ -162,8 +198,8 @@ const ToolbarBase = () => {
     return datasheet!.nodeShared;
   });
   const visualizationEditable = permissions.visualizationEditable || permissions.editable;
-  const kanbanFieldId = useSelector(state => Selectors.getKanbanFieldId(state));
-  const groupIds = useSelector(Selectors.getKanbanGroupMapIds);
+  const kanbanFieldId = useAppSelector((state) => Selectors.getKanbanFieldId(state));
+  const groupIds = useAppSelector(Selectors.getKanbanGroupMapIds);
   const keepSort = activeView.sortInfo && activeView.sortInfo.keepSort;
   const size = useSize(toolbarRef);
   const { screenIsAtMost } = useResponsive();
@@ -173,18 +209,19 @@ const ToolbarBase = () => {
   const hiddenRightToolbar = Boolean(
     size && size.width && (size.width < HIDDEN_TOOLBAR_RIGHT_WIDTH || (size.width < HIDDEN_TREE_WIDTH - SIDERBAR_WIDTH && !sideBarVisible)),
   );
-  const showIconBarLabel = Boolean(size && size.width && size.width > (isGanttView ?
-    GANTT_HIDDEN_TOOLBAR_LEFT_LABEL_WIDTH : HIDDEN_TOOLBAR_LEFT_LABEL_WIDTH) - offsetWidth);
+  const showIconBarLabel = Boolean(
+    size && size.width && size.width > (isGanttView ? GANTT_HIDDEN_TOOLBAR_LEFT_LABEL_WIDTH : HIDDEN_TOOLBAR_LEFT_LABEL_WIDTH) - offsetWidth,
+  );
 
   const hiddenKanbanGroupCount = useMemo(() => {
     return Object.keys(hiddenGroupMap || {})
-      .filter(id => id === UN_GROUP || (groupIds || []).includes(id))
+      .filter((id) => id === UN_GROUP || (groupIds || []).includes(id))
       .reduce((acc, key) => acc + (hiddenGroupMap?.[key] ? 1 : 0), 0);
   }, [groupIds, hiddenGroupMap]);
 
   const dispatch = useDispatch();
 
-  const embedInfo = useSelector(state => Selectors.getEmbedInfo(state));
+  const embedInfo = useAppSelector((state) => Selectors.getEmbedInfo(state));
 
   // The logic of inserting rows in the toolbar is special and is handled here by itself.
   // Always in the first, no grouped data is brought in.
@@ -339,17 +376,17 @@ const ToolbarBase = () => {
   }, [setIsFindOpen, sideBarVisible, toggleType, isFindOpen, size, offsetWidth]);
 
   // Mutually exclusive with the right-hand area.
-  const handleToggleRightBar = async(toggleKey: ShortcutActionName) => {
+  const handleToggleRightBar = async (toggleKey: ShortcutActionName) => {
     // Close sidebar.
     if (isSideRecordOpen) {
-      store.dispatch(StoreActions.toggleSideRecord(false));
-      await closeAllExpandRecord();
+      // store.dispatch(StoreActions.toggleSideRecord(false));
+      // await closeAllExpandRecord();
     }
-
     const panelMap = {
       [ShortcutActionName.ToggleApiPanel]: isApiPanelOpen,
       [ShortcutActionName.ToggleWidgetPanel]: isWidgetPanel,
       [ShortcutActionName.ToggleRobotPanel]: isRobotPanelOpen,
+      [ShortcutActionName.ToggleCopilotPanel]: isCopilotPanelOpen,
       [ShortcutActionName.ToggleTimeMachinePanel]: isTimeMachinePanelOpen,
     };
     for (const key in panelMap) {
@@ -357,7 +394,6 @@ const ToolbarBase = () => {
         await ShortcutActionManager.trigger(key as ShortcutActionName);
       }
     }
-
     onSetClickType && onSetClickType(SideBarClickType.ToolBar);
     await ShortcutActionManager.trigger(toggleKey);
   };
@@ -370,7 +406,7 @@ const ToolbarBase = () => {
       apiBtn: true,
       formBtn: true,
       historyBtn: true,
-      robotBtn: true
+      robotBtn: true,
     };
     if (!embedId) {
       return defaultValue;
@@ -382,9 +418,8 @@ const ToolbarBase = () => {
       apiBtn: get(embedInfo, 'viewControl.toolBar.apiBtn', false),
       formBtn: get(embedInfo, 'viewControl.toolBar.formBtn', false),
       historyBtn: get(embedInfo, 'viewControl.toolBar.historyBtn', false),
-      robotBtn: get(embedInfo, 'viewControl.toolBar.robotBtn', false)
+      robotBtn: get(embedInfo, 'viewControl.toolBar.robotBtn', false),
     };
-
   }, [embedInfo, embedId]);
 
   // The configuration array traversal for rendering, you need to manually specify a non-repeating key for the component,
@@ -393,7 +428,7 @@ const ToolbarBase = () => {
     {
       component: (
         <Find
-          key='find'
+          key="find"
           className={styles.toolbarItem}
           showLabel={showIconBarLabel}
           onOpen={findClick}
@@ -406,19 +441,36 @@ const ToolbarBase = () => {
       show: true,
     },
     {
-      component: <ForeignForm key='foreignForm' className={styles.toolbarItem} showLabel={showIconBarLabel} />,
-      key: 'foreignForm',
-      show: isGridView && !shareId && !templateId && !mirrorId && !embedId,
+      component: (
+        <ToolItem
+          key="copilot"
+          icon={<RobotOutlined size={16} />}
+          text={'Copilot'}
+          onClick={() => handleToggleRightBar(ShortcutActionName.ToggleCopilotPanel)}
+          className={classNames({ [styles.toolbarItem]: true, [styles.apiActive]: isCopilotPanelOpen })}
+          id={DATASHEET_ID.COPILOT_BTN}
+          showLabel={showIconBarLabel}
+          disabled={!permissions.editable} // ?
+        />
+      ),
+      label: 'Copilot',
+      key: 'copilot',
+      show:  getEnvVariables().AI_ENTRANCE_VISIBLE && getEnvVariables().IS_APITABLE && !shareId
     },
     {
-      component: <MirrorList key='mirror' className={styles.toolbarItem} showLabel={showIconBarLabel} />,
+      component: <ForeignForm key="foreignForm" className={styles.toolbarItem} showLabel={showIconBarLabel} />,
+      key: 'foreignForm',
+      show: isGridView && !shareId && !templateId && !mirrorId && embedSetting.formBtn,
+    },
+    {
+      component: <MirrorList key="mirror" className={styles.toolbarItem} showLabel={showIconBarLabel} />,
       key: 'mirror',
       show: !shareId && !templateId && !mirrorId && !embedId,
     },
     {
       component: (
         <ToolItem
-          key='api'
+          key="api"
           icon={<ApiOutlined size={16} className={styles.toolIcon} />}
           text={'API'}
           // onClick={() => ShortcutActionManager.trigger(ShortcutActionName.ToggleApiPanel)}
@@ -435,7 +487,7 @@ const ToolbarBase = () => {
     {
       component: (
         <ToolItem
-          key='widget'
+          key="widget"
           icon={<WidgetOutlined size={16} className={styles.toolIcon} />}
           text={widgetCount > 0 ? t(Strings.widget_num, { count: widgetCount }) : t(Strings.widget_tip)}
           // onClick={() => ShortcutActionManager.trigger(ShortcutActionName.ToggleWidgetPanel)}
@@ -451,9 +503,9 @@ const ToolbarBase = () => {
     {
       component: (
         <ToolItem
-          key='robot'
-          icon={<RobotOutlined size={16} />}
-          text={t(Strings.robot_feature_entry)}
+          key="robot"
+          icon={<AutomationOutlined size={16} />}
+          text={t(Strings.automation)}
           onClick={() => handleToggleRightBar(ShortcutActionName.ToggleRobotPanel)}
           className={classNames({ [styles.toolbarItem]: true, [styles.apiActive]: isRobotPanelOpen })}
           id={DATASHEET_ID.ROBOT_BTN}
@@ -467,7 +519,7 @@ const ToolbarBase = () => {
     {
       component: (
         <ToolItem
-          key='timeMachine'
+          key="timeMachine"
           icon={<HistoryFilled size={16} />}
           text={t(Strings.time_machine)}
           onClick={() => handleToggleRightBar(ShortcutActionName.ToggleTimeMachinePanel)}
@@ -478,19 +530,29 @@ const ToolbarBase = () => {
         />
       ),
       key: 'timeMachine',
-      show: !mirrorId && !shareId && !templateId && embedSetting.historyBtn && getEnvVariables().TIME_MACHINE_VISIBLE
+      show: !mirrorId && !shareId && !templateId && embedSetting.historyBtn && getEnvVariables().TIME_MACHINE_VISIBLE,
+    },
+    {
+      component: <ArchivedRecords
+        key="archived-records"
+        className={styles.toolbarItem}
+        showLabel={showIconBarLabel}
+      />,
+      key: 'archivedRecords',
+      show: !shareId && !mirrorId && !shareId && !templateId && permissions.manageable,
     },
   ];
-
+  const iframeShowTool = shareId ? !isIframe() : true;
   return (
     <div className={classNames(styles.toolbar, { [styles.toolbarVisible]: !!size })} id={DATASHEET_ID.VIEW_TOOL_BAR} ref={toolbarRef}>
-      {!isMobile && embedSetting.basicTools && !isIframe() && <Undo className={styles.toolbarLeft} />}
+      {!isMobile && embedSetting.basicTools && iframeShowTool && <Undo className={styles.toolbarLeft} />}
 
       <div className={classNames(styles.toolbarMiddle, { [styles.toolbarOnlyIcon]: !showIconBarLabel })}>
-        {isGalleryView && embedSetting.basicTools &&
+        {isGalleryView &&
+          embedSetting.basicTools &&
           !isMobile &&
           GalleryLayoutNode(activeView! as IGalleryViewProperty, showIconBarLabel, !visualizationEditable || disabledWithMirror)}
-        {!isOrgView && !isCalendarView && !isGalleryView && !isKanbanView && !isMobile && embedSetting.basicTools && !isIframe() && (
+        {!isOrgView && !isCalendarView && !isGalleryView && !isKanbanView && !isMobile && embedSetting.basicTools && iframeShowTool && (
           <ToolItem
             showLabel={showIconBarLabel}
             disabled={!permissions.rowCreatable}
@@ -606,10 +668,7 @@ const ToolbarBase = () => {
         {!isOrgView && embedSetting.basicTools && (
           <Display type={ToolHandleType.ViewFilter}>
             <div>
-              <FilterNode
-                showLabel={showIconBarLabel}
-                disabled={!visualizationEditable || disabledWithMirror}
-              />
+              <FilterNode showLabel={showIconBarLabel} disabled={!visualizationEditable || disabledWithMirror} />
             </div>
           </Display>
         )}
@@ -624,9 +683,7 @@ const ToolbarBase = () => {
               className={classNames({
                 [styles.toolbarItem]: true,
               })}
-              icon={
-                <GroupOutlined size={16} className={styles.toolIcon} color={isExitGroup ? colors.primaryColor : colors.secondLevelText} />
-              }
+              icon={<GroupOutlined size={16} className={styles.toolIcon} color={isExitGroup ? colors.primaryColor : colors.secondLevelText} />}
               text={
                 isExitGroup
                   ? t(Strings.group_amount, {
@@ -668,17 +725,11 @@ const ToolbarBase = () => {
             />
           </Display>
         )}
-        {!shareId && !templateId && activeNodeId && treeNodesMap[activeNodeId] && !embedId && !isIframe() && (
+        {!shareId && !templateId && Boolean(activeNode) && !embedId && !isIframe() && (
           <Display type={ToolHandleType.Share}>
             <ToolItem
               showLabel={showIconBarLabel}
-              icon={
-                <ShareOutlined
-                  size={16}
-                  color={nodeShared ? colors.primaryColor : colors.secondLevelText}
-                  className={styles.toolIcon}
-                />
-              }
+              icon={<ShareOutlined size={16} color={nodeShared ? colors.primaryColor : colors.secondLevelText} className={styles.toolIcon} />}
               text={t(Strings.share)}
               disabled={!permissions.sharable}
               isActive={nodeShared}
@@ -698,15 +749,15 @@ const ToolbarBase = () => {
           <Collapse
             ref={collapseRef}
             wrapClick={handleWrapClick}
-            wrapClassName='COLLAPSE'
+            wrapClassName="COLLAPSE"
             wrapStyle={{ height: 30 }}
-            id='tool_bar'
+            id="tool_bar"
             collapseItemClassName={classNames({ [styles.toolbarOnlyIcon]: !showIconBarLabel })}
-            data={featureToolItems.filter(v => v.show && v.component).map(v => ({ key: v.key, text: v.component }))}
+            data={featureToolItems.filter((v) => v.show && v.component).map((v) => ({ key: v.key, text: v.component }))}
             unSortable
             trigger={
               <TextButton
-                size='x-small'
+                size="x-small"
                 suffixIcon={<ChevronDownOutlined className={classNames(styles.viewArrow, { [styles.viewArrowActive]: iconRotation })} />}
                 id={DATASHEET_ID.VIEW_LIST_SHOW_BTN}
                 data-test-id={DATASHEET_ID.VIEW_LIST_SHOW_BTN}
@@ -716,7 +767,7 @@ const ToolbarBase = () => {
               </TextButton>
             }
             onPopupVisibleChange={setIconRotation}
-            align='flex-end'
+            align="flex-end"
             fixedIndex={1}
             popupClassName={styles.collapsePopup}
             popupItemClassName={styles.collapsePopupItem}
@@ -755,7 +806,7 @@ function GalleryLayoutNode(activeView: IViewProperty, showLabel: boolean, disabl
 function FilterNode(props: { showLabel: boolean; disabled: boolean }) {
   const { disabled, showLabel } = props;
 
-  const { filterInfo } = useSelector(state => {
+  const { filterInfo } = useAppSelector((state) => {
     return {
       filterInfo: Selectors.getFilterInfo(state, state.pageParams.datasheetId!),
     };

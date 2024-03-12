@@ -16,17 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { Tree } from 'antd';
+import { FC, ReactText } from 'react';
 import { ILightOrDarkThemeColors, useThemeColors } from '@apitable/components';
 import { ConfigConstant, IReduxState, ITemplateTree, Navigation, Selectors } from '@apitable/core';
 import { TriangleDownFilled } from '@apitable/icons';
-import { Tree } from 'antd';
 import { getNodeIcon } from 'pc/components/catalog/tree/node_icon';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { Router } from 'pc/components/route_manager/router';
 import { INodeTree } from 'pc/components/share/interface';
 import { useResponsive, useSideBarVisible } from 'pc/hooks';
-import { FC, ReactText } from 'react';
-import { useSelector } from 'react-redux';
+
+import { useAppSelector } from 'pc/store/react-redux';
 
 const { DirectoryTree, TreeNode } = Tree;
 
@@ -34,12 +35,12 @@ interface INodeTreeProps {
   nodeTree: ITemplateTree;
 }
 
-export const NodeTree: FC<React.PropsWithChildren<INodeTreeProps>> = props => {
+export const NodeTree: FC<React.PropsWithChildren<INodeTreeProps>> = (props) => {
   const colors = useThemeColors();
   const { nodeTree } = props;
-  const nodeId = useSelector(state => Selectors.getNodeId(state))!;
-  const { templateId, categoryId } = useSelector((state: IReduxState) => state.pageParams);
-  const spaceId = useSelector(state => state.space.activeId);
+  const nodeId = useAppSelector((state) => Selectors.getNodeId(state))!;
+  const { templateId, categoryId } = useAppSelector((state: IReduxState) => state.pageParams);
+  const spaceId = useAppSelector((state) => state.space.activeId);
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
 
@@ -66,7 +67,7 @@ export const NodeTree: FC<React.PropsWithChildren<INodeTreeProps>> = props => {
     if (!node || !node.length) {
       return <></>;
     }
-    return node!.map(item => {
+    return node!.map((item) => {
       const icon = getNodeIcon(item.icon, item.type, { size: 16, emojiSize: 18, actived: item.nodeId === nodeId, normalColor: colors.defaultBg });
       if (item.type === ConfigConstant.NodeType.FOLDER) {
         return (

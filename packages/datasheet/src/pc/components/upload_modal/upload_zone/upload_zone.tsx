@@ -16,20 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { IAttachmentValue, Strings, t } from '@apitable/core';
 import classNames from 'classnames';
-import { ScreenSize } from 'pc/components/common/component_display';
-import { resourceService } from 'pc/resource_service';
-import { useResponsive } from 'pc/hooks';
-import { stopPropagation } from 'pc/utils';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import * as React from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useThemeColors } from '@apitable/components';
-import { ICommonTabRef } from '../upload_tab';
-import styles from './styles.module.less';
+import { IAttachmentValue, Strings, t } from '@apitable/core';
 import { AddOutlined } from '@apitable/icons';
 import { browser } from 'modules/shared/browser';
+import { ScreenSize } from 'pc/components/common/component_display';
+import { useResponsive } from 'pc/hooks';
+import { resourceService } from 'pc/resource_service';
+import { stopPropagation } from 'pc/utils';
+import { ICommonTabRef } from '../upload_tab';
+import styles from './styles.module.less';
 
 interface IUploadZonProps {
   onUpload(files: IUploadZoneItem[]): void;
@@ -96,7 +96,18 @@ export const UploadZoneBase: React.ForwardRefRenderFunction<ICommonTabRef, IUplo
     setDragOver(false);
   }, [isFileDialogActive]);
 
-  const isMiniProgram = browser?.is('wechat') && browser?.is('android');
+  const isWechat = browser?.is('wechat');
+  const isAndroid = browser?.is('android');
+  const isIOS = browser?.is('ios');
+
+  const isMiniProgram = isWechat || isAndroid || isIOS;
+
+  const renderUploadText = () => {
+    if (isMobile) {
+      return isMiniProgram ? t(Strings.upload_on_your_phone) : t(Strings.take_photos_or_upload);
+    }
+    return t(Strings.select_local_file);
+  };
 
   return (
     <div
@@ -113,14 +124,13 @@ export const UploadZoneBase: React.ForwardRefRenderFunction<ICommonTabRef, IUplo
       }}
       defaultValue=""
     >
-      {/* WeChat applet input does not support multiple, widget side forced to set to false */}
-      <input {...getInputProps()} defaultValue="" {...(isMiniProgram && { multiple: false })} />
+      <input {...getInputProps()} defaultValue="" multiple />
       {!layoutOpacity && (
         <>
           <span onMouseDown={stopPropagation} style={{ display: 'flex', alignItems: 'center' }} ref={uploadRef}>
             <AddOutlined color={colors.fourthLevelText} />
           </span>
-          {isMobile ? (isMiniProgram ? t(Strings.upload_on_your_phone) : t(Strings.take_photos_or_upload)) : t(Strings.select_local_file)}
+          {renderUploadText()}
         </>
       )}
     </div>

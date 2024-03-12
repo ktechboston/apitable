@@ -1,56 +1,60 @@
-import styles from './style.module.less';
-import { ButtonPlus, Loading, Tooltip } from '../common';
-import { NarrowOutlined, QuestionCircleOutlined } from '@apitable/icons';
-import { DatasheetApi, Selectors, Strings, t } from '@apitable/core';
-import { SearchControl } from '../common/search_control';
-import { FolderBreadcrumb } from './folder_breadcrumb';
-import { SearchResult } from './search_result';
-import { FolderContent } from './folder_content';
+import { useMount } from 'ahooks';
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
-import { ScreenSize } from '../common/component_display';
-import { useResponsive } from '../../hooks';
-import { useFocusEffect } from '../editors/hooks/use_focus_effect';
-import { useSelector } from 'react-redux';
-import { getModalTitle } from './utils';
-import { SecondConfirmType } from './datasheet_search_panel';
 import { useThemeColors } from '@apitable/components';
-import { useMount } from 'ahooks';
+import { DatasheetApi, Selectors, Strings, t } from '@apitable/core';
+import { NarrowOutlined, QuestionCircleOutlined } from '@apitable/icons';
 import { useNodeClick } from 'pc/components/datasheet_search_panel/hooks/use_node_click';
-import { insertViewNode } from 'pc/components/datasheet_search_panel/utils/insert_view_nodes';
-import { ISearchPanelProps } from 'pc/components/datasheet_search_panel/interface';
 import { useSearch } from 'pc/components/datasheet_search_panel/hooks/use_search';
+import { insertViewNode } from 'pc/components/datasheet_search_panel/utils/insert_view_nodes';
+import { useAppSelector } from 'pc/store/react-redux';
+import { useResponsive } from '../../hooks';
+import { ButtonPlus, Loading, Tooltip } from '../common';
+import { ScreenSize } from '../common/component_display';
+import { SearchControl } from '../common/search_control';
+import { useFocusEffect } from '../editors/hooks/use_focus_effect';
+import { FolderBreadcrumb } from './folder_breadcrumb';
+import { FolderContent } from './folder_content';
+import { ISearchPanelProps, SecondConfirmType } from './interface';
+import { SearchResult } from './search_result';
+import { getModalTitle, getPlaceholder } from './utils';
+import styles from './style.module.less';
 
 export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
   const {
-    hidePanel,
-    noCheckPermission,
-    showMirrorNode,
-    localState,
-    localDispatch,
-    secondConfirmType,
+    hidePanel, noCheckPermission, options, onNodeSelect,
+    directClickMode, showMirrorNode, localState, localDispatch, secondConfirmType
   } = props;
 
   const colors = useThemeColors();
-  const { embedId } = useSelector(state => state.pageParams);
-  const mirror = useSelector(state => {
+  const { embedId } = useAppSelector((state) => state.pageParams);
+  const mirror = useAppSelector((state) => {
     return localState.currentMirrorId ? Selectors.getMirror(state, localState.currentMirrorId) : undefined;
   });
-  const datasheet = useSelector(state => {
+  const datasheet = useAppSelector((state) => {
     return localState.currentDatasheetId ? Selectors.getDatasheet(state, localState.currentDatasheetId) : undefined;
+  });
+
+  const form = useAppSelector((state) => {
+    return localState.currentFormId ? Selectors.getForm(state, localState.currentFormId) : undefined;
   });
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
-  const editorRef = useRef<{ focus: () => void } | null>(null);
+  const editorRef = useRef<{
+    focus: () => void;
+      } | null>(null);
 
   const onCancelClick = () => {
     localDispatch({ searchValue: '' });
     editorRef.current!.focus();
   };
 
-  const needSelectView = secondConfirmType === SecondConfirmType.Form || secondConfirmType === SecondConfirmType.Chat;
+  let needSelectView = secondConfirmType === SecondConfirmType.Form || secondConfirmType === SecondConfirmType.Chat;
+  if(directClickMode == true) {
+    needSelectView = false;
+  }
 
-  useSearch({ localDispatch, folderId: localState.currentFolderId, localState });
+  useSearch({ localDispatch, folderId: localState.currentFolderId, localState, options });
 
   useFocusEffect(() => {
     editorRef.current && editorRef.current.focus();
@@ -58,9 +62,26 @@ export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
 
   useEffect(() => {
     if (!needSelectView) {
+
       if (datasheet) {
         props.onChange({ datasheetId: datasheet.id });
       }
+
+      if(directClickMode) {
+        if(localState.currentFormId){
+          props.onChange({ formId: localState.currentFormId });
+        }
+      }else {
+
+        if (form) {
+          props.onChange({ formId: form.id });
+        }
+      }
+
+      if (datasheet) {
+        props.onChange({ datasheetId: datasheet.id });
+      }
+
       if (mirror) {
         props.onChange({ mirrorId: mirror.id });
       }
@@ -75,10 +96,10 @@ export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
       localDispatch,
     });
     // eslint-disable-next-line
-  }, [localState.folderLoaded, secondConfirmType, localState.currentMeta, datasheet, mirror]);
+  }, [localState.folderLoaded, secondConfirmType, localState.currentMeta, datasheet, mirror, form]);
 
   useMount(() => {
-    fetchFolderData(localState.currentFolderId);
+    fetchFolderData(localState.currentFolderId, options);
 
     if (secondConfirmType === SecondConfirmType.Form && localState.currentMeta == null) {
       searchDatasheetMetaData(localState.currentDatasheetId);
@@ -88,7 +109,7 @@ export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
   const needSearchDatasheetMetaData = secondConfirmType === SecondConfirmType.Form || secondConfirmType === SecondConfirmType.Chat;
 
   // 这个方法是需要调取视图数据，进行表单的预览时会调用的接口，如果不需要预览表单，则不会调用
-  const searchDatasheetMetaData = async(datasheetId: string) => {
+  const searchDatasheetMetaData = async (datasheetId: string) => {
     if (!datasheetId || !needSearchDatasheetMetaData) {
       return;
     }
@@ -110,53 +131,78 @@ export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
       }
     }
   };
-  const { onNodeClick, fetchFolderData } = useNodeClick({ localDispatch, localState, searchDatasheetMetaData, secondConfirmType });
+  const { onNodeClick, fetchFolderData } = useNodeClick({
+    localDispatch,
+    localState,
+    searchDatasheetMetaData,
+    secondConfirmType,
+  });
 
   const isPc = !isMobile;
 
-  return <div className={styles.searchPanel} onClick={e => e.stopPropagation()}>
-    {
-      isPc &&
-      <ButtonPlus.Icon className={styles.narrowBtn} icon={<NarrowOutlined size={16} color={'currentColor'} />}
-        size="small" onClick={hidePanel} />
-    }
-    {
-      isPc && <h2 className={styles.searchPanelTitle}>
-        {getModalTitle(secondConfirmType)}
-        {secondConfirmType === SecondConfirmType.Form && (
-          <Tooltip title={t(Strings.form_tour_desc)}>
-            <a href={t(Strings.form_tour_link)} className={styles.helpBtn} target="_blank" rel="noreferrer">
-              <QuestionCircleOutlined color={colors.textCommonTertiary} />
-            </a>
-          </Tooltip>
-        )}
-      </h2>
-    }
-    <SearchControl
-      ref={editorRef}
-      onFocus={() => localState.searchValue && localDispatch({ showSearch: true })}
-      onValueChange={val => localDispatch({ searchValue: val })}
-      onSwitcherChange={val => localDispatch({ onlyShowEditableNode: val })}
-      onCancelClick={onCancelClick}
-      placeholder={t(Strings.search_folder_or_sheet)}
-      checkboxText={t(Strings.hide_unusable_sheet)}
-      checked={localState.onlyShowEditableNode}
-      value={localState.searchValue}
-      switchVisible={secondConfirmType !== SecondConfirmType.Form}
-    />
-    {
-      !localState.showSearch && !embedId && <FolderBreadcrumb parents={localState.parents} onNodeClick={onNodeClick} />
-    }
-    {
-      localState.showSearch ? (
+  return (
+    <div className={styles.searchPanel} onClick={(e) => e.stopPropagation()}>
+      {isPc && (
+        <ButtonPlus.Icon className={styles.narrowBtn} icon={<NarrowOutlined size={16} color={'currentColor'} />} size="small" onClick={hidePanel} />
+      )}
+      {isPc && (
+        <h2 className={styles.searchPanelTitle}>
+          {getModalTitle(secondConfirmType, options)}
+          {secondConfirmType === SecondConfirmType.Form && (
+            <Tooltip title={t(Strings.form_tour_desc)}>
+              <a href={t(Strings.form_tour_link)} className={styles.helpBtn} target="_blank" rel="noreferrer">
+                <QuestionCircleOutlined color={colors.textCommonTertiary} />
+              </a>
+            </Tooltip>
+          )}
+        </h2>
+      )}
+      <SearchControl
+        ref={editorRef}
+        onFocus={() => localState.searchValue && localDispatch({ showSearch: true })}
+        onValueChange={(val) => localDispatch({ searchValue: val })}
+        onSwitcherChange={(val) => localDispatch({ onlyShowEditableNode: val })}
+        onCancelClick={onCancelClick}
+        placeholder={getPlaceholder(options)}
+        checkboxText={options?.needPermission === 'manageable'? t(Strings.hide_unmanageable_files): t(Strings.hide_unusable_sheet)}
+        checked={localState.onlyShowEditableNode}
+        value={localState.searchValue}
+        switchVisible={secondConfirmType !== SecondConfirmType.Form}
+      />
+      {!localState.showSearch && !embedId && <FolderBreadcrumb parents={localState.parents} onNodeClick={(e, id) => {
+        if (e === 'Datasheet') {
+          onNodeSelect?.({
+            datasheetId: id
+          });
+        }
+        onNodeClick(e, id);
+      }}
+      />
+      }
+      {localState.showSearch ? (
         <SearchResult
           searchResult={localState.searchResult}
           noCheckPermission={noCheckPermission}
+          options={options}
           onlyShowAvailable={localState.onlyShowEditableNode}
-          onNodeClick={onNodeClick}
+          onNodeClick={(e, id) => {
+            if(e==='Form') {
+              onNodeSelect?.({
+                formId: id
+              });
+            }
+            if(e==='Datasheet') {
+              onNodeSelect?.({
+                datasheetId: id
+              });
+            }
+            onNodeClick(e, id);
+          }}
         />
       ) : (
         <FolderContent
+          secondConfirmType={secondConfirmType}
+          options={options}
           nodes={localState.nodes}
           currentViewId={localState.currentViewId}
           currentMirrorId={localState.currentMirrorId}
@@ -165,12 +211,24 @@ export const SearchPanelMain: React.FC<ISearchPanelProps> = (props) => {
           onlyShowEditableNode={localState.onlyShowEditableNode}
           noCheckPermission={noCheckPermission}
           isSelectView={secondConfirmType === SecondConfirmType.Form}
-          onNodeClick={onNodeClick}
+          onNodeClick={(e, id) => {
+            if(e==='Form') {
+              onNodeSelect?.({
+                formId: id
+              });
+            }
+            if(e==='Datasheet') {
+              onNodeSelect?.({
+                datasheetId: id
+              });
+            }
+            onNodeClick(e, id);
+          }}
           showMirrorNode={showMirrorNode}
-          hideViewNode={secondConfirmType === SecondConfirmType.Chat}
+          // hideViewNode={secondConfirmType === SecondConfirmType.Chat}
         />
-      )
-    }
-    {localState.loading && <Loading className={styles.loading} />}
-  </div>;
+      )}
+      {localState.loading && <Loading className={styles.loading} />}
+    </div>
+  );
 };

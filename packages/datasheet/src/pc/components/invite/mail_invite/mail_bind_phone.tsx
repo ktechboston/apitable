@@ -16,24 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ApiInterface, ConfigConstant, IReduxState, Strings, t } from '@apitable/core';
 import { useMount } from 'ahooks';
 import classNames from 'classnames';
 import parser from 'html-react-parser';
+import { FC } from 'react';
+import { ApiInterface, ConfigConstant, IReduxState, Strings, t } from '@apitable/core';
 import { Wrapper } from 'pc/components/common';
-// @ts-ignore
-import { IdentifyingCodeLogin } from 'enterprise';
 import { useUserRequest } from 'pc/hooks';
 import { store } from 'pc/store';
-import { FC } from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from 'pc/store/react-redux';
 import { InviteTitle } from '../components';
 import { useInvitePageRefreshed } from '../use_invite';
+// @ts-ignore
+import { IdentifyingCodeLogin } from 'enterprise/home/login/identifying_code_login/identifying_code_login';
 import styles from './style.module.less';
 
 const MailBindPhone: FC<React.PropsWithChildren<unknown>> = () => {
   const { whenPageRefreshed } = useInvitePageRefreshed({ type: 'mailInvite' });
-  const inviteEmailInfo = useSelector((state: IReduxState) => state.invite.inviteEmailInfo);
+  const inviteEmailInfo = useAppSelector((state: IReduxState) => state.invite.inviteEmailInfo);
   const { loginOrRegisterReq } = useUserRequest();
 
   useMount(() => {
@@ -70,13 +70,15 @@ const MailBindPhone: FC<React.PropsWithChildren<unknown>> = () => {
           />
         )}
         <div className={styles.loginContent}>
-          {IdentifyingCodeLogin && <IdentifyingCodeLogin
-            submitRequest={submitRequest}
-            submitText={t(Strings.confirm_join)}
-            mode={ConfigConstant.LoginMode.MAIL}
-            footer={parser(t(Strings.old_user_turn_to_home))}
-            config={{ mail: { defaultValue: inviteEmailInfo?.data.inviteEmail, disabled: true }}}
-          />}
+          {IdentifyingCodeLogin && (
+            <IdentifyingCodeLogin
+              submitRequest={submitRequest}
+              submitText={t(Strings.confirm_join)}
+              mode={ConfigConstant.LoginMode.MAIL}
+              footer={parser(t(Strings.old_user_turn_to_home))}
+              config={{ mail: { defaultValue: inviteEmailInfo?.data.inviteEmail, disabled: true } }}
+            />
+          )}
         </div>
       </div>
     </Wrapper>

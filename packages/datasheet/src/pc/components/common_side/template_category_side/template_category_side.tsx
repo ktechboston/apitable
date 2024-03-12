@@ -16,23 +16,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ThemeName, Typography, useThemeColors } from '@apitable/components';
-import { ConfigConstant, IReduxState, ISearchAblum, ISearchTemplate, ITemplateCategory, Navigation, Strings, t, TrackEvents } from '@apitable/core';
-import { CloseCircleFilled } from '@apitable/icons';
 import { useDebounceFn, useUnmount } from 'ahooks';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
+import { usePostHog } from 'posthog-js/react';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { ThemeName, Typography, useThemeColors } from '@apitable/components';
+import { ConfigConstant, IReduxState, ISearchAblum, ISearchTemplate, ITemplateCategory, Navigation, Strings, t, TrackEvents } from '@apitable/core';
+import { CloseCircleFilled } from '@apitable/icons';
 import { Logo } from 'pc/components/common';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { SearchInput } from 'pc/components/common/search_input';
 import { Router } from 'pc/components/route_manager/router';
 import { useQuery, useRequest, useResponsive, useSideBarVisible, useTemplateRequest } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { KeyCode } from 'pc/utils/keycode';
-import { usePostHog } from 'posthog-js/react';
-import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
 import TemplateIcon from 'static/icon/datasheet/datasheet_icon_template_folder.svg';
 import NotDataImgDark from 'static/icon/datasheet/empty_state_dark.png';
 import NotDataImgLight from 'static/icon/datasheet/empty_state_light.png';
@@ -45,14 +45,14 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
   const [categoryList, setCategoryList] = useState<ITemplateCategory[]>([]);
   const query = useQuery();
   const [keywords, setKeywords] = useState(query.get('searchKey') || '');
-  const spaceId = useSelector((state: IReduxState) => state.space.activeId);
-  const categoryId = useSelector((state: IReduxState) => state.pageParams.categoryId);
+  const spaceId = useAppSelector((state: IReduxState) => state.space.activeId);
+  const categoryId = useAppSelector((state: IReduxState) => state.pageParams.categoryId);
   const { getTemplateCategoryReq, searchTemplateReq } = useTemplateRequest();
   const { data: templateCategory } = useRequest<ITemplateCategory[]>(getTemplateCategoryReq);
   const {
     run: searchTemplate,
     data: searchTemplateResult,
-    mutate
+    mutate,
   } = useRequest<{
     albums: ISearchAblum[];
     templates: ISearchTemplate[];
@@ -62,7 +62,7 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
   // Keep track of the keywords that have been reported to avoid duplication of buried reports
   const hasTrackSearchKeyWords = useRef('');
   const router = useRouter();
-  const themeName = useSelector(state => state.theme);
+  const themeName = useAppSelector((state) => state.theme);
   const SearchDefaultPng = themeName === ThemeName.Light ? NotDataImgLight : NotDataImgDark;
 
   useEffect(() => {
@@ -90,12 +90,12 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
   const isMobile = screenIsAtMost(ScreenSize.md);
 
   const handleClick = (categoryId: string) => {
-    Router.push(Navigation.TEMPLATE, { params: { spaceId, categoryId }});
+    Router.push(Navigation.TEMPLATE, { params: { spaceId, categoryId } });
     isMobile && setSideBarVisible(false);
   };
 
   const jumpOfficialWebsite = () => {
-    Router.newTab(Navigation.HOME, { query: { home: 1 }});
+    Router.newTab(Navigation.HOME, { query: { home: 1 } });
   };
 
   /**
@@ -107,20 +107,23 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
    * 4. Click to clear to report current results
    * 5. Input box enter
    */
-  const triggerTrack = useCallback((keywords: any) => {
-    if (!keywords || hasTrackSearchKeyWords.current === keywords) {
-      return;
-    }
-    hasTrackSearchKeyWords.current = keywords;
-    console.log(`template keyword track: ${keywords}`);
-    posthog?.capture(TrackEvents.TemplateSearchKeyword, {
-      keyword: keywords,
-    });
-  }, [posthog]);
+  const triggerTrack = useCallback(
+    (keywords: any) => {
+      if (!keywords || hasTrackSearchKeyWords.current === keywords) {
+        return;
+      }
+      hasTrackSearchKeyWords.current = keywords;
+      console.log(`template keyword track: ${keywords}`);
+      posthog?.capture(TrackEvents.TemplateSearchKeyword, {
+        keyword: keywords,
+      });
+    },
+    [posthog],
+  );
 
   const jumpTemplate = (categoryCode: string, templateId: string) => {
     triggerTrack(keywords);
-    Router.push(Navigation.TEMPLATE, { params: { spaceId, categoryId: categoryCode, templateId }});
+    Router.push(Navigation.TEMPLATE, { params: { spaceId, categoryId: categoryCode, templateId } });
   };
 
   const clearKeyword = () => {
@@ -161,7 +164,7 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
       params: {
         spaceId,
         albumId,
-        categoryId: 'album'
+        categoryId: 'album',
       },
     });
   };
@@ -173,7 +176,7 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
           {!spaceId && (
             <Tooltip title={t(Strings.jump_official_website)}>
               <div className={styles.logo} onClick={jumpOfficialWebsite}>
-                <Logo theme={ThemeName.Dark} size='large' text={false} />
+                <Logo theme={ThemeName.Dark} size="large" text={false} />
               </div>
             </Tooltip>
           )}
@@ -184,15 +187,21 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
             className={styles.templateSearch}
             keyword={keywords}
             change={setKeywords}
-            size='small'
+            size="small"
             onBlur={() => bindSearchQuery(keywords)}
             onKeyDown={onSearchInputKeyDown}
-            suffix={keywords && <span onClick={clearKeyword}><CloseCircleFilled className={styles.closeBtn} /></span>}
+            suffix={
+              keywords && (
+                <span onClick={clearKeyword}>
+                  <CloseCircleFilled className={styles.closeBtn} />
+                </span>
+              )
+            }
           />
         </div>
         <div className={styles.listContainer}>
           <div className={styles.officialTemplate}>
-            <Typography className={classNames(styles.subTitle, styles.officialSubTitle)} variant='h6'>
+            <Typography className={classNames(styles.subTitle, styles.officialSubTitle)} variant="h6">
               {t(Strings.official_template)}
             </Typography>
             <div className={styles.officialTemplateList}>
@@ -212,7 +221,7 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
           </div>
           {spaceId && (
             <div className={styles.spaceTemplate}>
-              <Typography variant='h6' className={styles.subTitle}>
+              <Typography variant="h6" className={styles.subTitle}>
                 {t(Strings.space_template)}
               </Typography>
               <div
@@ -229,20 +238,22 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
           )}
           {keywords && (
             <div className={styles.searchResult}>
-              {((templates && templates.length > 0) || (albums && albums.length > 0)) ? (
+              {(templates && templates.length > 0) || (albums && albums.length > 0) ? (
                 <>
                   {templates && templates.length > 0 && (
                     <>
                       <h3>{t(Strings.template)}</h3>
-                      {templates.map(item => (
-                        <div className={styles.item} key={item.templateId} onClick={() =>
-                          jumpTemplate(item.categoryCode || ConfigConstant.TEMPLATE_UNCATEGORIZED, item.templateId)}
+                      {templates.map((item) => (
+                        <div
+                          className={styles.item}
+                          key={item.templateId}
+                          onClick={() => jumpTemplate(item.categoryCode || ConfigConstant.TEMPLATE_UNCATEGORIZED, item.templateId)}
                         >
-                          <Typography className={styles.nameContainer} variant='body2'>
+                          <Typography className={styles.nameContainer} variant="body2">
                             <TemplateIcon width={16} height={16} fill={colors.staticWhite0} />
                             <span className={styles.name} dangerouslySetInnerHTML={{ __html: item.templateName }} />
                           </Typography>
-                          <Typography className={styles.tags} variant='body3'>
+                          <Typography className={styles.tags} variant="body3">
                             {item.tags.map((tag, index) => (
                               <span key={index} className={styles.tag} dangerouslySetInnerHTML={{ __html: tag }} />
                             ))}
@@ -264,7 +275,7 @@ export const TemplateCategorySide: FC<React.PropsWithChildren<unknown>> = () => 
                 </>
               ) : (
                 <div className={styles.emptyList}>
-                  <Image src={SearchDefaultPng} alt='empty' />
+                  <Image src={SearchDefaultPng} alt="empty" />
                   <div className={styles.tip}>{t(Strings.no_search_result)}</div>
                 </div>
               )}

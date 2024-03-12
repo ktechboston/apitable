@@ -16,19 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import classNames from 'classnames';
+import { forwardRef, memo, useImperativeHandle, useRef, useState } from 'react';
+import * as React from 'react';
 import { ConfigConstant, Field } from '@apitable/core';
 
-import classNames from 'classnames';
 import { Emoji } from 'pc/components/common';
 import { stopPropagation } from 'pc/utils/dom';
 import { KeyCode } from 'pc/utils/keycode';
-import { forwardRef, memo, useImperativeHandle, useRef, useState } from 'react';
-import * as React from 'react';
 import { FocusHolder } from '../focus_holder';
 import { IBaseEditorProps, IEditor } from '../interface';
 import styles from './style.module.less';
 
 export interface ICheckboxEditorProps extends IBaseEditorProps {
+  datasheetId: string;
   style: React.CSSProperties;
   editable: boolean;
   editing: boolean;
@@ -45,25 +46,30 @@ const CheckboxEditorBase: React.ForwardRefRenderFunction<IEditor, ICheckboxEdito
   const editorRef = useRef<HTMLInputElement>(null);
 
   const icon = Field.bindModel(field).isComputed ? ConfigConstant.DEFAULT_CHECK_ICON : field.property.icon;
-  useImperativeHandle(ref, (): IEditor => ({
-    focus: () => { focus(); },
-    onEndEdit: (cancel: boolean) => {
-      if (cellValueExist) return;
-      onEndEdit(cancel);
-    },
-    onStartEdit: (value?: boolean | null) => {
-      if (cellValueExist) return;
-      onStartEdit(value);
-    },
-    setValue: (value?: boolean | null) => {
-      if (cellValueExist) return;
-      onStartEdit(value);
-    },
-    saveValue: () => {
-      if (cellValueExist) return;
-      saveValue(value);
-    },
-  }));
+  useImperativeHandle(
+    ref,
+    (): IEditor => ({
+      focus: () => {
+        focus();
+      },
+      onEndEdit: (cancel: boolean) => {
+        if (cellValueExist) return;
+        onEndEdit(cancel);
+      },
+      onStartEdit: (value?: boolean | null) => {
+        if (cellValueExist) return;
+        onStartEdit(value);
+      },
+      setValue: (value?: boolean | null) => {
+        if (cellValueExist) return;
+        onStartEdit(value);
+      },
+      saveValue: () => {
+        if (cellValueExist) return;
+        saveValue(value);
+      },
+    }),
+  );
 
   const setEditorValue = (value: boolean | null) => {
     setValue(Boolean(value));
@@ -110,20 +116,10 @@ const CheckboxEditorBase: React.ForwardRefRenderFunction<IEditor, ICheckboxEdito
     }
   };
   return (
-    <div
-      className={styles.checkboxBase}
-      style={style}
-      onMouseDown={() => handleChange()}
-      onMouseMove={stopPropagation}
-      onKeyDown={handleKeyDown}
-    >
+    <div className={styles.checkboxBase} style={style} onMouseDown={() => handleChange()} onMouseMove={stopPropagation} onKeyDown={handleKeyDown}>
       <FocusHolder ref={editorRef} />
       <span className={classNames({ [styles.unChecked]: !value, [styles.iconContainer]: true })}>
-        <Emoji
-          emoji={icon}
-          set="apple"
-          size={ConfigConstant.CELL_EMOJI_SIZE}
-        />
+        <Emoji emoji={icon} set="apple" size={ConfigConstant.CELL_EMOJI_SIZE} />
       </span>
     </div>
   );

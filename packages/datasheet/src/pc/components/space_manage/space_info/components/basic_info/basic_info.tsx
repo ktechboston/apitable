@@ -16,27 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import dayjs from 'dayjs';
+import { useMemo } from 'react';
+import { shallowEqual } from 'react-redux';
 import { Skeleton, Typography } from '@apitable/components';
 import { IReduxState, Strings, t } from '@apitable/core';
 import { CopyOutlined } from '@apitable/icons';
-import dayjs from 'dayjs';
 import { Message } from 'pc/components/common';
-// @ts-ignore
-import { getSocialWecomUnitName } from 'enterprise';
+import { useAppSelector } from 'pc/store/react-redux';
 import { copy2clipBoard } from 'pc/utils';
-import { useMemo } from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
+// @ts-ignore
+import { getSocialWecomUnitName } from 'enterprise/home/social_platform/utils';
 import styles from './style.module.less';
 
 export const BasicInfo = () => {
-  const { spaceInfo, spaceId } = useSelector(
-    (state: IReduxState) => {
-      return {
-        spaceInfo: state.space.curSpaceInfo,
-        spaceId: state.space.activeId
-      };
-    }, shallowEqual
-  );
+  const { spaceInfo, spaceId } = useAppSelector((state: IReduxState) => {
+    return {
+      spaceInfo: state.space.curSpaceInfo,
+      spaceId: state.space.activeId,
+    };
+  }, shallowEqual);
 
   const copySuccess = () => {
     Message.success({ content: t(Strings.copy_success) });
@@ -46,41 +45,36 @@ export const BasicInfo = () => {
     if (!spaceInfo) return [];
 
     const { creatorName, createTime, ownerName, isCreatorNameModified, isOwnerNameModified } = spaceInfo;
-    const displayCreatorName = getSocialWecomUnitName?.({
-      name: creatorName,
-      isModified: isCreatorNameModified,
-      spaceInfo
-    }) || creatorName;
-    const displayOwnerName = getSocialWecomUnitName?.({
-      name: ownerName,
-      isModified: isOwnerNameModified,
-      spaceInfo
-    }) || ownerName;
+    const displayCreatorName =
+      getSocialWecomUnitName?.({
+        name: creatorName,
+        isModified: isCreatorNameModified,
+        spaceInfo,
+      }) || creatorName;
+    const displayOwnerName =
+      getSocialWecomUnitName?.({
+        name: ownerName,
+        isModified: isOwnerNameModified,
+        spaceInfo,
+      }) || ownerName;
 
     return [
       {
         label: t(Strings.creator),
         value: (
-          <Typography variant='body3' className={styles.textEllipsis} ellipsis>
+          <Typography variant="body3" className={styles.textEllipsis} ellipsis>
             {displayCreatorName}
           </Typography>
         ),
       },
       {
         label: t(Strings.create_date),
-        value: (
-          <span>
-            {
-              createTime &&
-              dayjs(new Date(createTime)).format('YYYY-MM-DD')
-            }
-          </span>
-        ),
+        value: <span>{createTime && dayjs.tz(new Date(createTime)).format('YYYY-MM-DD')}</span>,
       },
       {
         label: t(Strings.primary_admin),
         value: (
-          <Typography variant='body3' className={styles.textEllipsis} ellipsis>
+          <Typography variant="body3" className={styles.textEllipsis} ellipsis>
             {displayOwnerName}
           </Typography>
         ),
@@ -103,7 +97,7 @@ export const BasicInfo = () => {
     return (
       <>
         <Skeleton count={2} />
-        <Skeleton width='61%' />
+        <Skeleton width="61%" />
       </>
     );
   }
@@ -112,7 +106,7 @@ export const BasicInfo = () => {
     <div className={styles.basicInfo}>
       <div style={{ maxWidth: '100%' }}>
         {info.map((item) => (
-          <Typography variant='body3' className={styles.item} key={item.label}>
+          <Typography variant="body3" className={styles.item} key={item.label}>
             <span className={styles.label}>{item.label}：</span>
             {item.value}
           </Typography>

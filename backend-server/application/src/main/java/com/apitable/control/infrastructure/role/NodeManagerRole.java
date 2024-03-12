@@ -22,7 +22,8 @@ import com.apitable.control.infrastructure.permission.NodePermission;
 import com.apitable.control.infrastructure.role.RoleConstants.Node;
 
 /**
- * Manager role of node
+ * Manager role of node.
+ *
  * @author Shawn Deng
  */
 public class NodeManagerRole extends NodeEditorRole {
@@ -37,6 +38,12 @@ public class NodeManagerRole extends NodeEditorRole {
         this(inherit, false);
     }
 
+    /**
+     * constructor.
+     *
+     * @param inherit inherit
+     * @param isAdmin is admin
+     */
     public NodeManagerRole(boolean inherit, boolean isAdmin) {
         super(inherit);
         this.isAdmin = isAdmin;
@@ -64,6 +71,9 @@ public class NodeManagerRole extends NodeEditorRole {
         permissions.add(NodePermission.RENAME_FIELD);
         permissions.add(NodePermission.EDIT_FIELD_PROPERTY);
         permissions.add(NodePermission.REMOVE_FIELD);
+
+        permissions.add(NodePermission.ARCHIVE_ROW);
+        permissions.add(NodePermission.UNARCHIVE_ROW);
 
         // field permission
         permissions.add(NodePermission.MANAGE_FIELD_PERMISSION);

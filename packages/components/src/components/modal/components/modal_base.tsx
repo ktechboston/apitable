@@ -47,7 +47,9 @@ export const ModalBase: React.FC<React.PropsWithChildren<IModalProps>> = (props)
 
   const {
     className,
+    contentClassName,
     title,
+    renderTitle,
     footer,
     visible,
     closable = true,
@@ -62,6 +64,7 @@ export const ModalBase: React.FC<React.PropsWithChildren<IModalProps>> = (props)
     bodyStyle,
     destroyOnClose = true,
     okButtonProps,
+    isCloseable,
     cancelButtonProps,
   } = props;
 
@@ -81,11 +84,22 @@ export const ModalBase: React.FC<React.PropsWithChildren<IModalProps>> = (props)
     document.body.style.width = width;
   };
 
-  const handleCancel = () => {
-    setBodyStyle(initialBodyStyle.width, initialBodyStyle.overflow);
-    onCancel();
-    if (!destroyOnClose) {
-      setDisplayNone(true);
+  const handleCancel = async() => {
+    if(isCloseable == null) {
+      setBodyStyle(initialBodyStyle.width, initialBodyStyle.overflow);
+      onCancel();
+      if (!destroyOnClose) {
+        setDisplayNone(true);
+      }
+      return;
+    }
+    const res = await isCloseable();
+    if(res) {
+      setBodyStyle(initialBodyStyle.width, initialBodyStyle.overflow);
+      onCancel();
+      if (!destroyOnClose) {
+        setDisplayNone(true);
+      }
     }
   };
 
@@ -174,6 +188,7 @@ export const ModalBase: React.FC<React.PropsWithChildren<IModalProps>> = (props)
         />
         <ModalWrapper
           centered={centered}
+
           zIndex={zIndex}
           onClick={() => {
             if (maskClosable) {
@@ -196,15 +211,20 @@ export const ModalBase: React.FC<React.PropsWithChildren<IModalProps>> = (props)
           >
             {modalRender(
               <ModalContent
+                className={contentClassName}
                 onClick={stopPropagation}
               >
                 {closable && DefaultCloseIcon}
 
-                {title &&
-                  <ModalHeader>
-                    <Typography variant='h6'>{title}</Typography>
-                  </ModalHeader>
-                }
+                {renderTitle ? renderTitle : (
+                  <>
+                    {
+                      <ModalHeader>
+                        <Typography variant='h6'>{title}</Typography>
+                      </ModalHeader>
+                    }
+                  </>
+                )}
 
                 <Box padding={'0 24px'} style={bodyStyle}>
                   {props.children}

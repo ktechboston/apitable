@@ -46,24 +46,16 @@ public interface EntitlementServiceFacade {
     Map<String, SubscriptionFeature> getSpaceSubscriptions(List<String> spaceIds);
 
     /**
-     * create subscription.
-     *
-     * @param spaceId          space id
-     * @param createdBy        creator
-     * @param externalProperty external property
-     */
-    default void createSubscription(String spaceId, Long createdBy,
-                                    Map<String, String> externalProperty) {
-        // Nothing to do default
-    }
-
-    /**
      * reward gift capacity.
      *
      * @param spaceId space id
      * @param remark  remark
      */
     default void rewardGiftCapacity(String spaceId, EntitlementRemark remark) {
+        // Nothing to do default
+    }
+
+    default void cancelSubscription(String spaceId) {
         // Nothing to do default
     }
 }

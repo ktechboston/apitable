@@ -51,4 +51,16 @@
         FROM ${tablePrefix}datasheet
         WHERE dst_id = #{nodeId} and is_deleted = 0
     </select>
+
+    <select id="selectDstIdBySpaceId" resultType="java.lang.String">
+        SELECT dst_id
+        FROM ${tablePrefix}datasheet
+        WHERE space_id = #{spaceId} and is_deleted = 0
+    </select>
+
+    <select id="selectSpaceIdByDstId" resultType="java.lang.String">
+        SELECT space_id
+        FROM ${tablePrefix}datasheet
+        WHERE dst_id = #{dstId} and is_deleted = 0
+    </select>
 </mapper>

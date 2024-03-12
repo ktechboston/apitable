@@ -16,95 +16,132 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Box } from '@apitable/components';
-import { useDebounceFn } from 'ahooks';
-import axios from 'axios';
-import { useMemo } from 'react';
+import { useSetAtom, useAtomValue } from 'jotai';
+import React, { useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import useSWR from 'swr';
-import { getFilterActionTypes, getNodeOutputSchemaList } from '../../helper';
-import { IActionType, IRobotAction, IRobotTrigger, ITriggerType } from '../../interface';
+import { Box } from '@apitable/components';
+import { IReduxState, Selectors, Strings, t } from '@apitable/core';
+import { IFetchDatasheet } from '@apitable/widget-sdk/dist/message/interface';
+import { CONST_MAX_ACTION_COUNT } from 'pc/components/automation/config';
+import { getTriggerDatasheetId, IFetchedDatasheet } from 'pc/components/automation/controller/hooks/use_robot_fields';
+import { OrEmpty } from 'pc/components/common/or_empty';
+import { useAppSelector } from 'pc/store/react-redux';
+import { automationActionsAtom, automationStateAtom } from '../../../automation/controller';
+import { useAutomationResourcePermission } from '../../../automation/controller/use_automation_permission';
+import { OrTooltip } from '../../../common/or_tooltip';
+import { getNodeOutputSchemaList } from '../../helper';
+import { useActionTypes } from '../../hooks';
+import { AutomationScenario, ITriggerType } from '../../interface';
+import { EditType } from '../trigger/robot_trigger';
+import { getActionList, getTriggerList } from '../utils';
+import { LinkButton } from './link';
 import { RobotAction } from './robot_action';
-import { CreateNewAction } from './robot_action_create';
+import { CreateNewAction, CreateNewActionLineButton } from './robot_action_create';
 
-const req = axios.create({
-  baseURL: '/nest/v1/',
-});
+export const RobotActions = ({ robotId, triggerTypes }: { robotId: string; triggerTypes: ITriggerType[]; onScrollBottom?: () => void }) => {
+  const { data: actionTypes } = useActionTypes();
+  const robot = useAtomValue(automationStateAtom);
+  const permissions = useAutomationResourcePermission();
+  const actions = (robot?.robot?.actions ?? []).map((action) => ({ ...action, typeId: action.actionTypeId, id: action.actionId }));
 
-export const RobotActions = ({ robotId, triggerTypes, actionTypes, trigger, onScrollBottom }:
-  {
-    robotId: string;
-    trigger?: IRobotTrigger;
-    triggerTypes: ITriggerType[];
-    actionTypes: IActionType[];
-    onScrollBottom: () => void;
-  }
-) => {
-  const { run } = useDebounceFn(onScrollBottom, { wait: 100 });
+  const setActions = useSetAtom(automationActionsAtom);
+  useEffect(() => {
+    if (actions) {
+      setActions(actions);
+    }
+  }, [actions, setActions]);
+  const entryActionId = actions?.find((item: any) => item.prevActionId == '' || item.prevActionId == null)?.actionId;
 
-  const filterActionTypes = useMemo(() => {
-    return getFilterActionTypes(actionTypes);
-  }, [actionTypes]);
+  const actionList = useMemo(() => getActionList(actions), [actions]);
 
-  const { data, error } = useSWR(`/robots/${robotId}/actions`, req);
-  if (!data || error) {
-    return null;
-  }
-  const actions = data.data.data;
+  const triggers = getTriggerList(robot?.robot?.triggers ?? []);
+  const { data: dataList1 } = useSWR(['getRobotMagicDatasheet', triggers], () => getTriggerDatasheetId(triggers), {});
+  const activeDstId = useAppSelector(Selectors.getActiveDatasheetId);
 
-  const entryActionId = actions.find((item: any) => item.prevActionId === null)?.id;
-  if (!entryActionId) {
-    return <CreateNewAction robotId={robotId} actionTypes={filterActionTypes} />;
-  }
-  const actionsById = actions.reduce((acc: any, item: any) => {
-    acc[item.id] = item;
-    return acc;
+  const dataSheetMap = useAppSelector((state: IReduxState) => state.datasheetMap);
+
+  const triggerDataSheetIds: IFetchedDatasheet[] =
+    robot?.scenario === AutomationScenario?.datasheet
+      ? Array.from({ length: triggers.length }, () => activeDstId)
+      : ((dataList1 ?? []) as IFetchedDatasheet[]);
+
+  const triggerDataSheetMap : Record<string, string> = triggers.map((trigger, index) => ({ trigger, index })).reduce((p, c) => {
+    return {
+      ...p,
+      [c.trigger.triggerId]: triggerDataSheetIds[c.index]
+    };
   }, {});
-  // prev => next
-  Object.keys(actionsById).forEach(item => {
-    const action = actionsById[item];
-    if (action.prevActionId) {
-      actionsById[action.prevActionId].nextActionId = action.id;
-    }
-  });
-  const actionList: IRobotAction[] = [actionsById[entryActionId]];
-  Object.keys(actionsById).forEach(item => {
-    const action = actionsById[item];
-    if (action.nextActionId) {
-      actionList.push(actionsById[action.nextActionId]);
-    }
-  });
-
-  run();
 
   const nodeOutputSchemaList = getNodeOutputSchemaList({
     actionList,
     actionTypes,
     triggerTypes,
-    trigger,
+    triggers,
+    triggerDataSheetMap,
+    dataSheetMap,
   });
 
-  // Guides the creation of a trigger when there is no trigger
-  // <NodeForm schema={triggerUpdateForm as any} onSubmit={handleUpdateFormChange} />
-  return (
-    <Box
-      width='100%'
-      marginTop="24px"
-    >
-      {
-        actionList.map((action, index) => <RobotAction
-          index={index}
-          key={index}
-          action={action}
-          actionTypes={actionTypes}
-          nodeOutputSchemaList={nodeOutputSchemaList}
-          robotId={robotId}
-        />)
-      }
+  if (!entryActionId) {
+    return (
       <CreateNewAction
         robotId={robotId}
-        actionTypes={filterActionTypes}
-        prevActionId={actionList[actionList.length - 1].id}
+        actionTypes={actionTypes}
+        disabled={triggers.length == 0 || !permissions?.editable}
+        nodeOutputSchemaList={nodeOutputSchemaList}
       />
-    </Box >
+    );
+  }
+
+  return (
+    <Box width="100%">
+      {actionList.map((action, index) => (
+        <Box key={`${index}_${actionList[index - 1]?.prevActionId}_${action.id}`}>
+          {index > 0 && index < actionList.length && (
+            <CreateNewActionLineButton
+              disabled={actionList?.length >= CONST_MAX_ACTION_COUNT || !permissions.editable}
+              robotId={robotId}
+              actionTypes={actionTypes}
+              nodeOutputSchemaList={nodeOutputSchemaList}
+              prevActionId={actionList[index - 1].id}
+            >
+              <span>
+                <OrTooltip
+                  options={{
+                    offset: -10,
+                  }}
+                  tooltipEnable={actionList?.length >= CONST_MAX_ACTION_COUNT}
+                  tooltip={t(Strings.automation_action_num_warning, {
+                    value: CONST_MAX_ACTION_COUNT,
+                  })}
+                  placement={'top'}
+                >
+                  <LinkButton disabled={actionList?.length >= CONST_MAX_ACTION_COUNT || !permissions.editable} />
+                </OrTooltip>
+              </span>
+            </CreateNewActionLineButton>
+          )}
+          <RobotAction editType={EditType.entry} index={index + 1} action={action} robotId={robotId} />
+        </Box>
+      ))}
+
+      <OrEmpty visible={permissions?.editable}>
+        <OrTooltip
+          tooltipEnable={actionList?.length >= CONST_MAX_ACTION_COUNT}
+          tooltip={t(Strings.automation_action_num_warning, {
+            value: CONST_MAX_ACTION_COUNT,
+          })}
+          placement={'top'}
+        >
+          <CreateNewAction
+            nodeOutputSchemaList={nodeOutputSchemaList}
+            disabled={actionList?.length >= CONST_MAX_ACTION_COUNT || !permissions?.editable}
+            robotId={robotId}
+            actionTypes={actionTypes}
+            prevActionId={actionList[actionList.length - 1]?.id}
+          />
+        </OrTooltip>
+      </OrEmpty>
+    </Box>
   );
 };

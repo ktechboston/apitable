@@ -18,6 +18,7 @@
 
 package com.apitable.core.constants;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 
@@ -84,10 +85,7 @@ public class RedisConstants {
      * data table information opened by the user in the space.
      */
     private static final String USER_OPENED_SHEET_KEY = "cache:user:{}:space:{}:openedSheet";
-    /**
-     * new users are invited to join the space station.
-     */
-    private static final String NEW_USER_INVITED_JOIN_SPACE_KEY = "cache:user{}:space{}:invited";
+
     /**
      * members recently mentioned by users in the space.
      */
@@ -121,6 +119,9 @@ public class RedisConstants {
      * notification frequency limit person/day.
      */
     private static final String NOTIFY_FREQUENCY_LIMIT = "notify:cache:frequency:{}:{}:{}";
+
+    private static final String SPACE_AUTOMATION_RUN_COUNT_KEY =
+        "cache:space:automation:count:{}:{}";
 
     /**
      * Get the key stored by the login user.
@@ -167,19 +168,6 @@ public class RedisConstants {
         Assert.notNull(userId, "user does not exist");
         Assert.notBlank(spaceId, "space does not exist");
         return StrUtil.format(USER_OPENED_SHEET_KEY, userId, spaceId);
-    }
-
-    /**
-     * Get the information about new users being invited to join the space station.
-     *
-     * @param userId  user's id
-     * @param spaceId space's id
-     * @return key
-     */
-    public static String getUserInvitedJoinSpaceKey(Long userId, String spaceId) {
-        Assert.notNull(userId, "user does not exist");
-        Assert.notBlank(spaceId, "space does not exist");
-        return StrUtil.format(NEW_USER_INVITED_JOIN_SPACE_KEY, userId, spaceId);
     }
 
     /**
@@ -363,5 +351,41 @@ public class RedisConstants {
     public static String getGeneralStaticsOfRecordKey(String spaceId) {
         Assert.notBlank(spaceId, "space does not exist");
         return StrUtil.format(GENERAL_STATICS, "count:record", spaceId);
+    }
+
+    /**
+     * get space automation run count statistics.
+     *
+     * @param spaceId space id
+     * @return String
+     */
+    public static String getSpaceAutomationRunCountKey(String spaceId) {
+        Integer month = DateUtil.date().month() + 1;
+        Integer year = DateUtil.date().year();
+        return StrUtil.format(SPACE_AUTOMATION_RUN_COUNT_KEY, spaceId,
+            StrUtil.format("{}-{}", year, month));
+    }
+
+    /**
+     * get space api usage statistics concurrent lock key.
+     *
+     * @return String
+     */
+    public static String getSpaceApiUsageConcurrentKey() {
+        return StrUtil.format(GENERAL_LOCKED, "space", "api_usage");
+    }
+
+    public static String triggerUpdateLockKey(String triggerId) {
+        return StrUtil.format(GENERAL_LOCKED, "trigger_update", triggerId);
+    }
+
+    /**
+     * get api usage min id.
+     *
+     * @param date every day of begin time
+     * @return key
+     */
+    public static String getApiUsageTableDayMindIdCacheKey(String date) {
+        return StrUtil.format(GENERAL_STATICS, "api-usage-min-id-day", date);
     }
 }

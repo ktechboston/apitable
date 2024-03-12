@@ -3,11 +3,11 @@ import { WasmApi } from '@apitable/core';
 
 const Error = () => {
   useEffect(() => {
-    WasmApi.getDatasheetPack('dstknLjTKangk7ZtpY').then((data) => {
+    WasmApi.getDatasheetPack('dstknLjTKangk7ZtpY').then((data: any) => {
       console.log(data);
     });
   }, []);
-    
+
   return <div />;
 };
 

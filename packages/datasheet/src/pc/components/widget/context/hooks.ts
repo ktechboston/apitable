@@ -1,8 +1,8 @@
-import { WidgetContext } from './widget_context';
-import { useContext } from 'react';
-import { widgetRenderTask } from './widget_render_task';
-import { IWidgetRenderStatus, WidgetActionType } from './interface';
 import { useMount } from 'ahooks';
+import { useContext } from 'react';
+import { IWidgetRenderStatus, WidgetActionType } from './interface';
+import { WidgetContext } from './widget_context';
+import { widgetRenderTask } from './widget_render_task';
 
 export const useWidgetContext = () => {
   const context = useContext(WidgetContext);
@@ -13,9 +13,9 @@ export const useManageWidgetRenderTask = (widgetId: string) => {
   const { state, dispatch } = useWidgetContext();
   useMount(() => {
     if (!state.widgetRenderMap[widgetId]) {
-      dispatch({ type: WidgetActionType.SET_WIDGET_RENDER_STATUS, payload: { widgetId, status: IWidgetRenderStatus.None }});
+      dispatch({ type: WidgetActionType.SET_WIDGET_RENDER_STATUS, payload: { widgetId, status: IWidgetRenderStatus.None } });
       widgetRenderTask.addWidgetTask(widgetId, (widgetId: string, status: IWidgetRenderStatus) => {
-        dispatch({ type: WidgetActionType.SET_WIDGET_RENDER_STATUS, payload: { widgetId, status }});
+        dispatch({ type: WidgetActionType.SET_WIDGET_RENDER_STATUS, payload: { widgetId, status } });
       });
     }
   });

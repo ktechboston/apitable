@@ -16,14 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useThemeColors } from '@apitable/components';
-import { DateRange, getTimeZoneAbbrByUtc, IRecordAlarmClient, Strings, t, WithOptional, diffTimeZone, getTimeZone } from '@apitable/core';
-import { ChevronDownOutlined, NotificationOutlined } from '@apitable/icons';
 import { DatePicker } from 'antd-mobile';
 import classNames from 'classnames';
 import dayjs from 'dayjs';
 import * as React from 'react';
 import { FC, useMemo } from 'react';
+import { useThemeColors } from '@apitable/components';
+import { DateRange, getTimeZoneAbbrByUtc, IRecordAlarmClient, Strings, t, WithOptional, diffTimeZone, getTimeZone, Selectors } from '@apitable/core';
+import { ChevronDownOutlined, NotificationOutlined } from '@apitable/icons';
+import { useAppSelector } from 'pc/store/react-redux';
 import style from './style.module.less';
 
 interface IPickerContentProps {
@@ -53,25 +54,15 @@ interface ICustomChildren {
   disabled?: boolean;
 }
 
-export const CustomChildren: React.FC<React.PropsWithChildren<ICustomChildren>> = props => {
-  const {
-    onClick,
-    children,
-    value,
-    arrowIcon,
-    disabled
-  } = props;
+export const CustomChildren: React.FC<React.PropsWithChildren<ICustomChildren>> = (props) => {
+  const { onClick, children, value, arrowIcon, disabled } = props;
   const colors = useThemeColors();
 
   return (
     <div
-      className={classNames(
-        style.pickerChildrenWrapper,
-        'pickerChildrenWrapper',
-        {
-          [style.disabled]: disabled
-        }
-      )}
+      className={classNames(style.pickerChildrenWrapper, 'pickerChildrenWrapper', {
+        [style.disabled]: disabled,
+      })}
       onClick={!disabled ? onClick : undefined}
     >
       <span
@@ -81,9 +72,7 @@ export const CustomChildren: React.FC<React.PropsWithChildren<ICustomChildren>> 
       >
         {children}
       </span>
-      {
-        arrowIcon !== undefined ? arrowIcon : <ChevronDownOutlined size={16} color={colors.fourthLevelText} />
-      }
+      {arrowIcon !== undefined ? arrowIcon : <ChevronDownOutlined size={16} color={colors.fourthLevelText} />}
     </div>
   );
 };
@@ -105,11 +94,13 @@ const PickerContentBase: FC<React.PropsWithChildren<IPickerContentProps>> = (pro
     setVisible,
     includeTimeZone,
     timeZone,
-    disabled
+    disabled,
   } = props;
 
+  const userTimeZone = useAppSelector(Selectors.getUserTimeZone)!;
+
   const alarmRealTime = useMemo(() => {
-    let alarmDate = dayjs(value);
+    let alarmDate = dayjs.tz(value);
     const subtractMatch = alarm?.subtract?.match(/^([0-9]+)(\w{1,2})$/);
 
     if (subtractMatch) {
@@ -121,11 +112,11 @@ const PickerContentBase: FC<React.PropsWithChildren<IPickerContentProps>> = (pro
   const getDefaultValue = () => {
     let abbr = '';
     if (includeTimeZone) {
-      const tz = timeZone || getTimeZone();
+      const tz = timeZone || userTimeZone || getTimeZone();
       abbr = ` (${getTimeZoneAbbrByUtc(tz)!})`;
     }
     if (value) {
-      const dateTime = timeZone ? dayjs(value).tz(timeZone) : dayjs(value);
+      const dateTime = timeZone ? dayjs(value).tz(timeZone) : dayjs.tz(value);
       return `${dateTime.format(mode == 'day' ? dateFormat : dateTimeFormat)}${abbr}`;
     }
     return `${mode == 'day' ? dateFormat.toLowerCase() : dateTimeFormat.toLocaleLowerCase()}${abbr}`;
@@ -133,11 +124,18 @@ const PickerContentBase: FC<React.PropsWithChildren<IPickerContentProps>> = (pro
 
   const diff = timeZone ? diffTimeZone(timeZone) : 0;
 
-  const diffDate = dayjs(value).valueOf() - diff;
+  const diffDate = dayjs.tz(value).valueOf() - diff;
 
   return (
     <div className={style.mobileDatePicker}>
-      <CustomChildren value={value} arrowIcon={null} onClick={() => {!disabled && setVisible(true);}} disabled={disabled}>
+      <CustomChildren
+        value={value}
+        arrowIcon={null}
+        onClick={() => {
+          !disabled && setVisible(true);
+        }}
+        disabled={disabled}
+      >
         {getDefaultValue()}
       </CustomChildren>
       <DatePicker
@@ -145,34 +143,33 @@ const PickerContentBase: FC<React.PropsWithChildren<IPickerContentProps>> = (pro
         min={new Date(DateRange.MinTimeStamp)}
         max={new Date(DateRange.MaxTimeStamp)}
         precision={mode}
-        value={dayjs(diffDate).toDate()}
+        value={dayjs.tz(diffDate).toDate()}
         visible={editable && visible}
         onClose={() => {
           setVisible(false);
         }}
         confirmText={t(Strings.confirm)}
         cancelText={t(Strings.cancel)}
-        title={(
+        title={
           <>
-            {onBackToNow && <div
-              className={style.backToNow}
-              onClick={() => {
-                onBackToNow();
-                setVisible(false);
-              }}
-            >
-              <span>{t(Strings.today)}</span>
-            </div>}
-            {Boolean(value) && onClear && (
+            {onBackToNow && (
               <div
-                className={style.clear}
-                onClick={onClear}
+                className={style.backToNow}
+                onClick={() => {
+                  onBackToNow();
+                  setVisible(false);
+                }}
               >
+                <span>{t(Strings.today)}</span>
+              </div>
+            )}
+            {Boolean(value) && onClear && (
+              <div className={style.clear} onClick={onClear}>
                 {t(Strings.clear)}
               </div>
             )}
           </>
-        )}
+        }
         onConfirm={onChange}
         onSelect={onValueChange}
         forceRender
@@ -180,9 +177,7 @@ const PickerContentBase: FC<React.PropsWithChildren<IPickerContentProps>> = (pro
       {Boolean(alarm) && (
         <div className={style.alarm}>
           <NotificationOutlined color={colors.deepPurple[500]} size={14} />
-          <span className={style.alarmTime}>
-            {alarmRealTime}
-          </span>
+          <span className={style.alarmTime}>{alarmRealTime}</span>
         </div>
       )}
     </div>

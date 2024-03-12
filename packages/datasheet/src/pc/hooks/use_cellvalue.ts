@@ -17,7 +17,8 @@
  */
 
 import { FormulaBaseError, IFormulaField, ILookUpField, Selectors } from '@apitable/core';
-import { useSelector } from 'react-redux';
+
+import { useAppSelector } from 'pc/store/react-redux';
 
 export interface IComputeCVProps {
   recordId: string;
@@ -27,7 +28,7 @@ export interface IComputeCVProps {
 export const useComputeCellValue = (props: IComputeCVProps) => {
   const { recordId, field } = props;
   const datasheetId = field.property.datasheetId;
-  const cv = useSelector(state => {
+  const cv = useAppSelector((state) => {
     const snapshot = Selectors.getSnapshot(state, datasheetId)!;
     try {
       return Selectors.getCellValue(state, snapshot, recordId, field.id, true);

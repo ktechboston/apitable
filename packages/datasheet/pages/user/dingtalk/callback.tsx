@@ -20,9 +20,14 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 
 // @ts-ignore
-const DingtalkCallbackWithNoSSR = dynamic(() => import('enterprise').then((components) => {
-  return components.DingtalkCallback;
-}), { ssr: false });
+const DingtalkCallbackWithNoSSR = dynamic(
+  () =>
+    // @ts-ignore
+    import('enterprise/dingtalk/dingtalk_callback').then((components) => {
+      return components.DingtalkCallback;
+    }),
+  { ssr: false },
+);
 
 const App = () => {
   return DingtalkCallbackWithNoSSR && <DingtalkCallbackWithNoSSR />;

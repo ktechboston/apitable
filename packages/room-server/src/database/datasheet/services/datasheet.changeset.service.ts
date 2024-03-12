@@ -98,7 +98,7 @@ export class DatasheetChangesetService {
       const fieldMap = Selectors.getFieldMap(store.getState(), nodeId);
       Object.values(fieldMap!).map(field => {
         // Is linked field and linked datasheet is deleted, convert this field to multi-line text field
-        if (field.type === FieldType.Link && ro.linkNodeId.includes(field.property.foreignDatasheetId)) {
+        if ((field.type === FieldType.Link || field.type === FieldType.OneWayLink) && ro.linkNodeId.includes(field.property.foreignDatasheetId)) {
           const options = this.commandOption.getSetFieldAttrOptions(nodeId, { ...field, property: null, type: FieldType.Text }, false);
           const { result, changeSets } = this.commandService.execute(options, store);
           if (result && result.result == ExecuteResult.Success) {
@@ -301,7 +301,8 @@ export class DatasheetChangesetService {
             (action.p[1] == recordId && action.p[2] == 'data' && fieldIds.includes(action.p[3]!.toString())) ||
             (action.p[1] == recordId && action.p[2] == 'comments') ||
             // Only record creation with default values contains oi.data
-            (action.p[0] == 'recordMap' && action.p[1] == recordId && 'oi' in action && action.oi?.data && Object.keys(action.oi.data).length)
+            (action.p[0] == 'recordMap' && action.p[1] == recordId && 'oi' in action && action.oi?.data && Object.keys(action.oi.data).length) ||
+            (action.p[0] == 'recordMap' && action.p[1] == recordId && 'od' in action)
           );
         });
         if (actions.length) {

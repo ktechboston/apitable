@@ -17,16 +17,11 @@
  */
 
 import { useMemo } from 'react';
-import {
-  FolderNormalFilled,
-  LockFilled,
-  DeleteFilled,
-  UserAdminFilled
-} from '@apitable/icons';
 import { useThemeColors } from '@apitable/components';
+import { Strings, t } from '@apitable/core';
+import { DeleteFilled, FolderNormalFilled, LockFilled, UserAdminFilled } from '@apitable/icons';
 import { IHooksParams, IMultiLineItemProps } from '../interface';
 import { calcPercent } from './utils';
-import { Strings, t } from '@apitable/core';
 
 export const useOthers = ({ spaceInfo, subscription }: IHooksParams): IMultiLineItemProps[] => {
   const colors = useThemeColors();
@@ -61,19 +56,36 @@ export const useOthers = ({ spaceInfo, subscription }: IHooksParams): IMultiLine
       },
       {
         unit: t(Strings.unit_ge),
+        total: subscription?.maxWidgetNums,
+        used: spaceInfo?.widgetNums,
+        name: t(Strings.widget_per_space),
+        icon: <UserAdminFilled color={colors.black[500]} />,
+        percent: calcPercent(spaceInfo?.widgetNums, subscription?.maxWidgetNums),
+        showProgress: false,
+      },
+      {
+        unit: t(Strings.unit_ge),
         total: 0,
         used: 0,
         name: t(Strings.trash),
         icon: <DeleteFilled color={colors.black[500]} />,
         showProgress: false,
-        customIntro: <span style={{ color: colors.fc2 }}>
-          {t(Strings.dating_back_to)} <span style={{
-            color: colors.fc1,
-            fontFamily: 'BebasNeue',
-            letterSpacing: '0.5px',
-            fontSize: 24
-          }}>{subscription?.maxRemainTrashDays}</span> {t(Strings.end_day)}
-        </span>
+        customIntro: (
+          <span style={{ color: colors.fc2 }}>
+            {t(Strings.dating_back_to)}{' '}
+            <span
+              style={{
+                color: colors.fc1,
+                fontFamily: 'BebasNeue',
+                letterSpacing: '0.5px',
+                fontSize: 24,
+              }}
+            >
+              {subscription?.maxRemainTrashDays}
+            </span>{' '}
+            {t(Strings.end_day)}
+          </span>
+        ),
       },
     ];
   }, [spaceInfo, subscription, colors]);

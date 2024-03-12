@@ -16,20 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FC, useRef, useState } from 'react';
-import * as React from 'react';
-import { BaseModal } from 'pc/components/common';
-import { IShowCaseData, Selectors } from '@apitable/core';
-import styles from './style.module.less';
 import { useDebounceFn } from 'ahooks';
-import { useRequest } from 'pc/hooks';
-import { useCatalogTreeRequest, useImageUpload, useResponsive } from 'pc/hooks';
-import { useSelector } from 'react-redux';
-import { Network } from 'pc/components/network_status';
+import * as React from 'react';
+import { FC, useRef, useState } from 'react';
+import { IShowCaseData, Selectors } from '@apitable/core';
+import { BaseModal } from 'pc/components/common';
 // import classNames from 'classnames';
 import { ComponentDisplay, ScreenSize } from 'pc/components/common/component_display';
 import { Popup } from 'pc/components/common/mobile/popup';
+import { Network } from 'pc/components/network_status';
 import { SlateEditor, Deserializer, EditorValue, IEditorData, Serializer } from 'pc/components/slate_editor';
+import { useRequest, useCatalogTreeRequest, useImageUpload, useResponsive } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
+import styles from './style.module.less';
 
 export interface IDescriptionModalProps {
   onCancel: () => void;
@@ -52,17 +51,17 @@ const polyfillData = (description: string) => {
   return Deserializer.html(data.data);
 };
 
-export const DescriptionModal: FC<React.PropsWithChildren<IDescriptionModalProps>> = props => {
+export const DescriptionModal: FC<React.PropsWithChildren<IDescriptionModalProps>> = (props) => {
   const { nodeInfo, updateDesc } = props;
   const [value, setValue] = useState<EditorValue | IEditorData>(polyfillData(nodeInfo.description));
   const [description, setDescription] = useState(nodeInfo.description);
   const descHtml = useRef('');
-  const nodeId = useSelector(state => Selectors.getNodeId(state))!;
+  const nodeId = useAppSelector((state) => Selectors.getNodeId(state))!;
   const { updateNodeDescriptionReq } = useCatalogTreeRequest();
   const { uploadImage } = useImageUpload();
   const { run: updateNodeDescription } = useRequest(updateNodeDescriptionReq, { manual: true });
   const { run: sendUpdateDesc } = useDebounceFn(
-    async(nodeId, desc) => {
+    async (nodeId, desc) => {
       await updateNodeDescription(nodeId, desc);
     },
     { wait: 500 },

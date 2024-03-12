@@ -18,7 +18,7 @@
 
 import { Strings, t } from 'exports/i18n';
 import { FieldType, IField } from 'types';
-import { IPermissions } from 'exports/store';
+import { IPermissions } from 'exports/store/interfaces';
 
 export const DEFAULT_PERMISSION: IPermissions = {
   allowEditConfigurable: false,
@@ -57,6 +57,8 @@ export const DEFAULT_PERMISSION: IPermissions = {
   fieldRemovable: false,
   rowCreatable: false,
   rowRemovable: false,
+  rowArchivable: false,
+  rowUnarchivable: false,
   cellEditable: false,
   rowSortable: false,
   fieldPermissionManageable: false,
@@ -109,6 +111,8 @@ export const DEFAULT_MANAGER_PERMISSION: IPermissions = {
   fieldRemovable: true,
   rowCreatable: true,
   rowRemovable: true,
+  rowArchivable: true,
+  rowUnarchivable: true,
   cellEditable: true,
   fieldPermissionManageable: true,
   viewLayoutEditable: true,
@@ -160,6 +164,8 @@ export const DEFAULT_EDITOR_PERMISSION: IPermissions = {
   fieldRemovable: false,
   rowCreatable: true,
   rowRemovable: true,
+  rowArchivable: false,
+  rowUnarchivable: false,
   cellEditable: true,
   fieldPermissionManageable: false,
   viewLayoutEditable: true,
@@ -210,6 +216,8 @@ export const DEFAULT_READ_ONLY_PERMISSION: IPermissions = {
   fieldRemovable: false,
   rowCreatable: false,
   rowRemovable: false,
+  rowArchivable: false,
+  rowUnarchivable: false,
   cellEditable: false,
   rowSortable: false,
   fieldPermissionManageable: false,
@@ -240,7 +248,7 @@ export enum ToolBarMenuCardOpenState {
   OrgChartSetting = 'OrgChartSetting',
 
   // special: this is a component in the toolbar, just clean for "display" component, so place it here to control.by @mayne
-  ViewSwitcher = 'ViewSwitcher', 
+  ViewSwitcher = 'ViewSwitcher',
   KanbanFieldHidden = 'KanbanFieldHidden',
   Share = 'Share',
 }

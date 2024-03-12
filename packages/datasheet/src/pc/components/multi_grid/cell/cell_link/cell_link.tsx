@@ -16,23 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { useThemeColors } from '@apitable/components';
-import { Field, ILinkField, LinkField, RowHeightLevel, Selectors, StatusCode, Strings, t } from '@apitable/core';
-import { AddOutlined, CloseOutlined } from '@apitable/icons';
 import classNames from 'classnames';
 import isEmpty from 'lodash/isEmpty';
+import * as React from 'react';
+import { useContext, useState } from 'react';
+import { shallowEqual } from 'react-redux';
+import { useThemeColors } from '@apitable/components';
+import { Field, ILinkField, IOneWayLinkField, LinkField, RowHeightLevel, Selectors, StatusCode, Strings, t } from '@apitable/core';
+import { AddOutlined, CloseOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { ButtonPlus, Message, Tooltip } from 'pc/components/common';
-import { expandRecord } from 'pc/components/expand_record';
 import { ExpandLinkContext } from 'pc/components/expand_record/expand_link/expand_link_context';
+import { expandRecord } from 'pc/components/expand_record/expand_record.utils';
 import { useGetViewByIdWithDefault } from 'pc/hooks';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { stopPropagation } from 'pc/utils';
 import { getDatasheetOrLoad } from 'pc/utils/get_datasheet_or_load';
 import { loadRecords } from 'pc/utils/load_records';
-import * as React from 'react';
-import { useContext, useState } from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
 import styles from '../cell_options/style.module.less';
 import { ICellComponentProps } from '../cell_value/interface';
 import { OptionalCellContainer } from '../optional_cell_container/optional_cell_container';
@@ -40,6 +41,7 @@ import optionalStyle from '../optional_cell_container/style.module.less';
 
 const NO_DATA = Symbol('NO_DATA');
 const ERROR_DATA = Symbol('ERROR_DATA');
+const ARCHIVED_DATA = Symbol('ARCHIVED_DATA');
 const NO_PERMISSION = Symbol('NO_PERMISSION');
 
 // Tentatively display up to 20 nodes of associated records in a cell
@@ -47,42 +49,42 @@ const NO_PERMISSION = Symbol('NO_PERMISSION');
 const MAX_SHOW_LINK_IDS_COUNT = 20;
 
 interface ICellLink extends ICellComponentProps {
-  field: ILinkField;
+  field: ILinkField | IOneWayLinkField;
   keyPrefix?: string;
   rowHeightLevel?: RowHeightLevel;
   datasheetId?: string;
 }
 
-export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
-  const {
-    onChange, isActive, cellValue, field: propsField, toggleEdit, className, readonly, keyPrefix, rowHeightLevel,
-  } = props;
+export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = (props) => {
+  const { onChange, isActive, cellValue, field: propsField, toggleEdit, className, readonly, keyPrefix, rowHeightLevel } = props;
   const colors = useThemeColors();
   // To edit an link field, you need to have edit permission on both datasheets.
   const [showTip, setShowTip] = useState(false);
   const field = Selectors.findRealField(store.getState(), propsField);
-  const linkRecordIds = field ? (Field.bindModel(field).validate(cellValue) ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT) : undefined) :
-    [];
+  const linkRecordIds = field
+    ? Field.bindModel(field).validate(cellValue)
+      ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT)
+      : undefined
+    : [];
   const { ignoreMirror, baseDatasheetId } = useContext(ExpandLinkContext) || {};
 
   const allowShowTip = readonly && isActive;
 
   const foreignView = useGetViewByIdWithDefault(propsField.property.foreignDatasheetId, propsField.property.limitToView);
   const hasLimitToView = Boolean(propsField.property.limitToView && foreignView?.id === propsField.property.limitToView);
-
   /**
    * In order for the cell to listen to changes in the foreignDatasheet record value, update the view
    */
-  const cellStringList = useSelector(state => {
-
+  const cellStringList = useAppSelector((state) => {
     const emptyRecords: string[] = [];
     if (linkRecordIds && field) {
       const datasheet = getDatasheetOrLoad(state, field.property.foreignDatasheetId, baseDatasheetId, undefined, undefined, ignoreMirror);
       const isLoading = Selectors.getDatasheetLoading(state, field.property.foreignDatasheetId);
       const datasheetClient = Selectors.getDatasheetClient(state, field.property.foreignDatasheetId);
       const snapshot = datasheet && datasheet.snapshot;
+      const archivedRecordIds = snapshot?.meta.archivedRecordIds || [];
       const datasheetErrorCode = Selectors.getDatasheetErrorCode(state, field.property.foreignDatasheetId);
-      const strList = linkRecordIds.map(recordId => {
+      const strList = linkRecordIds.map((recordId) => {
         const cellString = (Field.bindModel(field) as LinkField).getLinkedRecordCellString(recordId);
         if (cellString === null && datasheetErrorCode === StatusCode.NODE_NOT_EXIST) {
           return NO_PERMISSION;
@@ -92,6 +94,9 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
         }
 
         if (!snapshot.recordMap[recordId]) {
+          if (archivedRecordIds.includes(recordId)) {
+            return ARCHIVED_DATA;
+          }
           if (!isLoading && datasheetClient!.loadingRecord[recordId] === 'error') {
             return ERROR_DATA;
           }
@@ -134,7 +139,7 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
   function showDeleteIcon(index?: number) {
     if (isActive && !readonly) {
       return (
-        <div className={styles.iconDelete} onClick={e => deleteItem(e, index)}>
+        <div className={styles.iconDelete} onClick={(e) => deleteItem(e, index)}>
           <CloseOutlined size={8} color={colors.secondLevelText} />
         </div>
       );
@@ -158,14 +163,13 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
     }
     expandRecord({
       activeRecordId: recordId,
-      recordIds: linkRecordIds!.map(recordId => recordId),
+      recordIds: linkRecordIds!.map((recordId) => recordId),
       viewId: hasLimitToView ? foreignView?.id : undefined,
       datasheetId: field.property.foreignDatasheetId,
     });
   }
 
-  const canAddLinkRecord = (field && !field.property.limitSingleRecord) ||
-    linkRecordIds == null || !linkRecordIds.length;
+  const canAddLinkRecord = (field && !field.property.limitSingleRecord) || linkRecordIds == null || !linkRecordIds.length;
 
   function renderText(linkRecordIds?: string[]) {
     if (isEmpty(linkRecordIds)) {
@@ -173,39 +177,33 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
     }
     return (
       <>
-        {
-          linkRecordIds!.map((id, index) => {
-            const text = cellStringList[index];
-            return (
-              <div
-                className={classNames(styles.tabItem, styles.link, 'link')}
-                style={{
-                  pointerEvents: isActive ? 'initial' : 'none',
-                }}
-                key={keyPrefix ? `${keyPrefix}-${index}` : id}
-                onClick={e => expand(e, id)}
-              >
-                {
-                  text && (typeof text === 'string') ? (
-                    <div className={classNames(styles.optionText)}>
-                      {text}
-                    </div>
-                  ) : (
-                    <div className={classNames(styles.optionText, styles.unnamed)}>
-                      {text === NO_DATA && t(Strings.loading)}
-                      {text === ERROR_DATA && t(Strings.record_fail_data)}
-                      {text === NO_PERMISSION && t(Strings.link_record_no_permission)}
-                      {!text && t(Strings.record_unnamed)}
-                    </div>
-                  )
-                }
-                {
-                  showDeleteIcon(index)
-                }
-              </div>
-            );
-          })
-        }
+        {linkRecordIds!.map((id, index) => {
+          const text = cellStringList[index];
+          const isDisabled = text === ERROR_DATA || text === ARCHIVED_DATA;
+          return (
+            <div
+              className={classNames(styles.tabItem, styles.link, 'link')}
+              style={{
+                pointerEvents: (isActive && !isDisabled) ? 'initial' : 'none',
+              }}
+              key={keyPrefix ? `${keyPrefix}-${index}` : id}
+              onClick={(e) => !isDisabled && expand(e, id)}
+            >
+              {text && typeof text === 'string' ? (
+                <div className={classNames(styles.optionText)}>{text}</div>
+              ) : (
+                <div className={classNames(styles.optionText, styles.unnamed)}>
+                  {text === NO_DATA && t(Strings.loading)}
+                  {text === ERROR_DATA && t(Strings.record_fail_data)}
+                  {text === ARCHIVED_DATA && t(Strings.record_archived_data)}
+                  {text === NO_PERMISSION && t(Strings.link_record_no_permission)}
+                  {!text && t(Strings.record_unnamed)}
+                </div>
+              )}
+              {showDeleteIcon(index)}
+            </div>
+          );
+        })}
       </>
     );
   }
@@ -219,7 +217,7 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
       }, 3000);
       return;
     }
-    !readonly && toggleEdit && await toggleEdit();
+    !readonly && toggleEdit && (await toggleEdit());
   }
 
   const MainLayout = () => {
@@ -230,16 +228,15 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
         displayMinWidth={Boolean(isActive && canAddLinkRecord && !readonly)}
         viewRowHeight={rowHeightLevel}
       >
-        {(isActive && canAddLinkRecord) && !readonly &&
+        {isActive && canAddLinkRecord && !readonly && (
           <ButtonPlus.Icon
             className={optionalStyle.iconAdd}
             onClick={toggleEdit}
             size={'x-small'}
             icon={<AddOutlined color={colors.fourthLevelText} />}
           />
-        }
+        )}
         {renderText(linkRecordIds)}
-
       </OptionalCellContainer>
     );
   };
@@ -248,5 +245,7 @@ export const CellLink: React.FC<React.PropsWithChildren<ICellLink>> = props => {
     <Tooltip title={t(Strings.no_link_ds_permission)} visible={showTip} placement={'top'}>
       {MainLayout()}
     </Tooltip>
-  ) : MainLayout();
+  ) : (
+    MainLayout()
+  );
 };

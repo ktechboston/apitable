@@ -16,30 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FC, useState, useEffect } from 'react';
-import * as React from 'react';
 import { Form } from 'antd';
-import styles from './style.module.less';
+import * as React from 'react';
+import { FC, useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import {
-  StoreActions,
-  Api,
-  ConfigConstant,
-  Strings,
-  t,
-} from '@apitable/core';
-import {
-  Message,
-  NormalModal,
-  WithTipWrapper,
-  IdentifyingCodeInput,
-} from 'pc/components/common';
-import { useSetState } from 'pc/hooks';
 import { TextInput } from '@apitable/components';
-import { Verify } from '../modify_mobile_modal/verify';
+import { StoreActions, Api, ConfigConstant, Strings, t } from '@apitable/core';
+import { IdentifyingCodeInput } from 'pc/components/common/input/identifying_code_input/identifying_code_input';
+import { WithTipWrapper } from 'pc/components/common/input/with_tip_wrapper/with_tip_wrapper';
+import { Message } from 'pc/components/common/message/message';
+import { NormalModal } from 'pc/components/common/modal/normal_modal/normal_modal';
 import { usePlatform } from 'pc/hooks/use_platform';
+import { useSetState } from 'pc/hooks/use_set_state';
+import { Verify } from '../modify_mobile_modal/verify';
 // @ts-ignore
-import { addWizardNumberAndApiRun } from 'enterprise';
+import { addWizardNumberAndApiRun } from 'enterprise/guide/utils';
+import styles from './style.module.less';
 
 export interface IModifyEmailModalProps {
   setEmailModal: React.Dispatch<React.SetStateAction<boolean>>;
@@ -80,6 +72,7 @@ export const ModifyEmailModal: FC<React.PropsWithChildren<IModifyEmailModalProps
   };
 
   const handleEmailCheck = () => {
+    setIdentifyingCode('');
     if (newEmail === '') {
       setErrMsg({ accountErrMsg: t(Strings.error_email_empty) });
       return;
@@ -142,9 +135,7 @@ export const ModifyEmailModal: FC<React.PropsWithChildren<IModifyEmailModalProps
     setErrMsg(defaultErrMsg);
   };
 
-  const handleIdentifyingCodeChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleIdentifyingCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (errMsg.identifyingCodeErrMsg) {
       setErrMsg({ identifyingCodeErrMsg: '' });
     }
@@ -174,11 +165,7 @@ export const ModifyEmailModal: FC<React.PropsWithChildren<IModifyEmailModalProps
               onChange={handleIdentifyingCodeChange}
               setErrMsg={setErrMsg}
               error={Boolean(errMsg.identifyingCodeErrMsg)}
-              disabled={Boolean(
-                !newEmail ||
-                errMsg.accountErrMsg ||
-                errMsg.identifyingCodeErrMsg
-              )}
+              disabled={Boolean(!newEmail || errMsg.accountErrMsg || errMsg.identifyingCodeErrMsg)}
               value={identifyingCode}
             />
           </WithTipWrapper>
@@ -207,11 +194,7 @@ export const ModifyEmailModal: FC<React.PropsWithChildren<IModifyEmailModalProps
 
   return (
     <NormalModal
-      title={
-        needSkipVerify
-          ? t(Strings.modal_title_bind_email)
-          : t(Strings.modal_title_check_original_mail)
-      }
+      title={needSkipVerify ? t(Strings.modal_title_bind_email) : t(Strings.modal_title_check_original_mail)}
       className={styles.modifyEmail}
       maskClosable={false}
       onCancel={handleCancel}
@@ -224,7 +207,7 @@ export const ModifyEmailModal: FC<React.PropsWithChildren<IModifyEmailModalProps
         disabled: Boolean(!identifyingCode || errMsg.accountErrMsg || errMsg.identifyingCodeErrMsg),
       }}
     >
-      {needSkipVerify? bindEmailPage() : checkEmailPage()}
+      {needSkipVerify ? bindEmailPage() : checkEmailPage()}
     </NormalModal>
   );
 };

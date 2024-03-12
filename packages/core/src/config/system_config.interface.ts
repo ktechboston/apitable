@@ -1,123 +1,134 @@
 export interface SystemConfigInterface {
-    api_panel:                   { [key: string]: APIPanel };
-    audit:                       Audit;
-    country_code_and_phone_code: { [key: string]: CountryCodeAndPhoneCode };
     environment:                 Environment;
-    guide:                       SystemConfigInterfaceGuide;
-    integral:                    Integral;
-    locales:                     Locale[];
-    marketplace:                 SystemConfigInterfaceMarketplace;
-    notifications:               Notifications;
-    player:                      SystemConfigInterfacePlayer;
     settings:                    Settings;
     shortcut_keys:               ShortcutKey[];
+    country_code_and_phone_code: { [key: string]: CountryCodeAndPhoneCode };
+    api_panel:                   { [key: string]: APIPanel };
+    audit:                       Audit;
+    locales:                     Locale[];
+    marketplace:                 SystemConfigInterfaceMarketplace;
     test_function:               TestFunction;
+    player:                      SystemConfigInterfacePlayer;
+    guide:                       SystemConfigInterfaceGuide;
+    notifications:               Notifications;
+    integral:                    Integral;
 }
 
 export interface APIPanel {
-    defaultExample:   string;
     defaultExampleId: string;
     description:      string;
     descriptionId:    string;
+    defaultExample:   string;
     valueType:        string;
 }
 
 export interface Audit {
-    actual_delete_space:       TartuGecko;
-    add_field_role:            TartuGecko;
-    add_node_role:             AddNodeRole;
-    add_sub_admin:             AddTeamToMemberClass;
-    add_team_to_member:        AddTeamToMemberClass;
-    agree_user_apply:          AddTeamToMemberClass;
-    cancel_delete_space:       TartuGecko;
-    change_main_admin:         AddTeamToMemberClass;
-    copy_node:                 AddNodeRole;
-    create_node:               AddNodeRole;
-    create_space:              TartuGecko;
-    create_team:               AddTeamToMemberClass;
-    create_template:           TartuGecko;
-    delete_field_role:         TartuGecko;
-    delete_node:               AddNodeRole;
-    delete_node_role:          AddNodeRole;
-    delete_rubbish_node:       TartuGecko;
-    delete_space:              TartuGecko;
-    delete_sub_admin:          AddTeamToMemberClass;
-    delete_team:               AddTeamToMemberClass;
-    delete_template:           TartuGecko;
-    disable_field_role:        TartuGecko;
-    disable_node_role:         AddNodeRole;
-    disable_node_share:        AddNodeRole;
-    enable_field_role:         TartuGecko;
-    enable_node_role:          AddNodeRole;
-    enable_node_share:         AddNodeRole;
-    export_node:               TartuGecko;
-    import_node:               AddNodeRole;
-    invite_user_join_by_email: TartuGecko;
-    move_node:                 AddNodeRole;
-    quote_template:            TartuGecko;
-    recover_rubbish_node:      AddNodeRole;
-    remove_member_from_team:   AddTeamToMemberClass;
-    remove_user:               AddTeamToMemberClass;
-    rename_node:               AddNodeRole;
-    rename_space:              TartuGecko;
-    sort_node:                 TartuGecko;
-    store_share_node:          AddNodeRole;
-    update_field_role:         TartuGecko;
-    update_field_role_setting: AddTeamToMemberClass;
-    update_member_property:    AddTeamToMemberClass;
-    update_member_team:        AddTeamToMemberClass;
-    update_node_cover:         TartuGecko;
-    update_node_desc:          TartuGecko;
-    update_node_icon:          TartuGecko;
-    update_node_role:          AddNodeRole;
-    update_node_share_setting: AddNodeRole;
-    update_space_logo:         TartuGecko;
-    update_sub_admin_role:     AddTeamToMemberClass;
-    update_team_property:      AddTeamToMemberClass;
-    user_leave_space:          TartuGecko;
-    user_login:                TartuGecko;
-    user_logout:               TartuGecko;
+    actual_delete_space:         ActualDeleteSpace;
+    add_field_role:              ActualDeleteSpace;
+    add_node_role:               AddNodeRole;
+    add_sub_admin:               AddSubAdmin;
+    add_team_to_member:          AddSubAdmin;
+    agree_user_apply:            AddSubAdmin;
+    cancel_delete_space:         ActualDeleteSpace;
+    change_main_admin:           AddSubAdmin;
+    copy_node:                   AddNodeRole;
+    create_node:                 AddNodeRole;
+    create_space:                ActualDeleteSpace;
+    create_team:                 AddSubAdmin;
+    create_template:             ActualDeleteSpace;
+    delete_field_role:           ActualDeleteSpace;
+    delete_node:                 AddNodeRole;
+    delete_node_role:            AddNodeRole;
+    delete_rubbish_node:         ActualDeleteSpace;
+    delete_space:                ActualDeleteSpace;
+    delete_sub_admin:            AddSubAdmin;
+    delete_team:                 AddSubAdmin;
+    delete_template:             ActualDeleteSpace;
+    disable_field_role:          ActualDeleteSpace;
+    disable_node_role:           AddNodeRole;
+    disable_node_share:          AddNodeRole;
+    enable_field_role:           ActualDeleteSpace;
+    enable_node_role:            AddNodeRole;
+    enable_node_share:           AddNodeRole;
+    export_node:                 ActualDeleteSpace;
+    import_node:                 AddNodeRole;
+    invite_user_join_by_email:   ActualDeleteSpace;
+    move_node:                   AddNodeRole;
+    quote_template:              ActualDeleteSpace;
+    recover_rubbish_node:        AddNodeRole;
+    remove_member_from_team:     AddSubAdmin;
+    remove_user:                 AddSubAdmin;
+    rename_node:                 AddNodeRole;
+    rename_space:                ActualDeleteSpace;
+    sort_node:                   ActualDeleteSpace;
+    store_share_node:            StoreShareNode;
+    update_field_role:           ActualDeleteSpace;
+    update_field_role_setting:   AddSubAdmin;
+    update_member_name_property: ActualDeleteSpace;
+    update_member_property:      ActualDeleteSpace;
+    update_member_team:          AddSubAdmin;
+    update_node_cover:           ActualDeleteSpace;
+    update_node_desc:            ActualDeleteSpace;
+    update_node_icon:            ActualDeleteSpace;
+    update_node_role:            AddNodeRole;
+    update_node_share_setting:   AddNodeRole;
+    update_space_logo:           ActualDeleteSpace;
+    update_sub_admin_role:       AddSubAdmin;
+    update_team_property:        AddSubAdmin;
+    user_leave_space:            ActualDeleteSpace;
+    user_login:                  ActualDeleteSpace;
+    user_logout:                 ActualDeleteSpace;
 }
 
-export interface TartuGecko {
-    category: string;
-    content:  string;
-    name:     string;
+export interface ActualDeleteSpace {
+    content?: string;
     online?:  boolean;
-    type:     NotificationsTypeEnum;
+    type:     NotificationsTypeElement;
+    category: string;
+    name:     string;
 }
 
-export enum NotificationsTypeEnum {
+export enum NotificationsTypeElement {
     Member = "member",
     Space = "space",
     System = "system",
 }
 
 export interface AddNodeRole {
-    category:          PurpleCategory;
     content:           string;
-    name:              string;
     online:            boolean;
-    show_in_audit_log: boolean;
+    type:              NotificationsTypeElement;
     sort:              string;
-    type:              NotificationsTypeEnum;
+    show_in_audit_log: boolean;
+    category:          CategoryElement;
+    name:              string;
 }
 
-export enum PurpleCategory {
+export enum CategoryElement {
     WorkCatalogChangeEvent = "work_catalog_change_event",
     WorkCatalogPermissionChangeEvent = "work_catalog_permission_change_event",
     WorkCatalogShareEvent = "work_catalog_share_event",
 }
 
-export interface AddTeamToMemberClass {
-    category: FluffyCategory;
-    type:     NotificationsTypeEnum;
+export interface AddSubAdmin {
+    type:     NotificationsTypeElement;
+    category: AddSubAdminCategory;
 }
 
-export enum FluffyCategory {
+export enum AddSubAdminCategory {
     AdminPermissionChangeEvent = "admin_permission_change_event",
     DatasheetFieldPermissionChangeEvent = "datasheet_field_permission_change_event",
     OrganizationChangeEvent = "organization_change_event",
+}
+
+export interface StoreShareNode {
+    content:           string;
+    online:            boolean;
+    type:              NotificationsTypeElement[];
+    sort:              string;
+    show_in_audit_log: boolean;
+    category:          CategoryElement[];
+    name:              string;
 }
 
 export interface CountryCodeAndPhoneCode {
@@ -135,24 +146,24 @@ export interface Integration {
 }
 
 export interface SystemConfigInterfaceGuide {
-    step:   { [key: string]: Step };
     wizard: { [key: string]: Wizard };
+    step:   { [key: string]: Step };
 }
 
 export interface Step {
-    backdrop?:  Backdrop;
-    next?:      Next;
-    nextId?:    NextID;
-    onClose?:   string[];
-    onNext?:    On[];
-    onPlay?:    string[];
-    onPrev?:    On[];
-    onSkip?:    On[];
-    onTarget?:  On[];
-    prev?:      string;
-    uiConfig:   string;
     uiConfigId: string;
     uiType:     string;
+    prev?:      string;
+    backdrop?:  Backdrop;
+    onPlay?:    string[];
+    onNext?:    On[];
+    next?:      Next;
+    onPrev?:    On[];
+    nextId?:    NextID;
+    onSkip?:    On[];
+    uiConfig:   string;
+    onClose?:   string[];
+    onTarget?:  On[];
     skipId?:    string;
     byEvent?:   string[];
     skip?:      string;
@@ -202,12 +213,12 @@ export interface Wizard {
     completeIndex?:   number;
     player?:          WizardPlayer;
     steps?:           string;
+    manualActions?:   string[];
     repeat?:          boolean;
     endTime?:         number;
     startTime?:       number;
     freeVCount?:      number;
     integral_action?: string;
-    manualActions?:   string[];
 }
 
 export interface WizardPlayer {
@@ -235,20 +246,20 @@ export interface IntegralRule {
 
 export interface BeInvitedToReward {
     action_code:            string;
-    action_name:            string;
     day_max_integral_value: number;
-    display_name:           string[];
+    display_name:           any[];
+    online?:                boolean;
     integral_value:         number;
     notify?:                boolean;
-    online?:                boolean;
+    action_name:            string;
 }
 
 export interface FissionReward {
     action_code:  string;
-    action_name:  string;
-    display_name: string[];
-    notify?:      boolean;
+    display_name: any[];
     online:       boolean;
+    notify?:      boolean;
+    action_name:  string;
 }
 
 export interface Locale {
@@ -262,49 +273,49 @@ export interface Locale {
 
 export interface SystemConfigInterfaceMarketplace {
     cli_9f3930dd7d7ad00c: CLI;
-    cli_9f614b454434500e: CLI;
     cli_a08120b120fad00e: CLI;
+    cli_9f614b454434500e: CLI;
     ina5200279359980055:  Ina;
-    ina5645957505507647:  Ina;
     ina9134969049653777:  Ina;
+    ina5645957505507647:  Ina;
 }
 
 export interface CLI {
-    app_description: string;
-    app_id:          string;
+    logo:            Image;
+    env:             string[];
+    disable:         boolean;
     app_info:        string;
+    note:            string;
     app_name:        string;
+    type:            string;
+    app_description: string;
+    id:              string;
+    display_order:   number;
+    image:           Image;
+    app_id:          string;
+    link_to_cms:     string;
     app_type:        string;
     btn_card:        BtnCard;
-    disable:         boolean;
-    display_order:   number;
-    env:             string[];
-    id:              string;
-    image:           Image;
-    link_to_cms:     string;
-    logo:            Image;
     modal:           CLI9F3930Dd7D7Ad00CModal;
-    note:            string;
-    type:            string;
 }
 
 export interface BtnCard {
-    apps_btn_text:     string;
-    btn_action?:       string;
-    btn_close_action?: string;
     btn_text:          string;
+    btn_action?:       string;
     btn_type:          string;
+    btn_close_action?: string;
+    apps_btn_text:     string;
 }
 
 export interface Image {
-    height:   number;
     id:       string;
-    mimeType: MIMEType;
     name:     string;
     size:     number;
+    mimeType: MIMEType;
     token:    string;
-    url:      string;
     width:    number;
+    height:   number;
+    url:      string;
 }
 
 export enum MIMEType {
@@ -313,34 +324,34 @@ export enum MIMEType {
 }
 
 export interface CLI9F3930Dd7D7Ad00CModal {
-    app_description: string;
-    btn_action?:     string;
     btn_text:        string;
+    btn_action?:     string;
+    app_description: string;
     btn_type:        string;
     help_link:       string;
 }
 
 export interface Ina {
-    app_description: string;
-    app_id:          string;
+    logo:            Image;
+    env:             string[];
     app_info:        string;
+    note:            string;
     app_name:        string;
+    type:            string;
+    app_description: string;
+    id:              string;
+    display_order:   number;
+    image:           Image;
+    app_id:          string;
+    link_to_cms:     string;
     app_type:        string;
     btn_card:        BtnCard;
-    display_order:   number;
-    env:             string[];
-    id:              string;
-    image:           Image;
-    link_to_cms:     string;
-    logo:            Image;
     modal:           CLI9F3930Dd7D7Ad00CModal;
-    note:            string;
-    type:            string;
 }
 
 export interface Notifications {
-    templates: Templates;
     types:     Types;
+    templates: Templates;
 }
 
 export interface Templates {
@@ -348,102 +359,128 @@ export interface Templates {
     activity_integral_income_toadmin:            ActivityIntegralIncomeNotify;
     add_record_out_of_limit:                     AddRecordOutOfLimit;
     add_record_soon_to_be_limit:                 AddRecordOutOfLimit;
-    add_sub_admin:                               AssignedToGroupClass;
-    admin_transfer_space_widget_notify:          LivingstoneSouthernWhiteFacedOwl;
-    admin_unpublish_space_widget_notify:         LivingstoneSouthernWhiteFacedOwl;
+    add_sub_admin:                               AddRecordOutOfLimit;
+    admin_transfer_space_widget_notify:          Notify;
+    admin_unpublish_space_widget_notify:         Notify;
     apply_space_beta_feature_success_notify_all: ActivityIntegralIncomeNotify;
     apply_space_beta_feature_success_notify_me:  ActivityIntegralIncomeNotify;
-    assigned_to_group:                           AssignedToGroupClass;
-    assigned_to_role:                            AssignedToGroupClass;
-    auto_cancel_record_subscription:             AutoCancelRecordSubscription;
-    auto_create_record_subscription:             AutoCancelRecordSubscription;
+    assigned_to_group:                           AddRecordOutOfLimit;
+    assigned_to_role:                            AddRecordOutOfLimit;
+    auto_cancel_record_subscription:             AutoCRecordSubscription;
+    auto_create_record_subscription:             AutoCRecordSubscription;
+    "automation-fail":                           AutomationFail;
     capacity_limit:                              AddRecordOutOfLimit;
-    changed_ordinary_user:                       LivingstoneSouthernWhiteFacedOwl;
-    comment_mentioned:                           AutoCancelRecordSubscription;
-    common_system_notify:                        LivingstoneSouthernWhiteFacedOwl;
-    common_system_notify_web:                    ActivityIntegralIncomeNotify;
+    changed_ordinary_user:                       AddRecordOutOfLimit;
+    comment_mentioned:                           CommentMentioned;
+    common_system_notify:                        Notify;
+    common_system_notify_web:                    CommonSystemNotifyWeb;
     datasheet_limit:                             AddRecordOutOfLimit;
     datasheet_record_limit:                      AddRecordOutOfLimit;
     integral_income_notify:                      ActivityIntegralIncomeNotify;
-    invite_member_toadmin:                       LivingstoneSouthernWhiteFacedOwl;
-    invite_member_tomyself:                      LivingstoneSouthernWhiteFacedOwl;
-    invite_member_touser:                        LivingstoneSouthernWhiteFacedOwl;
-    member_applied_to_close_account:             LivingstoneSouthernWhiteFacedOwl;
-    new_space_widget_notify:                     LivingstoneSouthernWhiteFacedOwl;
-    new_user_welcome_notify:                     LivingstoneSouthernWhiteFacedOwl;
-    quit_space:                                  LivingstoneSouthernWhiteFacedOwl;
-    remove_from_group:                           LivingstoneSouthernWhiteFacedOwl;
-    remove_from_role:                            LivingstoneSouthernWhiteFacedOwl;
-    removed_from_space_toadmin:                  LivingstoneSouthernWhiteFacedOwl;
-    removed_from_space_touser:                   LivingstoneSouthernWhiteFacedOwl;
-    removed_member_tomyself:                     LivingstoneSouthernWhiteFacedOwl;
-    server_pre_publish:                          LivingstoneSouthernWhiteFacedOwl;
-    single_record_comment_mentioned:             AutoCancelRecordSubscription;
-    single_record_member_mention:                AutoCancelRecordSubscription;
-    space_add_primary_admin:                     LivingstoneSouthernWhiteFacedOwl;
+    invite_member_toadmin:                       AddRecordOutOfLimit;
+    invite_member_tomyself:                      AddRecordOutOfLimit;
+    invite_member_touser:                        AddRecordOutOfLimit;
+    member_applied_to_close_account:             AddRecordOutOfLimit;
+    new_space_widget_notify:                     AddRecordOutOfLimit;
+    new_user_welcome_notify:                     AddRecordOutOfLimit;
+    quit_space:                                  AddRecordOutOfLimit;
+    remove_from_group:                           AddRecordOutOfLimit;
+    remove_from_role:                            AddRecordOutOfLimit;
+    removed_from_space_toadmin:                  AddRecordOutOfLimit;
+    removed_from_space_touser:                   AddRecordOutOfLimit;
+    removed_member_tomyself:                     AddRecordOutOfLimit;
+    server_pre_publish:                          AddRecordOutOfLimit;
+    single_record_comment_mentioned:             CommentMentioned;
+    single_record_member_mention:                CommentMentioned;
+    space_add_primary_admin:                     AddRecordOutOfLimit;
     space_admin_limit:                           AddRecordOutOfLimit;
     space_api_limit:                             AddRecordOutOfLimit;
     space_calendar_limit:                        AddRecordOutOfLimit;
-    space_certification_fail_notify:             LivingstoneSouthernWhiteFacedOwl;
-    space_certification_notify:                  LivingstoneSouthernWhiteFacedOwl;
-    space_deleted:                               LivingstoneSouthernWhiteFacedOwl;
-    space_dingtalk_notify:                       LivingstoneSouthernWhiteFacedOwl;
-    space_field_permission_limit:                LivingstoneSouthernWhiteFacedOwl;
-    space_file_permission_limit:                 LivingstoneSouthernWhiteFacedOwl;
-    space_form_limit:                            LivingstoneSouthernWhiteFacedOwl;
-    space_gantt_limit:                           LivingstoneSouthernWhiteFacedOwl;
-    space_join_apply:                            LivingstoneSouthernWhiteFacedOwl;
-    space_join_apply_approved:                   LivingstoneSouthernWhiteFacedOwl;
-    space_join_apply_refused:                    LivingstoneSouthernWhiteFacedOwl;
-    space_lark_notify:                           LivingstoneSouthernWhiteFacedOwl;
-    space_members_limit:                         LivingstoneSouthernWhiteFacedOwl;
-    space_mirror_limit:                          LivingstoneSouthernWhiteFacedOwl;
-    space_name_change:                           LivingstoneSouthernWhiteFacedOwl;
-    space_paid_notify:                           LivingstoneSouthernWhiteFacedOwl;
-    space_rainbow_label_limit:                   LivingstoneSouthernWhiteFacedOwl;
-    space_record_limit:                          LivingstoneSouthernWhiteFacedOwl;
-    space_recover:                               LivingstoneSouthernWhiteFacedOwl;
-    space_seats_limit:                           LivingstoneSouthernWhiteFacedOwl;
-    space_subscription_end_notify:               LivingstoneSouthernWhiteFacedOwl;
-    space_subscription_notify:                   LivingstoneSouthernWhiteFacedOwl;
-    space_time_machine_limit:                    LivingstoneSouthernWhiteFacedOwl;
-    space_trash_limit:                           LivingstoneSouthernWhiteFacedOwl;
-    space_trial:                                 LivingstoneSouthernWhiteFacedOwl;
-    space_vika_paid_notify:                      LivingstoneSouthernWhiteFacedOwl;
-    space_watermark_notify:                      LivingstoneSouthernWhiteFacedOwl;
-    space_wecom_api_trial_end:                   LivingstoneSouthernWhiteFacedOwl;
-    space_wecom_notify:                          LivingstoneSouthernWhiteFacedOwl;
-    space_yozooffice_notify:                     LivingstoneSouthernWhiteFacedOwl;
-    subscribed_record_cell_updated:              AutoCancelRecordSubscription;
-    subscribed_record_commented:                 AutoCancelRecordSubscription;
+    space_certification_fail_notify:             AddRecordOutOfLimit;
+    space_certification_notify:                  AddRecordOutOfLimit;
+    space_deleted:                               AddRecordOutOfLimit;
+    space_dingtalk_notify:                       AddRecordOutOfLimit;
+    space_field_permission_limit:                AddRecordOutOfLimit;
+    space_file_permission_limit:                 AddRecordOutOfLimit;
+    space_form_limit:                            AddRecordOutOfLimit;
+    space_gantt_limit:                           AddRecordOutOfLimit;
+    space_join_apply:                            AddRecordOutOfLimit;
+    space_join_apply_approved:                   AddRecordOutOfLimit;
+    space_join_apply_refused:                    AddRecordOutOfLimit;
+    space_lark_notify:                           AddRecordOutOfLimit;
+    space_members_limit:                         AddRecordOutOfLimit;
+    space_mirror_limit:                          AddRecordOutOfLimit;
+    space_name_change:                           AddRecordOutOfLimit;
+    space_paid_notify:                           AddRecordOutOfLimit;
+    space_rainbow_label_limit:                   AddRecordOutOfLimit;
+    space_record_limit:                          AddRecordOutOfLimit;
+    space_recover:                               AddRecordOutOfLimit;
+    space_seats_limit:                           AddRecordOutOfLimit;
+    space_subscription_end_notify:               AddRecordOutOfLimit;
+    space_subscription_notify:                   AddRecordOutOfLimit;
+    space_time_machine_limit:                    AddRecordOutOfLimit;
+    space_trash_limit:                           AddRecordOutOfLimit;
+    space_trial:                                 AddRecordOutOfLimit;
+    space_watermark_notify:                      AddRecordOutOfLimit;
+    space_wecom_api_trial_end:                   AddRecordOutOfLimit;
+    space_wecom_notify:                          AddRecordOutOfLimit;
+    space_yozooffice_notify:                     AddRecordOutOfLimit;
+    subscribed_record_cell_updated:              CommentMentioned;
+    subscribed_record_commented:                 CommentMentioned;
+    "subscribed-record-archived":                AddRecordOutOfLimit;
+    "subscribed-record-unarchived":              AddRecordOutOfLimit;
     task_reminder:                               AddRecordOutOfLimit;
-    user_field:                                  AutoCancelRecordSubscription;
-    web_publish:                                 LivingstoneSouthernWhiteFacedOwl;
+    user_field:                                  CommentMentioned;
+    web_publish:                                 CommonSystemNotifyWeb;
+    workflow_execute_failed_notify:              AddRecordOutOfLimit;
 }
 
 export interface ActivityIntegralIncomeNotify {
-    format_string:      string;
-    is_component?:      boolean;
-    is_notification?:   boolean;
-    notifications_type: NotificationsTypeEnum;
-    to_tag:             string;
-    can_jump?:          boolean;
+    to_tag:                 ToTag;
+    notifications_type:     NotificationsTypeElement;
+    is_notification:        boolean;
+    format_string:          string;
+    notification_type:      NotificationType;
+    is_component?:          boolean;
+    can_jump?:              boolean;
+    is_mail?:               boolean;
+    mail_template_subject?: string;
+}
+
+export enum NotificationType {
+    事务型消息TransactionalNotify = "事务型消息(transactional notify)",
+    营销型消息MarketingNotify = "营销型消息(marketing notify)",
+    通知型消息NotificationNotify = "通知型消息(notification notify)",
+}
+
+export enum ToTag {
+    AllMembers = "all_members",
+    AllUsers = "all_users",
+    Members = "members",
+    Myself = "myself",
+    SpaceAdmins = "space_admins",
+    SpaceMainAdmin = "space_main_admin",
+    SpaceMemberAdmins = "space_member_admins",
+    Users = "users",
 }
 
 export interface AddRecordOutOfLimit {
-    can_jump:              boolean;
-    format_string:         string;
-    frequency?:            number;
-    is_component:          boolean;
-    is_mail:               boolean;
-    is_notification:       boolean;
-    mail_template_subject: string;
-    notifications_type:    NotificationsTypeEnum;
-    to_tag:                string;
-    url:                   URL;
-    billing_notify?:       string;
-    is_browser?:           boolean;
-    is_mobile?:            boolean;
+    can_jump?:              boolean;
+    to_tag:                 ToTag;
+    notifications_type:     NotificationsTypeElement;
+    is_notification:        boolean;
+    is_mail?:               boolean;
+    mail_template_subject?: string;
+    format_string?:         string;
+    url?:                   URL;
+    frequency?:             number;
+    is_component?:          boolean;
+    is_mobile?:             boolean;
+    is_browser?:            boolean;
+    notification_type?:     NotificationType;
+    billing_notify?:        string;
+    redirect_url?:          string;
+    id?:                    string;
 }
 
 export enum URL {
@@ -451,47 +488,49 @@ export enum URL {
     Workbench = "/workbench",
 }
 
-export interface AssignedToGroupClass {
-    can_jump:           boolean;
-    format_string:      string;
-    is_browser:         boolean;
-    is_component:       boolean;
-    is_mobile:          boolean;
+export interface Notify {
+    to_tag:             ToTag;
+    notifications_type: NotificationsTypeElement;
     is_notification:    boolean;
-    notifications_type: NotificationsTypeEnum;
-    to_tag:             string;
+    is_mail?:           boolean;
+    is_browser:         boolean;
+    format_string:      string;
+    is_component:       boolean;
+}
+
+export interface AutoCRecordSubscription {
+    can_jump:           boolean;
+    to_tag:             ToTag;
+    notifications_type: any[];
+    is_notification:    boolean;
+    is_browser:         boolean;
+    format_string:      string;
     url:                URL;
 }
 
-export interface LivingstoneSouthernWhiteFacedOwl {
-    format_string?:         string;
-    is_browser?:            boolean;
-    is_component?:          boolean;
-    is_mail?:               boolean;
-    is_notification?:       boolean;
-    notifications_type:     NotificationsTypeEnum;
-    to_tag:                 string;
-    can_jump?:              boolean;
-    is_mobile?:             boolean;
-    url?:                   URL;
-    redirect_url?:          string;
-    billing_notify?:        string;
-    frequency?:             number;
-    mail_template_subject?: string;
+export interface AutomationFail {
 }
 
-export interface AutoCancelRecordSubscription {
+export interface CommentMentioned {
     can_jump:               boolean;
-    format_string:          string;
-    is_browser:             boolean;
-    is_mail:                boolean;
-    is_mobile:              boolean;
-    is_notification:        boolean;
+    to_tag:                 ToTag;
     notifications_type:     any[];
-    to_tag:                 string;
+    is_notification:        boolean;
+    is_mobile:              boolean;
+    is_mail:                boolean;
+    is_browser:             boolean;
+    format_string:          string;
     url:                    URL;
     is_component?:          boolean;
     mail_template_subject?: string;
+}
+
+export interface CommonSystemNotifyWeb {
+    to_tag:             ToTag;
+    notifications_type: NotificationsTypeElement;
+    format_string:      string;
+    is_component:       boolean;
+    is_mobile?:         boolean;
 }
 
 export interface Types {
@@ -507,18 +546,18 @@ export interface Member {
 }
 
 export interface SystemConfigInterfacePlayer {
-    action:  Action[];
-    events:  Events;
-    jobs:    Jobs;
-    rule:    RuleElement[];
-    tips:    Tips;
     trigger: Trigger[];
+    events:  Events;
+    rule:    RuleElement[];
+    jobs:    Jobs;
+    action:  Action[];
+    tips:    Tips;
 }
 
 export interface Action {
+    guide?:       ActionGuide;
     id:           string;
     command:      string;
-    guide?:       ActionGuide;
     commandArgs?: string;
 }
 
@@ -527,77 +566,76 @@ export interface ActionGuide {
 }
 
 export interface Events {
-    _:                                             Empty;
-    address_shown:                                 HammerfestPonies;
-    app_error_logger:                              HammerfestPonies;
-    app_modal_confirm:                             HammerfestPonies;
-    app_set_user_id:                               HammerfestPonies;
-    app_tracker:                                   HammerfestPonies;
-    datasheet_add_new_view:                        HammerfestPonies;
-    datasheet_create_mirror_tip:                   DatasheetCreateMirrorTip;
-    datasheet_dashboard_panel_shown:               HammerfestPonies;
-    datasheet_delete_record:                       HammerfestPonies;
-    datasheet_field_context_hidden:                HammerfestPonies;
-    datasheet_field_context_shown:                 HammerfestPonies;
-    datasheet_field_setting_hidden:                DatasheetCreateMirrorTip;
-    datasheet_field_setting_shown:                 HammerfestPonies;
-    datasheet_gantt_view_shown:                    HammerfestPonies;
-    datasheet_grid_view_shown:                     DatasheetCreateMirrorTip;
-    datasheet_org_has_link_field:                  HammerfestPonies;
-    datasheet_org_view_add_first_node:             HammerfestPonies;
-    datasheet_org_view_drag_to_unhandled_list:     HammerfestPonies;
-    datasheet_org_view_right_panel_shown:          HammerfestPonies;
-    datasheet_search_panel_hidden:                 DatasheetCreateMirrorTip;
-    datasheet_search_panel_shown:                  DatasheetCreateMirrorTip;
-    datasheet_shown:                               HammerfestPonies;
-    datasheet_user_menu:                           HammerfestPonies;
-    datasheet_widget_center_modal_shown:           DatasheetCreateMirrorTip;
-    datasheet_wigdet_empty_panel_shown:            HammerfestPonies;
-    get_context_menu_file_more:                    HammerfestPonies;
-    get_context_menu_folder_more:                  HammerfestPonies;
-    get_context_menu_root_add:                     HammerfestPonies;
-    get_nav_list:                                  HammerfestPonies;
-    invite_entrance_modal_shown:                   HammerfestPonies;
-    questionnaire_shown:                           HammerfestPonies;
-    questionnaire_shown_after_sign:                HammerfestPonies;
-    space_setting_main_admin_shown:                HammerfestPonies;
-    space_setting_member_manage_shown:             HammerfestPonies;
-    space_setting_overview_shown:                  HammerfestPonies;
-    space_setting_sub_admin_shown:                 HammerfestPonies;
-    space_setting_workbench_shown:                 HammerfestPonies;
-    template_center_shown:                         HammerfestPonies;
-    template_detail_shown:                         HammerfestPonies;
-    template_use_confirm_modal_shown:              HammerfestPonies;
-    view_add_panel_shown:                          HammerfestPonies;
-    view_convert_gallery:                          HammerfestPonies;
-    view_notice_auto_save_true:                    HammerfestPonies;
-    view_notice_view_auto_false:                   HammerfestPonies;
-    viewset_manual_save_tip:                       HammerfestPonies;
-    workbench_create_form_bth_clicked:             HammerfestPonies;
-    workbench_create_form_panel_shown:             HammerfestPonies;
-    workbench_create_form_previewer_shown:         DatasheetCreateMirrorTip;
-    workbench_entry:                               HammerfestPonies;
-    workbench_folder_from_template_showcase_shown: HammerfestPonies;
-    workbench_folder_showcase_shown:               HammerfestPonies;
-    workbench_form_container_shown:                HammerfestPonies;
-    workbench_hidden_vikaby_btn_clicked:           HammerfestPonies;
-    workbench_no_emit:                             HammerfestPonies;
-    workbench_show_trial_tip:                      HammerfestPonies;
-    workbench_shown:                               HammerfestPonies;
-    workbench_space_list_shown:                    HammerfestPonies;
+    _:                                             AutomationFail;
+    address_shown:                                 AddressShown;
+    ai_create_ai_node:                             AICreateAINode;
+    app_error_logger:                              AddressShown;
+    app_modal_confirm:                             AddressShown;
+    app_set_user_id:                               AddressShown;
+    app_tracker:                                   AddressShown;
+    datasheet_add_new_view:                        AddressShown;
+    datasheet_create_mirror_tip:                   AICreateAINode;
+    datasheet_dashboard_panel_shown:               AddressShown;
+    datasheet_delete_record:                       AddressShown;
+    datasheet_field_context_hidden:                AddressShown;
+    datasheet_field_context_shown:                 AddressShown;
+    datasheet_field_setting_hidden:                AICreateAINode;
+    datasheet_field_setting_shown:                 AddressShown;
+    datasheet_gantt_view_shown:                    AddressShown;
+    datasheet_grid_view_shown:                     AICreateAINode;
+    datasheet_org_has_link_field:                  AddressShown;
+    datasheet_org_view_add_first_node:             AddressShown;
+    datasheet_org_view_drag_to_unhandled_list:     AddressShown;
+    datasheet_org_view_right_panel_shown:          AddressShown;
+    datasheet_search_panel_hidden:                 AICreateAINode;
+    datasheet_search_panel_shown:                  AICreateAINode;
+    datasheet_shown:                               AddressShown;
+    datasheet_user_menu:                           AddressShown;
+    datasheet_widget_center_modal_shown:           AICreateAINode;
+    datasheet_wigdet_empty_panel_shown:            AddressShown;
+    get_context_menu_file_more:                    AddressShown;
+    get_context_menu_folder_more:                  AddressShown;
+    get_context_menu_root_add:                     AddressShown;
+    get_nav_list:                                  AddressShown;
+    guide_use_automation_first_time:               AddressShown;
+    invite_entrance_modal_shown:                   AddressShown;
+    questionnaire_shown:                           AddressShown;
+    questionnaire_shown_after_sign:                AddressShown;
+    space_setting_main_admin_shown:                AddressShown;
+    space_setting_member_manage_shown:             AddressShown;
+    space_setting_overview_shown:                  AddressShown;
+    space_setting_sub_admin_shown:                 AddressShown;
+    space_setting_workbench_shown:                 AddressShown;
+    template_center_shown:                         AddressShown;
+    template_detail_shown:                         AddressShown;
+    template_use_confirm_modal_shown:              AddressShown;
+    view_add_panel_shown:                          AddressShown;
+    view_convert_gallery:                          AddressShown;
+    view_notice_auto_save_true:                    AddressShown;
+    view_notice_view_auto_false:                   AddressShown;
+    viewset_manual_save_tip:                       AddressShown;
+    workbench_create_form_bth_clicked:             AddressShown;
+    workbench_create_form_panel_shown:             AddressShown;
+    workbench_create_form_previewer_shown:         AICreateAINode;
+    workbench_entry:                               AddressShown;
+    workbench_folder_from_template_showcase_shown: AddressShown;
+    workbench_folder_showcase_shown:               AddressShown;
+    workbench_form_container_shown:                AddressShown;
+    workbench_hidden_vikaby_btn_clicked:           AddressShown;
+    workbench_no_emit:                             AddressShown;
+    workbench_show_trial_tip:                      AddressShown;
+    workbench_shown:                               AddressShown;
+    workbench_space_list_shown:                    AddressShown;
 }
 
-export interface Empty {
-}
-
-export interface HammerfestPonies {
+export interface AddressShown {
     module: string;
     name:   string;
 }
 
-export interface DatasheetCreateMirrorTip {
-    guide:  ActionGuide;
+export interface AICreateAINode {
     module: string;
+    guide:  ActionGuide;
     name:   string;
 }
 
@@ -624,14 +662,14 @@ export interface Tips {
 }
 
 export interface FirstNodeTips {
-    desc:        string;
     description: string;
     title:       string;
+    desc:        string;
 }
 
 export interface Trigger {
     actions:     string[];
-    rules:       string[];
+    rules?:      string[];
     id:          string;
     event:       string[];
     eventState?: string;
@@ -639,174 +677,174 @@ export interface Trigger {
 }
 
 export interface Settings {
-    _build_branch:                                       ArakGroundhog;
-    _build_id:                                           ArakGroundhog;
-    _version_type:                                       ArakGroundhog;
-    activity_center_end_time:                            ArakGroundhog;
-    activity_center_url:                                 ArakGroundhog;
-    activity_train_camp_end_time:                        ArakGroundhog;
-    activity_train_camp_start_time:                      ArakGroundhog;
-    agree_terms_of_service:                              ArakGroundhog;
-    api_apiffox_patch_url:                               ArakGroundhog;
-    api_apiffox_post_url:                                ArakGroundhog;
-    api_apifox_delete_url:                               ArakGroundhog;
-    api_apifox_get_url:                                  ArakGroundhog;
-    api_apifox_upload_url:                               ArakGroundhog;
-    api_times_per_day:                                   ArakGroundhog;
-    api_times_per_hour:                                  ArakGroundhog;
-    api_times_per_minute:                                ArakGroundhog;
-    api_times_per_second:                                ArakGroundhog;
-    apitable_login_logo:                                 ArakGroundhog;
-    assistant:                                           ArakGroundhog;
-    assistant_activity_train_camp_end_time:              ArakGroundhog;
-    assistant_activity_train_camp_start_time:            ArakGroundhog;
-    assistant_ai_course_url:                             ArakGroundhog;
-    assistant_release_history_url:                       ArakGroundhog;
-    automation_action_send_msg_to_dingtalk:              ArakGroundhog;
-    automation_action_send_msg_to_feishu:                ArakGroundhog;
-    automation_action_send_msg_to_wecom:                 ArakGroundhog;
-    billing_default_billing_period:                      ArakGroundhog;
-    billing_default_grade:                               ArakGroundhog;
-    billing_default_seats:                               ArakGroundhog;
-    billing_enterprise_qr_code:                          ArakGroundhog;
-    billing_pay_contact_us:                              ArakGroundhog;
-    billing_pay_success_qr_code:                         ArakGroundhog;
-    datasheet_max_view_count_per_sheet:                  ArakGroundhog;
-    datasheet_unlogin_user_avatar:                       ArakGroundhog;
-    delete_account_step1_cover:                          ArakGroundhog;
-    delete_account_step2_email_icon:                     ArakGroundhog;
-    delete_account_step2_mobile_icon:                    ArakGroundhog;
-    education_url:                                       ArakGroundhog;
-    email_icon:                                          ArakGroundhog;
-    emoji_apple_32:                                      ArakGroundhog;
-    emoji_apple_64:                                      ArakGroundhog;
-    experimental_features_unsynchronized_view_intro_img: ArakGroundhog;
-    field_cascade:                                       ArakGroundhog;
-    github_icon:                                         ArakGroundhog;
-    grades_info:                                         ArakGroundhog;
-    help_assistant:                                      ArakGroundhog;
-    help_contact_us_type:                                ArakGroundhog;
-    help_developers_center_url:                          ArakGroundhog;
-    help_download_app:                                   ArakGroundhog;
-    help_join_chatgroup_url:                             ArakGroundhog;
-    help_official_website_url:                           ArakGroundhog;
-    help_product_roadmap_url:                            ArakGroundhog;
-    help_solution_url:                                   ArakGroundhog;
-    help_subscribe_demonstrate_form_url:                 ArakGroundhog;
-    help_user_community_url:                             ArakGroundhog;
-    help_user_community_url_dev:                         ArakGroundhog;
-    help_user_community_url_prod:                        ArakGroundhog;
-    help_user_feedback_url:                              ArakGroundhog;
-    help_video_tutorials_url:                            ArakGroundhog;
-    integration_apifox_url:                              ArakGroundhog;
-    integration_dingtalk_da:                             ArakGroundhog;
+    _build_branch:                                       BuildBranch;
+    _build_id:                                           BuildBranch;
+    _version_type:                                       BuildBranch;
+    activity_center_end_time:                            BuildBranch;
+    activity_center_url:                                 BuildBranch;
+    activity_train_camp_end_time:                        BuildBranch;
+    activity_train_camp_start_time:                      BuildBranch;
+    agree_terms_of_service:                              BuildBranch;
+    api_apiffox_patch_url:                               BuildBranch;
+    api_apiffox_post_url:                                BuildBranch;
+    api_apifox_delete_url:                               BuildBranch;
+    api_apifox_get_url:                                  BuildBranch;
+    api_apifox_upload_url:                               BuildBranch;
+    api_times_per_day:                                   BuildBranch;
+    api_times_per_hour:                                  BuildBranch;
+    api_times_per_minute:                                BuildBranch;
+    api_times_per_second:                                BuildBranch;
+    apitable_login_logo:                                 BuildBranch;
+    assistant:                                           BuildBranch;
+    assistant_activity_train_camp_end_time:              BuildBranch;
+    assistant_activity_train_camp_start_time:            BuildBranch;
+    assistant_ai_course_url:                             BuildBranch;
+    assistant_release_history_url:                       BuildBranch;
+    automation_action_send_msg_to_dingtalk:              BuildBranch;
+    automation_action_send_msg_to_feishu:                BuildBranch;
+    automation_action_send_msg_to_wecom:                 BuildBranch;
+    billing_default_billing_period:                      BuildBranch;
+    billing_default_grade:                               BuildBranch;
+    billing_default_seats:                               BuildBranch;
+    billing_enterprise_qr_code:                          BuildBranch;
+    billing_pay_contact_us:                              BuildBranch;
+    billing_pay_success_qr_code:                         BuildBranch;
+    datasheet_max_view_count_per_sheet:                  BuildBranch;
+    datasheet_unlogin_user_avatar:                       BuildBranch;
+    delete_account_step1_cover:                          BuildBranch;
+    delete_account_step2_email_icon:                     BuildBranch;
+    delete_account_step2_mobile_icon:                    BuildBranch;
+    education_url:                                       BuildBranch;
+    email_icon:                                          BuildBranch;
+    emoji_apple_32:                                      BuildBranch;
+    emoji_apple_64:                                      BuildBranch;
+    experimental_features_unsynchronized_view_intro_img: BuildBranch;
+    field_cascade:                                       BuildBranch;
+    github_icon:                                         BuildBranch;
+    grades_info:                                         BuildBranch;
+    help_assistant:                                      BuildBranch;
+    help_contact_us_type:                                BuildBranch;
+    help_developers_center_url:                          BuildBranch;
+    help_download_app:                                   BuildBranch;
+    help_join_chatgroup_url:                             BuildBranch;
+    help_official_website_url:                           BuildBranch;
+    help_product_roadmap_url:                            BuildBranch;
+    help_solution_url:                                   BuildBranch;
+    help_subscribe_demonstrate_form_url:                 BuildBranch;
+    help_user_community_url:                             BuildBranch;
+    help_user_community_url_dev:                         BuildBranch;
+    help_user_community_url_prod:                        BuildBranch;
+    help_user_feedback_url:                              BuildBranch;
+    help_video_tutorials_url:                            BuildBranch;
+    integration_apifox_url:                              BuildBranch;
+    integration_dingtalk_da:                             BuildBranch;
     integration_dingtalk_help_url:                       IntegrationHelpURL;
-    integration_dingtalk_upgrade_url:                    ArakGroundhog;
-    integration_feishu_help:                             ArakGroundhog;
+    integration_dingtalk_upgrade_url:                    BuildBranch;
+    integration_feishu_help:                             BuildBranch;
     integration_feishu_help_url:                         IntegrationHelpURL;
-    integration_feishu_manage_open_url:                  ArakGroundhog;
-    integration_feishu_seats_form_url:                   ArakGroundhog;
-    integration_feishu_upgrade_url:                      ArakGroundhog;
-    integration_feishu_upgrade_url_dev:                  ArakGroundhog;
-    integration_feisu_register_now_url:                  ArakGroundhog;
-    integration_wecom_bind_help_center:                  ArakGroundhog;
-    integration_wecom_bind_help_center_url:              ArakGroundhog;
-    integration_wecom_bind_success_icon_img:             ArakGroundhog;
-    integration_wecom_custom_subdomain_help_url:         ArakGroundhog;
+    integration_feishu_manage_open_url:                  BuildBranch;
+    integration_feishu_seats_form_url:                   BuildBranch;
+    integration_feishu_upgrade_url:                      BuildBranch;
+    integration_feishu_upgrade_url_dev:                  BuildBranch;
+    integration_feisu_register_now_url:                  BuildBranch;
+    integration_wecom_bind_help_center:                  BuildBranch;
+    integration_wecom_bind_help_center_url:              BuildBranch;
+    integration_wecom_bind_success_icon_img:             BuildBranch;
+    integration_wecom_custom_subdomain_help_url:         BuildBranch;
     integration_wecom_help_url:                          IntegrationHelpURL;
-    integration_wecom_login_qrcode_js:                   ArakGroundhog;
-    integration_wecom_qrcode_css:                        ArakGroundhog;
-    integration_wecom_shop_cms:                          ArakGroundhog;
-    integration_wecom_shop_corpid_dev:                   ArakGroundhog;
-    integration_wecom_shop_corpid_prod:                  ArakGroundhog;
-    integration_wecom_shop_corpid_staging:               ArakGroundhog;
-    integration_wecom_shop_corpid_test:                  ArakGroundhog;
-    integration_wecom_shop_suiteid_dev:                  ArakGroundhog;
-    integration_wecom_shop_suiteid_prod:                 ArakGroundhog;
-    integration_wecom_shop_suiteid_staging:              ArakGroundhog;
-    integration_wecom_shop_suiteid_test:                 ArakGroundhog;
-    integration_wecom_upgrade_guide_url:                 ArakGroundhog;
+    integration_wecom_login_qrcode_js:                   BuildBranch;
+    integration_wecom_qrcode_css:                        BuildBranch;
+    integration_wecom_shop_cms:                          BuildBranch;
+    integration_wecom_shop_corpid_dev:                   BuildBranch;
+    integration_wecom_shop_corpid_prod:                  BuildBranch;
+    integration_wecom_shop_corpid_staging:               BuildBranch;
+    integration_wecom_shop_corpid_test:                  BuildBranch;
+    integration_wecom_shop_suiteid_dev:                  BuildBranch;
+    integration_wecom_shop_suiteid_prod:                 BuildBranch;
+    integration_wecom_shop_suiteid_staging:              BuildBranch;
+    integration_wecom_shop_suiteid_test:                 BuildBranch;
+    integration_wecom_upgrade_guide_url:                 BuildBranch;
     integration_yozosoft_help_url:                       IntegrationHelpURL;
-    introduction_video:                                  ArakGroundhog;
-    linkedin_icon:                                       ArakGroundhog;
-    login_agree_terms_of_service:                        ArakGroundhog;
-    login_icp1_url:                                      ArakGroundhog;
-    login_icp2_url:                                      ArakGroundhog;
-    login_introduction_video:                            ArakGroundhog;
-    login_join_chatgroup_url:                            ArakGroundhog;
-    login_privacy_policy:                                ArakGroundhog;
-    login_private_deployment_form_url:                   ArakGroundhog;
-    login_service_agreement:                             ArakGroundhog;
-    official_avatar:                                     ArakGroundhog;
-    page_apply_logout:                                   ArakGroundhog;
-    page_apply_logout_bg:                                ArakGroundhog;
-    permission_config_in_workbench_page:                 ArakGroundhog;
-    quick_search_default_dark:                           ArakGroundhog;
-    quick_search_default_light:                          ArakGroundhog;
-    server_error_page_bg:                                ArakGroundhog;
-    share_iframe_brand:                                  ArakGroundhog;
-    share_iframe_brand_dark:                             ArakGroundhog;
-    space_setting_integrations_dingtalk:                 ArakGroundhog;
-    space_setting_integrations_feishu:                   ArakGroundhog;
-    space_setting_integrations_preview_office_file:      ArakGroundhog;
-    space_setting_integrations_wecom:                    ArakGroundhog;
-    space_setting_invite_user_to_get_v_coins:            ArakGroundhog;
-    space_setting_list_of_enable_all_lab_features:       ArakGroundhog;
-    space_setting_role_empty_img:                        ArakGroundhog;
-    space_setting_upgrade:                               ArakGroundhog;
-    system_configuration_logo_with_name_white_font:      ArakGroundhog;
-    system_configuration_minmum_version_require:         ArakGroundhog;
-    system_configuration_server_error_bg_img:            ArakGroundhog;
-    system_configuration_version:                        ArakGroundhog;
-    twitter_icon:                                        ArakGroundhog;
-    user_account_deleted_bg_img:                         ArakGroundhog;
-    user_account_deleted_img:                            ArakGroundhog;
-    user_guide_welcome_developer_center_url:             ArakGroundhog;
-    user_guide_welcome_introduction_video:               ArakGroundhog;
-    user_guide_welcome_quick_start_video:                ArakGroundhog;
-    user_guide_welcome_template1_icon:                   ArakGroundhog;
-    user_guide_welcome_template1_url:                    ArakGroundhog;
-    user_guide_welcome_template2_icon:                   ArakGroundhog;
-    user_guide_welcome_template2_url:                    ArakGroundhog;
-    user_guide_welcome_template3_icon:                   ArakGroundhog;
-    user_guide_welcome_template3_url:                    ArakGroundhog;
-    user_guide_welcome_what_is_datasheet_video:          ArakGroundhog;
-    user_setting_account_bind:                           ArakGroundhog;
-    user_setting_account_bind_dingtalk:                  ArakGroundhog;
-    user_setting_account_bind_qq:                        ArakGroundhog;
-    user_setting_account_bind_wechat:                    ArakGroundhog;
-    user_setting_default_avatar:                         ArakGroundhog;
-    view_architecture_empty_graphics_img:                ArakGroundhog;
-    view_architecture_empty_record_list_img:             ArakGroundhog;
-    view_architecture_guide_video:                       ArakGroundhog;
-    view_calendar_guide_create:                          ArakGroundhog;
-    view_calendar_guide_no_permission:                   ArakGroundhog;
-    view_calendar_guide_video:                           ArakGroundhog;
-    view_form_guide_video:                               ArakGroundhog;
-    view_gallery_guide_video:                            ArakGroundhog;
-    view_gantt_guide_video:                              ArakGroundhog;
-    view_grid_guide_video:                               ArakGroundhog;
-    view_kanban_guide_video:                             ArakGroundhog;
-    view_mirror_list_empty_img:                          ArakGroundhog;
-    widget_center_feature_not_unturned_on_img:           ArakGroundhog;
-    widget_center_help_link:                             ArakGroundhog;
-    widget_center_space_widget_empty_img:                ArakGroundhog;
-    widget_cli_miumum_version:                           ArakGroundhog;
-    widget_custom_widget_empty_img:                      ArakGroundhog;
-    widget_default_cover_img:                            ArakGroundhog;
-    widget_panel_empty_img:                              ArakGroundhog;
-    workbench_folder_default_cover_list:                 ArakGroundhog;
-    workbench_max_node_number_show_invite_and_new_node:  ArakGroundhog;
-    workbench_no_permission_img:                         ArakGroundhog;
+    introduction_video:                                  BuildBranch;
+    linkedin_icon:                                       BuildBranch;
+    login_agree_terms_of_service:                        BuildBranch;
+    login_icp1_url:                                      BuildBranch;
+    login_icp2_url:                                      BuildBranch;
+    login_introduction_video:                            BuildBranch;
+    login_join_chatgroup_url:                            BuildBranch;
+    login_privacy_policy:                                BuildBranch;
+    login_private_deployment_form_url:                   BuildBranch;
+    login_service_agreement:                             BuildBranch;
+    official_avatar:                                     BuildBranch;
+    page_apply_logout:                                   BuildBranch;
+    page_apply_logout_bg:                                BuildBranch;
+    permission_config_in_workbench_page:                 BuildBranch;
+    quick_search_default_dark:                           BuildBranch;
+    quick_search_default_light:                          BuildBranch;
+    server_error_page_bg:                                BuildBranch;
+    share_iframe_brand:                                  BuildBranch;
+    share_iframe_brand_dark:                             BuildBranch;
+    space_setting_integrations_dingtalk:                 BuildBranch;
+    space_setting_integrations_feishu:                   BuildBranch;
+    space_setting_integrations_preview_office_file:      BuildBranch;
+    space_setting_integrations_wecom:                    BuildBranch;
+    space_setting_invite_user_to_get_v_coins:            BuildBranch;
+    space_setting_list_of_enable_all_lab_features:       BuildBranch;
+    space_setting_role_empty_img:                        BuildBranch;
+    space_setting_upgrade:                               BuildBranch;
+    system_configuration_logo_with_name_white_font:      BuildBranch;
+    system_configuration_minmum_version_require:         BuildBranch;
+    system_configuration_server_error_bg_img:            BuildBranch;
+    system_configuration_version:                        BuildBranch;
+    twitter_icon:                                        BuildBranch;
+    user_account_deleted_bg_img:                         BuildBranch;
+    user_account_deleted_img:                            BuildBranch;
+    user_guide_welcome_developer_center_url:             BuildBranch;
+    user_guide_welcome_introduction_video:               BuildBranch;
+    user_guide_welcome_quick_start_video:                BuildBranch;
+    user_guide_welcome_template1_icon:                   BuildBranch;
+    user_guide_welcome_template1_url:                    BuildBranch;
+    user_guide_welcome_template2_icon:                   BuildBranch;
+    user_guide_welcome_template2_url:                    BuildBranch;
+    user_guide_welcome_template3_icon:                   BuildBranch;
+    user_guide_welcome_template3_url:                    BuildBranch;
+    user_guide_welcome_what_is_datasheet_video:          BuildBranch;
+    user_setting_account_bind:                           BuildBranch;
+    user_setting_account_bind_dingtalk:                  BuildBranch;
+    user_setting_account_bind_qq:                        BuildBranch;
+    user_setting_account_bind_wechat:                    BuildBranch;
+    user_setting_default_avatar:                         BuildBranch;
+    view_architecture_empty_graphics_img:                BuildBranch;
+    view_architecture_empty_record_list_img:             BuildBranch;
+    view_architecture_guide_video:                       BuildBranch;
+    view_calendar_guide_create:                          BuildBranch;
+    view_calendar_guide_no_permission:                   BuildBranch;
+    view_calendar_guide_video:                           BuildBranch;
+    view_form_guide_video:                               BuildBranch;
+    view_gallery_guide_video:                            BuildBranch;
+    view_gantt_guide_video:                              BuildBranch;
+    view_grid_guide_video:                               BuildBranch;
+    view_kanban_guide_video:                             BuildBranch;
+    view_mirror_list_empty_img:                          BuildBranch;
+    widget_center_feature_not_unturned_on_img:           BuildBranch;
+    widget_center_help_link:                             BuildBranch;
+    widget_center_space_widget_empty_img:                BuildBranch;
+    widget_cli_miumum_version:                           BuildBranch;
+    widget_custom_widget_empty_img:                      BuildBranch;
+    widget_default_cover_img:                            BuildBranch;
+    widget_panel_empty_img:                              BuildBranch;
+    workbench_folder_default_cover_list:                 BuildBranch;
+    workbench_max_node_number_show_invite_and_new_node:  BuildBranch;
+    workbench_no_permission_img:                         BuildBranch;
 }
 
-export interface ArakGroundhog {
+export interface BuildBranch {
     value: string;
 }
 
 export interface IntegrationHelpURL {
-    marketplace: IntegrationDingtalkHelpURLMarketplace;
     value:       string;
+    marketplace: IntegrationDingtalkHelpURLMarketplace;
 }
 
 export interface IntegrationDingtalkHelpURLMarketplace {
@@ -822,10 +860,10 @@ export interface ShortcutKey {
     id:           string;
     command:      string;
     description?: string;
-    type?:        TypeElement[];
+    type?:        ShortcutKeyType[];
 }
 
-export enum TypeElement {
+export enum ShortcutKeyType {
     GalleryViewShortcuts = "gallery_view_shortcuts",
     GirdViewShortcuts = "gird_view_shortcuts",
     GlobalShortcuts = "global_shortcuts",
@@ -834,37 +872,37 @@ export enum TypeElement {
 
 export interface TestFunction {
     async_compute:    AsyncCompute;
-    render_normal:    AsyncCompute;
     render_prompt:    AsyncCompute;
     robot:            AsyncCompute;
-    view_manual_save: AsyncCompute;
     widget_center:    AsyncCompute;
+    render_normal:    AsyncCompute;
+    view_manual_save: AsyncCompute;
 }
 
 export interface AsyncCompute {
-    card:         Card;
-    feature_key:  string;
     feature_name: string;
-    id:           string;
     logo:         string;
-    modal:        AsyncComputeModal;
+    id:           string;
     note:         string;
+    feature_key:  string;
+    modal:        AsyncComputeModal;
+    card:         Card;
 }
 
 export interface Card {
-    btn_close_action: string;
     btn_open_action:  string;
-    btn_text:         string;
-    btn_type:         string;
     info:             string;
     info的副本:          string;
+    btn_close_action: string;
+    btn_text:         string;
+    btn_type:         string;
 }
 
 export interface AsyncComputeModal {
-    btn_action?: string;
     btn_text:    string;
-    btn_type:    string;
     info:        string;
-    info_image:  string;
+    btn_action?: string;
+    btn_type:    string;
     info的副本:     string;
+    info_image:  string;
 }

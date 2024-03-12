@@ -16,20 +16,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Strings, t } from '@apitable/core';
 import Image from 'next/image';
 import { FC } from 'react';
+import { ThemeName } from '@apitable/components';
+import { Strings, t } from '@apitable/core';
+import { useAppSelector } from 'pc/store/react-redux';
 import NotDataImgDark from 'static/icon/datasheet/empty_state_dark.png';
 import NotDataImgLight from 'static/icon/datasheet/empty_state_light.png';
 import styles from './style.module.less';
-import { ThemeName } from '@apitable/components';
-import { useSelector } from 'react-redux';
+
 export interface ISearchResultProps {
   isEmpty?: boolean;
 }
 
 export const SearchResult: FC<React.PropsWithChildren<ISearchResultProps>> = ({ isEmpty, children }) => {
-  const themeName = useSelector(state => state.theme);
+  const themeName = useAppSelector((state) => state.theme);
   const NotDataImg = themeName === ThemeName.Light ? NotDataImgLight : NotDataImgDark;
   if (isEmpty) {
     return (

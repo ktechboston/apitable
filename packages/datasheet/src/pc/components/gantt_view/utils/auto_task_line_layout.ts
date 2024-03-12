@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { getDiffOriginalCount } from 'pc/components/gantt_view';
-import { originalChange } from './date';
 import { ISetRecordOptions, Selectors, fastCloneDeep, IViewRow, IGanttViewStyle } from '@apitable/core';
-import { getAllTaskLine, detectCyclesStack } from './task_line';
+import { getDiffOriginalCount } from 'pc/components/gantt_view';
 import { store } from 'pc/store';
+import { originalChange } from './date';
+import { getAllTaskLine, detectCyclesStack } from './task_line';
 
 interface ISourceRecordData {
   recordId: string;
@@ -37,7 +37,7 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
   const nodeIdMap: string[] = [];
   const visibleRowsTime = {};
 
-  visibleRows.forEach(row => {
+  visibleRows.forEach((row) => {
     const linkCellValue = Selectors.getCellValue(state, snapshot, row.recordId, linkFieldId) || [];
     if (linkCellValue.length > 0) {
       targetAdj[row.recordId] = linkCellValue;
@@ -57,9 +57,9 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
   });
 
   const { sourceAdj } = getAllTaskLine(targetAdj);
-  
+
   const cycleEdges = detectCyclesStack(nodeIdMap, sourceAdj);
-  
+
   const rowsTimeList = fastCloneDeep(visibleRowsTime);
 
   const autoDFS = (sourceId: string) => {
@@ -67,9 +67,10 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
     if (!sourceAdj[sourceId] || !rowsTimeList[sourceId]) return;
 
     if (rowsTimeList[sourceId].diffCount < 0) return;
-
-    sourceAdj[sourceId]?.forEach(targetId => {
+    
+    sourceAdj[sourceId]?.forEach((targetId) => {
       if (cycleEdges.includes(`taskLine-${sourceId}-${targetId}`) || !rowsTimeList[targetId]) return;
+      
       const { diffCount } = rowsTimeList[targetId];
       if (diffCount < 0) return;
       // Compare the size of all post-tasks to the size of all pre-tasks, whichever is closest
@@ -78,6 +79,9 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
       let recentTime = rowsTimeList[sourceId].endTime ?? rowsTimeList[sourceId].startTime;
 
       targetAdj[targetId].forEach((sourceItem: string) => {
+        if(!rowsTimeList[sourceItem]) {
+          return;
+        }
         const { diffCount: sourceItemDiffTime } = rowsTimeList[sourceItem];
         if (sourceItemDiffTime < 0) {
           return;
@@ -108,7 +112,7 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
   };
 
   if (!sourceRecord) {
-    visibleRows.forEach(row => {
+    visibleRows.forEach((row) => {
       if (!targetAdj[row.recordId]) {
         autoDFS(row.recordId);
       }
@@ -128,7 +132,7 @@ export const autoTaskScheduling = (visibleRows: IViewRow[], ganttStyle: IGanttVi
   }
 
   const res: ISetRecordOptions[] = [];
-  Object.keys(visibleRowsTime).forEach(recordId => {
+  Object.keys(visibleRowsTime).forEach((recordId) => {
     const originDate = visibleRowsTime[recordId];
     const newDate = rowsTimeList[recordId];
     if (newDate.startTime !== originDate.startTime || newDate.endTime !== originDate.endTime) {

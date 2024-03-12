@@ -16,24 +16,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {
-  BasicValueType, CellType, Field, FieldType, IField, KONVA_DATASHEET_ID, LOOKUP_VALUE_FUNC_SET, Range, RollUpFuncType, Selectors, Strings, t
-} from '@apitable/core';
 import { KonvaEventObject } from 'konva/lib/Node';
 import { isEqual } from 'lodash';
-import dynamic from 'next/dynamic';
 import { ShortcutActionManager, ShortcutActionName } from 'modules/shared/shortcut_key';
+import dynamic from 'next/dynamic';
+import * as React from 'react';
+import { useCallback, useContext, useMemo } from 'react';
+import {
+  BasicValueType,
+  CellType,
+  Field,
+  FieldType,
+  IField,
+  KONVA_DATASHEET_ID,
+  LOOKUP_VALUE_FUNC_SET,
+  Range,
+  RollUpFuncType,
+  Selectors,
+  Strings,
+  t,
+} from '@apitable/core';
 import { generateTargetName, IScrollState } from 'pc/components/gantt_view';
 import { Rect } from 'pc/components/konva_components';
 import {
-  cellHelper, getCellEditable, getCellHeight, GRID_FILL_HANDLER_SIZE, GRID_GROUP_OFFSET, GridCoordinate, IRenderStyleProps, KonvaGridContext,
-  KonvaGridViewContext
+  cellHelper,
+  getCellEditable,
+  getCellHeight,
+  GRID_FILL_HANDLER_SIZE,
+  GRID_GROUP_OFFSET,
+  GridCoordinate,
+  IRenderStyleProps,
+  KonvaGridContext,
+  KonvaGridViewContext,
 } from 'pc/components/konva_grid';
 import { store } from 'pc/store';
-import * as React from 'react';
-import { useCallback, useContext, useMemo } from 'react';
-import { CellValue } from '../components';
 import { MouseDownType } from '../../multi_grid';
+import { CellValue } from '../components';
 
 const RectComponent = dynamic(() => import('pc/components/gantt_view/hooks/use_gantt_timeline/rect'), { ssr: false });
 
@@ -44,7 +62,7 @@ const TOOLTIP_TEXT_MAP = {
   [FieldType.CreatedBy]: t(Strings.uneditable_check_info),
   [FieldType.LastModifiedBy]: t(Strings.uneditable_check_info),
   [FieldType.CreatedTime]: t(Strings.uneditable_check_info),
-  [FieldType.LastModifiedTime]: t(Strings.uneditable_check_info)
+  [FieldType.LastModifiedTime]: t(Strings.uneditable_check_info),
 };
 
 const TOOLTIP_VISIBLE_SET = new Set([
@@ -66,16 +84,9 @@ const TRANSPARENT_FIELD_TYPES = new Set([
   FieldType.AutoNumber,
 ]);
 
-const TRANSPARENT_LOOKUP_FIELD_TYPES = new Set([
-  FieldType.Attachment,
-  FieldType.Checkbox,
-]);
+const TRANSPARENT_LOOKUP_FIELD_TYPES = new Set([FieldType.Attachment, FieldType.Checkbox]);
 
-const DBL_CLICK_DISABLED_TYPES = new Set([
-  FieldType.Member,
-  FieldType.SingleSelect,
-  FieldType.MultiSelect,
-]);
+const DBL_CLICK_DISABLED_TYPES = new Set([FieldType.Member, FieldType.SingleSelect, FieldType.MultiSelect]);
 
 const EMPTY_ARRAY: any[] = [];
 
@@ -91,34 +102,22 @@ interface IUseDynamicCellsProps {
 /**
  * Determine where a cell is located based on whether it is the first/last column
  */
-export const getCellHorizontalPosition = (props: { depth: number; columnWidth: number; columnIndex: number; columnCount: number; }) => {
-  const {
-    depth,
-    columnWidth,
-    columnIndex,
-    columnCount
-  } = props;
+export const getCellHorizontalPosition = (props: { depth: number; columnWidth: number; columnIndex: number; columnCount: number }) => {
+  const { depth, columnWidth, columnIndex, columnCount } = props;
   if (!depth) return { width: columnWidth, offset: 0 };
   const firstIndent = columnIndex === 0 && depth;
   const lastIndent = columnIndex === columnCount - 1 && depth === 3;
   const offset = firstIndent ? (depth - 1) * GRID_GROUP_OFFSET + 0.5 : 0;
-  const width = (lastIndent && !firstIndent) ? columnWidth - GRID_GROUP_OFFSET : columnWidth - offset;
+  const width = lastIndent && !firstIndent ? columnWidth - GRID_GROUP_OFFSET : columnWidth - offset;
 
   return {
     width,
-    offset
+    offset,
   };
 };
 
 export const useDynamicCells = (props: IUseDynamicCellsProps) => {
-  const {
-    instance,
-    rowStartIndex,
-    rowStopIndex,
-    columnStartIndex,
-    columnStopIndex,
-    scrollState,
-  } = props;
+  const { instance, rowStartIndex, rowStopIndex, columnStartIndex, columnStopIndex, scrollState } = props;
   const { theme } = useContext(KonvaGridContext);
   const colors = theme.color;
   const {
@@ -135,21 +134,23 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
     permissions,
     disabledDownload,
     unitTitleMap,
-    cacheTheme
+    cacheTheme,
   } = useContext(KonvaGridViewContext);
   const { isScrolling } = scrollState;
-  const { activeCellBound, setTooltipInfo, clearTooltipInfo, draggingOutlineInfo } = useContext(KonvaGridContext);
+  const { activeCellBound, setTooltipInfo, clearTooltipInfo, draggingOutlineInfo, activeNodePrivate } = useContext(KonvaGridContext);
   const state = store.getState();
   const { rowHeight, rowHeightLevel, columnCount, rowCount, frozenColumnCount, rowInitSize } = instance;
   const totalColumnCount = visibleColumns.length;
   const { cellEditable, editable: _editable } = permissions;
   const activeCellHeight = activeCellBound.height;
 
-  const checkIsVisible = useCallback((rowIndex: number, columnIndex: number) => {
-    if (columnIndex < frozenColumnCount) return true;
-    return rowIndex >= rowStartIndex && rowIndex <= rowStopIndex &&
-      columnIndex >= columnStartIndex && columnIndex <= columnStopIndex;
-  }, [columnStartIndex, columnStopIndex, rowStartIndex, rowStopIndex, frozenColumnCount]);
+  const checkIsVisible = useCallback(
+    (rowIndex: number, columnIndex: number) => {
+      if (columnIndex < frozenColumnCount) return true;
+      return rowIndex >= rowStartIndex && rowIndex <= rowStopIndex && columnIndex >= columnStartIndex && columnIndex <= columnStopIndex;
+    },
+    [columnStartIndex, columnStopIndex, rowStartIndex, rowStopIndex, frozenColumnCount],
+  );
 
   /**
    * Active state cells, active border
@@ -175,20 +176,19 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
                 activedCell,
                 activeCellBorder,
                 frozenActivedCell,
-                frozenActiveCellBorder
+                frozenActiveCellBorder,
               };
             }
             const x = instance.getColumnOffset(columnIndex);
             const y = instance.getRowOffset(rowIndex);
             const columnWidth = instance.getColumnWidth(columnIndex);
             const cellValue = Selectors.getCellValue(state, snapshot, recordId, fieldId);
-            const isFirstColumn = columnIndex === 0;
             const isFrozenColumn = columnIndex < frozenColumnCount;
             const { offset, width } = getCellHorizontalPosition({
               depth,
               columnWidth,
               columnIndex,
-              columnCount: totalColumnCount
+              columnCount: totalColumnCount,
             });
             let isCurrentSearchCell = false;
             if (currentSearchCell) {
@@ -196,10 +196,13 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
               isCurrentSearchCell = searchRecordId === recordId && searchFieldId === fieldId;
             }
             const editable = getCellEditable(activeField, _editable);
-            const fontWeight = isFirstColumn ? 'bold' : 'normal';
+            const fontWeight = 'normal';
+            const permissions = Selectors.getDatasheet(state)?.permissions || {};
+
             const renderProps = {
               x: x + offset,
               y,
+              permissions,
               columnWidth: width,
               rowHeight,
               recordId,
@@ -214,7 +217,7 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
               } as IRenderStyleProps,
               unitTitleMap,
               cacheTheme,
-              colors
+              colors,
             };
 
             cellHelper.needDraw = false;
@@ -226,26 +229,17 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
               realField,
               rowHeight,
               activeHeight: activeCellHeight,
-              isActive: true
+              isActive: true,
             });
+
             const currentCell = (
               <>
-                {
-                  !(
-                    (Field.bindModel(activeField).basicValueType === BasicValueType.Boolean ||
-                      TRANSPARENT_FIELD_TYPES.has(activeField.type) ||
-                      TRANSPARENT_LOOKUP_FIELD_TYPES.has((realField || activeField).type)) &&
-                    !LOOKUP_VALUE_FUNC_SET.has(activeField.property?.rollUpType || RollUpFuncType.VALUES)
-                  ) &&
-                  <Rect
-                    x={x + offset}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={colors.defaultBg}
-                    listening={false}
-                  />
-                }
+                {!(
+                  (Field.bindModel(activeField).basicValueType === BasicValueType.Boolean ||
+                    TRANSPARENT_FIELD_TYPES.has(activeField.type) ||
+                    TRANSPARENT_LOOKUP_FIELD_TYPES.has((realField || activeField).type)) &&
+                  !LOOKUP_VALUE_FUNC_SET.has(activeField.property?.rollUpType || RollUpFuncType.VALUES)
+                ) && <Rect x={x + offset} y={y} width={width} height={height} fill={colors.defaultBg} listening={false} />}
                 <CellValue
                   x={x + offset}
                   y={y}
@@ -294,184 +288,156 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
       activedCell,
       activeCellBorder,
       frozenActivedCell,
-      frozenActiveCellBorder
+      frozenActiveCellBorder,
     };
     // eslint-disable-next-line
-  }, [activeCell, activeCellHeight, checkIsVisible, totalColumnCount, currentSearchCell,
-    datasheetId, fieldMap, instance, linearRows, rowHeight, rowHeightLevel, snapshot, colors.defaultBg]);
+  }, [
+    activeCell,
+    activeCellHeight,
+    checkIsVisible,
+    totalColumnCount,
+    currentSearchCell,
+    datasheetId,
+    fieldMap,
+    instance,
+    linearRows,
+    rowHeight,
+    rowHeightLevel,
+    snapshot,
+    colors.defaultBg,
+  ]);
 
   /**
    * Drag handler
    */
   let fillHandler: React.ReactNode = null;
   let frozenFillHandler: React.ReactNode = null;
-  if (!isEditing && selectRanges.length) {
-    const selectionRange = selectRanges[0];
-    if (selectionRange != null) {
-      const fillHandleCellIndex = Range.bindModel(selectionRange).getUIIndexRange(state);
-      const { min: recordMinIndex, max: recordMaxIndex } = fillHandleCellIndex?.record || {
-        min: null, max: null
-      };
-      const { min: fieldMinIndex, max: fieldMaxIndex } = fillHandleCellIndex?.field || {
-        min: null, max: null
-      };
-      if (
-        recordMaxIndex != null && !isNaN(recordMaxIndex) &&
-        fieldMaxIndex != null && !isNaN(fieldMaxIndex)
-      ) {
-        const { fieldId } = visibleColumns[fieldMaxIndex];
-        const maxIndexField = fieldMap[fieldId];
-        // Computed fields do not render drag handler
-        if (getCellEditable(maxIndexField, _editable)) {
-          const x = instance.getColumnOffset(fieldMaxIndex);
-          const y = instance.getRowOffset(recordMaxIndex);
-          const isSingleCell = recordMinIndex === recordMaxIndex && fieldMinIndex === fieldMaxIndex;
-          const activeField = fieldMap[activeCell!.fieldId];
-          const realField = Selectors.findRealField(state, activeField);
-          const cellHeight = getCellHeight({
-            field: activeField,
-            realField,
-            rowHeight,
-            activeHeight: activeCellBound.height,
-            isActive: isSingleCell
-          });
-          const columnWidth = instance.getColumnWidth(fieldMaxIndex);
-          const { depth } = linearRows[recordMaxIndex];
-          const { width, offset } = getCellHorizontalPosition({
-            depth,
-            columnWidth,
-            columnIndex: fieldMaxIndex,
-            columnCount: totalColumnCount
-          });
-
-          const currentHandler = (
-            <Rect
-              name={KONVA_DATASHEET_ID.GRID_CELL_FILL_HANDLER}
-              x={x - GRID_FILL_HANDLER_SIZE / 2 - 0.5 + width + offset}
-              y={y + cellHeight - GRID_FILL_HANDLER_SIZE / 2 - 0.5}
-              width={GRID_FILL_HANDLER_SIZE}
-              height={GRID_FILL_HANDLER_SIZE}
-              stroke={colors.primaryColor}
-              strokeWidth={0.5}
-            />
-          );
-          if (fieldMaxIndex < frozenColumnCount) {
-            frozenFillHandler = currentHandler;
-          } else {
-            fillHandler = currentHandler;
-          }
-        }
-      }
-    }
-  }
 
   const toggleEditing: () => Promise<boolean | void> = useCallback((): Promise<boolean | void> => {
     return ShortcutActionManager.trigger(ShortcutActionName.ToggleEditing);
   }, []);
 
-  const onDblClick = useCallback(async(e: KonvaEventObject<MouseEvent>, field: IField, rowIndex: number, columnIndex: number): Promise<void> => {
-    if (e.evt.button === MouseDownType.Right) return;
-    const fieldType = field.type;
-    if (DBL_CLICK_DISABLED_TYPES.has(fieldType)) return;
-    if (!TOOLTIP_VISIBLE_SET.has(fieldType)) {
-      await toggleEditing();
-      return;
-    }
-    if (cellEditable) {
-      setTooltipInfo({
-        title: TOOLTIP_TEXT_MAP[fieldType],
-        visible: true,
-        rowIndex,
-        columnIndex,
-        width: instance.getColumnWidth(columnIndex),
-        height: rowHeight,
-      });
-      setTimeout(clearTooltipInfo, 2000);
-      return;
-    }
-  }, [cellEditable, clearTooltipInfo, instance, rowHeight, setTooltipInfo, toggleEditing]);
-
-  const onMouseDown = useCallback((e: any, field: any, isActive: any) => {
-    if (e.evt.button === MouseDownType.Right) return;
-    if (![
-      FieldType.MultiSelect,
-      FieldType.SingleSelect,
-      FieldType.Member
-    ].includes(field.type)) return;
-    if (getCellEditable(field, _editable) && isActive) toggleEditing();
-  }, [_editable, toggleEditing]);
-
-  const getPlaceHolderCellsByColumnIndex = useCallback((columnStartIndex: number, columnStopIndex: number) => {
-    const tempCells: React.ReactNode[] = [];
-
-    for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
-      if (columnIndex > columnCount - 1) return EMPTY_ARRAY;
-      const { fieldId } = visibleColumns[columnIndex];
-      const field = fieldMap[fieldId];
-      if (field == null) return EMPTY_ARRAY;
-      const x = instance.getColumnOffset(columnIndex) + 0.5;
-      const columnWidth = instance.getColumnWidth(columnIndex);
-
-      for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
-        if (rowIndex > rowCount - 1) break;
-
-        const row = linearRows[rowIndex];
-        const { recordId, type, depth } = row;
-        if (type !== CellType.Record) continue;
-
-        const y = instance.getRowOffset(rowIndex) + 0.5;
-        const { width, offset } = getCellHorizontalPosition({
-          depth,
-          columnWidth,
-          columnIndex,
-          columnCount
-        });
-        const isActive = isEqual(activeCell, { fieldId, recordId });
-        let height = rowHeight;
-
-        if (isActive) {
-          const realField = Selectors.findRealField(state, field);
-          height = getCellHeight({
-            field,
-            realField,
-            rowHeight,
-            activeHeight: activeCellHeight,
-            isActive,
-          });
-        }
-
-        tempCells.unshift(
-          <RectComponent
-            key={`placeholder-cell-${fieldId}-${recordId}`}
-            name={generateTargetName({
-              targetName: KONVA_DATASHEET_ID.GRID_CELL,
-              fieldId,
-              recordId
-            })}
-            x={x + offset}
-            y={y}
-            width={width}
-            height={height}
-            fill={'transparent'}
-            strokeEnabled={false}
-            hitStrokeWidth={0}
-            transformsEnabled={'position'}
-            perfectDrawEnabled={false}
-            shadowEnabled={false}
-            onDblClick={(e: KonvaEventObject<MouseEvent>) => onDblClick(e, field, rowIndex, columnIndex)}
-            onMouseDown={(e: any) => onMouseDown(e, field, isActive)}
-            onTap={(e: any) => onMouseDown(e, field, isActive)}
-          />
-        );
+  const onDblClick = useCallback(
+    async (e: KonvaEventObject<MouseEvent>, field: IField, rowIndex: number, columnIndex: number): Promise<void> => {
+      if (e.evt.button === MouseDownType.Right) return;
+      const fieldType = field.type;
+      if (DBL_CLICK_DISABLED_TYPES.has(fieldType)) return;
+      if (!TOOLTIP_VISIBLE_SET.has(fieldType)) {
+        await toggleEditing();
+        return;
       }
-    }
+      if (cellEditable) {
+        setTooltipInfo({
+          title: TOOLTIP_TEXT_MAP[fieldType],
+          visible: true,
+          rowIndex,
+          columnIndex,
+          width: instance.getColumnWidth(columnIndex),
+          height: rowHeight,
+        });
+        setTimeout(clearTooltipInfo, 2000);
+        return;
+      }
+    },
+    [cellEditable, clearTooltipInfo, instance, rowHeight, setTooltipInfo, toggleEditing],
+  );
 
-    return tempCells;
-    // eslint-disable-next-line
-  }, [
-    activeCell, activeCellHeight, columnCount, fieldMap, instance, linearRows, rowInitSize,
-    onDblClick, onMouseDown, rowCount, rowHeight, rowStartIndex, rowStopIndex, visibleColumns
-  ]);
+  const onMouseDown = useCallback(
+    (e: any, field: any, isActive: any) => {
+      if (e.evt.button === MouseDownType.Right) return;
+      if (![FieldType.MultiSelect, FieldType.SingleSelect, FieldType.Member].includes(field.type)) return;
+      if (getCellEditable(field, _editable) && isActive) toggleEditing();
+    },
+    [_editable, toggleEditing],
+  );
+
+  const getPlaceHolderCellsByColumnIndex = useCallback(
+    (columnStartIndex: number, columnStopIndex: number) => {
+      const tempCells: React.ReactNode[] = [];
+
+      for (let columnIndex = columnStartIndex; columnIndex <= columnStopIndex; columnIndex++) {
+        if (columnIndex > columnCount - 1) return EMPTY_ARRAY;
+        const { fieldId } = visibleColumns[columnIndex];
+        const field = fieldMap[fieldId];
+        if (field == null) return EMPTY_ARRAY;
+        const x = instance.getColumnOffset(columnIndex) + 0.5;
+        const columnWidth = instance.getColumnWidth(columnIndex);
+
+        for (let rowIndex = rowStartIndex; rowIndex <= rowStopIndex; rowIndex++) {
+          if (rowIndex > rowCount - 1) break;
+
+          const row = linearRows[rowIndex];
+          const { recordId, type, depth } = row;
+          if (type !== CellType.Record) continue;
+
+          const y = instance.getRowOffset(rowIndex) + 0.5;
+          const { width, offset } = getCellHorizontalPosition({
+            depth,
+            columnWidth,
+            columnIndex,
+            columnCount,
+          });
+          const isActive = isEqual(activeCell, { fieldId, recordId });
+          let height = rowHeight;
+
+          if (isActive) {
+            const realField = Selectors.findRealField(state, field);
+            height = getCellHeight({
+              field,
+              realField,
+              rowHeight,
+              activeHeight: activeCellHeight,
+              isActive,
+            });
+          }
+
+          tempCells.unshift(
+            <RectComponent
+              key={`placeholder-cell-${fieldId}-${recordId}`}
+              name={generateTargetName({
+                targetName: KONVA_DATASHEET_ID.GRID_CELL,
+                fieldId,
+                recordId,
+              })}
+              x={x + offset}
+              y={y}
+              width={width}
+              height={height}
+              fill={'transparent'}
+              strokeEnabled={false}
+              hitStrokeWidth={0}
+              transformsEnabled={'position'}
+              perfectDrawEnabled={false}
+              shadowEnabled={false}
+              onDblClick={(e: KonvaEventObject<MouseEvent>) => onDblClick(e, field, rowIndex, columnIndex)}
+              onMouseDown={(e: any) => onMouseDown(e, field, isActive)}
+              onTap={(e: any) => onMouseDown(e, field, isActive)}
+            />,
+          );
+        }
+      }
+
+      return tempCells;
+      // eslint-disable-next-line
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      activeCell,
+      activeCellHeight,
+      columnCount,
+      fieldMap,
+      instance,
+      linearRows,
+      rowInitSize,
+      onDblClick,
+      onMouseDown,
+      rowCount,
+      rowHeight,
+      rowStartIndex,
+      rowStopIndex,
+      visibleColumns,
+    ],
+  );
 
   const placeHolderCells = useMemo(() => {
     if (isScrolling) return null;
@@ -504,6 +470,79 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
     );
   }, [colors.primaryColor, draggingOutlineInfo, instance, rowHeight]);
 
+  if (!isEditing && selectRanges.length) {
+    const selectionRange = selectRanges[0];
+    if (selectionRange != null) {
+      const fillHandleCellIndex = Range.bindModel(selectionRange).getUIIndexRange(state);
+      const { min: recordMinIndex, max: recordMaxIndex } = fillHandleCellIndex?.record || {
+        min: null,
+        max: null,
+      };
+      const { min: fieldMinIndex, max: fieldMaxIndex } = fillHandleCellIndex?.field || {
+        min: null,
+        max: null,
+      };
+      if (recordMaxIndex != null && !isNaN(recordMaxIndex) && fieldMaxIndex != null && !isNaN(fieldMaxIndex)) {
+        const maxIndexColumn = visibleColumns[fieldMaxIndex];
+        if (!maxIndexColumn) return;
+        const { fieldId } = maxIndexColumn;
+        const maxIndexField = fieldMap[fieldId];
+        // Computed fields do not render drag handler
+        if (getCellEditable(maxIndexField, _editable)) {
+          const x = instance.getColumnOffset(fieldMaxIndex);
+          const y = instance.getRowOffset(recordMaxIndex);
+          const isSingleCell = recordMinIndex === recordMaxIndex && fieldMinIndex === fieldMaxIndex;
+          const activeField = fieldMap[activeCell!.fieldId];
+          const realField = Selectors.findRealField(state, activeField);
+          const cellHeight = getCellHeight({
+            field: activeField,
+            realField,
+            rowHeight,
+            activeHeight: activeCellBound.height,
+            isActive: isSingleCell,
+          });
+          const columnWidth = instance.getColumnWidth(fieldMaxIndex);
+          const { depth } = linearRows[recordMaxIndex];
+          const { width, offset } = getCellHorizontalPosition({
+            depth,
+            columnWidth,
+            columnIndex: fieldMaxIndex,
+            columnCount: totalColumnCount,
+          });
+
+          const currentHandler = (
+            <Rect
+              name={KONVA_DATASHEET_ID.GRID_CELL_FILL_HANDLER}
+              x={x - GRID_FILL_HANDLER_SIZE / 2 - 0.5 + width + offset}
+              y={y + cellHeight - GRID_FILL_HANDLER_SIZE / 2 - 0.5}
+              width={GRID_FILL_HANDLER_SIZE}
+              height={GRID_FILL_HANDLER_SIZE}
+              stroke={colors.primaryColor}
+              strokeWidth={0.5}
+            />
+          );
+          // select section with workdoc field cannot be filled
+          let selectWithWorkdocField = false;
+          for (let idx = fieldMinIndex; idx <= fieldMaxIndex; idx++) {
+            const { fieldId } = visibleColumns[idx];
+            const field = fieldMap[fieldId];
+            if (field.type === FieldType.WorkDoc) {
+              selectWithWorkdocField = true;
+              break;
+            }
+          }
+          if (selectWithWorkdocField) {
+            fillHandler = null;
+          } else if (fieldMaxIndex < frozenColumnCount) {
+            frozenFillHandler = currentHandler;
+          } else {
+            fillHandler = currentHandler;
+          }
+        }
+      }
+    }
+  }
+
   return {
     ...activeCellMap,
     fillHandler,
@@ -511,6 +550,6 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
     placeHolderCells,
     frozenPlaceHolderCells,
     draggingOutline,
-    toggleEditing
+    toggleEditing,
   };
 };

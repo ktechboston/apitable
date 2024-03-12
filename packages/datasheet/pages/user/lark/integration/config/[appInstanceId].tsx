@@ -20,19 +20,34 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 
 // @ts-ignore
-const FeishuIntegrationWithNoSSR: any = dynamic(() => import('enterprise').then((components) => {
-  return components.FeishuIntegration;
-}), { ssr: false });
+const FeishuIntegrationWithNoSSR: any = dynamic(
+  () =>
+    // @ts-ignore
+    import('enterprise/lark/feishu_integration/feishu_integration').then((components) => {
+      return components.default;
+    }),
+  { ssr: false },
+);
 
 // @ts-ignore
-const FeishuConfigWithNoSSR = dynamic(() => import('enterprise').then((components) => {
-  return components.FeishuConfig;
-}), { ssr: false });
+const FeishuConfigWithNoSSR = dynamic(
+  () =>
+    // @ts-ignore
+    import('enterprise/lark/feishu_integration/feishu_integration_config').then((components) => {
+      return components.default;
+    }),
+  { ssr: false },
+);
 
 const App = () => {
-  return FeishuIntegrationWithNoSSR && FeishuConfigWithNoSSR && <FeishuIntegrationWithNoSSR>
-    <FeishuConfigWithNoSSR />
-  </FeishuIntegrationWithNoSSR>;
+  return (
+    FeishuIntegrationWithNoSSR &&
+    FeishuConfigWithNoSSR && (
+      <FeishuIntegrationWithNoSSR>
+        <FeishuConfigWithNoSSR />
+      </FeishuIntegrationWithNoSSR>
+    )
+  );
 };
 
 export default App;

@@ -15,11 +15,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-import { Selectors, IReduxState, StoreActions, FieldType } from '@apitable/core';
+import { FieldType, IReduxState, Selectors, StoreActions } from '@apitable/core';
 import { store } from 'pc/store';
 
 export const getDatasheetOrLoad = (
-  state: IReduxState, foreignDatasheetId: string, dstId?: string, assignDstId?: boolean, forceFetch?: boolean, ignoreMirror?: boolean
+  state: IReduxState,
+  foreignDatasheetId: string,
+  dstId?: string,
+  assignDstId?: boolean,
+  forceFetch?: boolean,
+  ignoreMirror?: boolean,
 ) => {
   const { formId, mirrorId } = state.pageParams;
   const datasheetId = dstId || state.pageParams.datasheetId;
@@ -29,13 +34,11 @@ export const getDatasheetOrLoad = (
   const fieldMap = datasheet?.snapshot.meta?.fieldMap;
   // check if foreign datasheet has link relationship
   const isforeignDatasheetIdRelated = fieldMap ? Object.values(fieldMap).some(field =>
-    field.type === FieldType.Link && field.property.foreignDatasheetId === foreignDatasheetId) : true;
+    [FieldType.Link, FieldType.OneWayLink].includes(field.type) && field.property.foreignDatasheetId === foreignDatasheetId) : true;
 
   if (
     isforeignDatasheetIdRelated &&
-    (forceFetch ||
-    (!datasheet && !datasheetLoading && !datasheetErrorCode) ||
-    (datasheet?.isPartOfData && !datasheetLoading && !datasheetErrorCode))
+    (forceFetch || (!datasheet && !datasheetLoading && !datasheetErrorCode) || (datasheet?.isPartOfData && !datasheetLoading && !datasheetErrorCode))
   ) {
     if (formId) {
       store.dispatch(StoreActions.fetchForeignDatasheet(formId, foreignDatasheetId, forceFetch));

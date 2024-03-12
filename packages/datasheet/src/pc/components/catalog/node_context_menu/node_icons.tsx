@@ -18,6 +18,7 @@
 
 import * as React from 'react';
 
+import { colorVars } from '@apitable/components';
 import {
   DashboardOutlined,
   SearchOutlined,
@@ -45,13 +46,16 @@ import {
   FormOutlined,
   FolderEmptyFilled,
   DatasheetOutlined,
-  IIconProps, MirrorOutlined, InfoCircleOutlined,
+  IIconProps,
+  MirrorOutlined,
+  InfoCircleOutlined,
   ChevronRightOutlined,
-  FolderRightOutlined, RobotOutlined,
-  RefreshOutlined
+  AutomationOutlined,
+  FolderRightOutlined,
+  RobotOutlined,
+  RefreshOutlined,
+  EmbedOutlined,
 } from '@apitable/icons';
-import { colorVars } from '@apitable/components';
-
 /**
  * Node icon type, external use of this enumeration as configuration
  *
@@ -59,48 +63,50 @@ import { colorVars } from '@apitable/components';
  * @enum {string}
  */
 export enum NodeIcon {
-    Arrow = 'arrow',
-    Search = 'search',
-    Add = 'add',
-    More = 'more',
-    AddFolder = 'add_folder',
-    AddFile = 'add_file',
-    Rename = 'rename',
-    Delete = 'delete',
-    Import = 'import',
-    Export = 'export',
-    ExportCsv = 'export_csv',
-    ExportXlsx = 'export_xlsx',
-    AddDatasheet = 'add_datasheet',
-    AddDashboard = 'AddDashboard',
-    AddForm = 'add_form',
-    Copy = 'copy',
-    Permission = 'permission',
-    Share = 'share',
-    Emoji = 'emoji',
-    Csv = 'csv',
-    Excel = 'excel',
-    Image = 'image',
-    Template = 'template',
-    Favorite = 'favorite',
-    UnFavorite = 'un_favorite',
-    Url = 'url',
-    NodeInfo = 'node_info',
-    Folder = 'folder',
-    OpenFolder = 'open_folder',
-    EmptyFolder = 'empty_folder',
-    Datasheet = 'datasheet',
-    Form = 'form',
-    Dashboard = 'dashboard',
-    Mirror = 'Mirror',
-    MoveTo = 'MoveTo',
-    Ai = 'Ai',
-    CreateBackup = 'CreateBackup',
+  Arrow = 'arrow',
+  Search = 'search',
+  Add = 'add',
+  More = 'more',
+  AddFolder = 'add_folder',
+  AddFile = 'add_file',
+  Rename = 'rename',
+  Delete = 'delete',
+  Import = 'import',
+  Export = 'export',
+  ExportCsv = 'export_csv',
+  ExportXlsx = 'export_xlsx',
+  AddDatasheet = 'add_datasheet',
+  AddDashboard = 'AddDashboard',
+  AddForm = 'add_form',
+  Copy = 'copy',
+  Permission = 'permission',
+  Share = 'share',
+  Emoji = 'emoji',
+  Csv = 'csv',
+  Excel = 'excel',
+  Image = 'image',
+  Template = 'template',
+  Favorite = 'favorite',
+  UnFavorite = 'un_favorite',
+  Url = 'url',
+  NodeInfo = 'node_info',
+  Folder = 'folder',
+  OpenFolder = 'open_folder',
+  EmptyFolder = 'empty_folder',
+  Datasheet = 'datasheet',
+  Form = 'form',
+  Dashboard = 'dashboard',
+  Mirror = 'Mirror',
+  MoveTo = 'MoveTo',
+  Ai = 'Ai',
+  AddAutomation = 'add_automation',
+  CreateBackup = 'CreateBackup',
+  AddEmbed = 'add_embed',
 }
 
 // Enumeration and Resource Location Matching Table
 export const nodeIconImportMap: {
-    [iconName: string]: React.FC<React.PropsWithChildren<IIconProps>>
+  [iconName: string]: React.FC<React.PropsWithChildren<IIconProps>>;
 } = {
   [NodeIcon.Search]: SearchOutlined,
   [NodeIcon.Add]: AddOutlined,
@@ -113,6 +119,9 @@ export const nodeIconImportMap: {
   [NodeIcon.Export]: DownloadOutlined,
   [NodeIcon.ExportCsv]: FileAddOutlined,
   [NodeIcon.ExportXlsx]: FileAddOutlined,
+
+  // TODO Node Icon
+  [NodeIcon.AddAutomation]: AutomationOutlined,
   [NodeIcon.AddDatasheet]: FileAddOutlined,
   [NodeIcon.AddForm]: FormAddOutlined,
   [NodeIcon.Copy]: DuplicateOutlined,
@@ -138,6 +147,7 @@ export const nodeIconImportMap: {
   [NodeIcon.MoveTo]: FolderRightOutlined,
   [NodeIcon.Ai]: RobotOutlined,
   [NodeIcon.CreateBackup]: RefreshOutlined,
+  [NodeIcon.AddEmbed]: EmbedOutlined,
 };
 
 /**

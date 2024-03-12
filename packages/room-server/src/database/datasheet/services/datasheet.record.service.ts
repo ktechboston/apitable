@@ -16,13 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Field, FieldType, IMeta, IRecord, IRecordMap, IReduxState } from '@apitable/core';
+import {
+  Field,
+  FieldType,
+  IMeta,
+  IRecord,
+  IRecordMap,
+  IReduxState,
+} from '@apitable/core';
 import { Span } from '@metinseylan/nestjs-opentelemetry';
 import { Injectable } from '@nestjs/common';
 import { get, isEmpty, keyBy, orderBy } from 'lodash';
 import { Store } from 'redux';
 import { RecordHistoryTypeEnum } from 'shared/enums/record.history.enum';
-import { In } from 'typeorm';
 import { UnitInfoDto } from '../../../unit/dtos/unit.info.dto';
 import { DatasheetRecordRepository } from '../repositories/datasheet.record.repository';
 import { ChangesetBaseDto } from '../dtos/changeset.base.dto';
@@ -32,26 +38,54 @@ import { DatasheetRecordEntity } from '../entities/datasheet.record.entity';
 import { RecordHistoryQueryRo } from '../ros/record.history.query.ro';
 import { DatasheetChangesetService } from './datasheet.changeset.service';
 import { RecordCommentService } from './record.comment.service';
+import {
+  DatasheetRecordArchiveRepository,
+} from '../repositories/datasheet.record.archive.repository';
+import { IApiPaginateRo, IPaginateInfo } from 'shared/interfaces';
+import { ArchivedRecord } from '../../interfaces';
+import { UserService } from '../../../user/services/user.service';
+import { DBHelper } from 'shared/helpers';
 
 @Injectable()
 export class DatasheetRecordService {
   constructor(
     private readonly recordRepo: DatasheetRecordRepository,
+    private readonly recordArchiveRepo: DatasheetRecordArchiveRepository,
     private readonly recordCommentService: RecordCommentService,
     private readonly datasheetChangesetService: DatasheetChangesetService,
+    private readonly userService: UserService,
   ) {
   }
 
   @Span()
-  async getRecordsByDstId(dstId: string, includeCommentCount = true): Promise<IRecordMap> {
-    const records = await this.recordRepo.find({
-      select: ['recordId', 'data', 'revisionHistory', 'createdAt', 'updatedAt', 'recordMeta'],
-      where: { dstId, isDeleted: false },
-    });
+  async getRecordsByDstId(dstId: string, includeCommentCount = true, includeArchivedRecords = false): Promise<IRecordMap> {
+    // We do not expect to query all the records of dstId at once,
+    // which will cause excessive memory usage. We expect to use paging to load the records of dstId.
+    const counts = await this.recordRepo.count({ dstId, isDeleted: false });
+    // Use paging to load records of dstId
+    const pageSize = 2000;
+    const pageCount = Math.ceil(counts / pageSize);
+    let records: DatasheetRecordEntity[] = [];
+    for (let i = 0; i < pageCount; i++) {
+      const tmpRecords = await this.recordRepo.find({
+        select: ['recordId', 'data', 'revisionHistory', 'createdAt', 'updatedAt', 'recordMeta'],
+        where: { dstId, isDeleted: false },
+        skip: i * pageSize,
+        take: pageSize,
+      });
+      records = records.concat(tmpRecords);
+    }
     let commentCountMap = {};
     if (includeCommentCount) {
       commentCountMap = await this.recordCommentService.getCommentCountMapByDstId(dstId);
     }
+    if (!includeArchivedRecords) {
+      const archivedRecordIds = await this.recordArchiveRepo.getArchivedRecordIdsByDstId(dstId);
+      if (archivedRecordIds && archivedRecordIds.size > 0) {
+        records = records.filter(record => !archivedRecordIds.has(record.recordId));
+      }
+    }
+
     return this.formatRecordMap(records, commentCountMap);
   }
 
@@ -64,32 +98,52 @@ export class DatasheetRecordService {
   }
 
   @Span()
-  async getRecordsByDstIdAndRecordIds(dstId: string, recordIds: string[], isDeleted = false, includeCommentCount = true): Promise<IRecordMap> {
+  async getRecordsByDstIdAndRecordIds(dstId: string, recordIds: string[], isDeleted = false, includeCommentCount = true,
+    includeArchivedRecords = false): Promise<IRecordMap> {
     if (recordIds && recordIds.length === 0) {
       return {};
     }
-    const records = await this.recordRepo.find({
-      select: ['recordId', 'data', 'revisionHistory', 'createdAt', 'updatedAt', 'recordMeta'],
-      where: { recordId: In(recordIds), dstId, isDeleted },
-    });
+    let records = await DBHelper.batchQueryByRecordIdIn(
+      this.recordRepo,
+      ['recordId', 'data', 'revisionHistory', 'createdAt', 'updatedAt', 'recordMeta'],
+      recordIds,
+      { dstId, isDeleted },
+    );
     let commentCountMap = {};
     if (includeCommentCount) {
       commentCountMap = await this.recordCommentService.getCommentCountMapByDstId(dstId);
     }
+    if (!includeArchivedRecords) {
+      const archivedRecordIds = await this.recordArchiveRepo.getArchivedRecordIdsByDstIdAndRecordIds(dstId, recordIds);
+      if (archivedRecordIds && archivedRecordIds.size > 0) {
+        records = records.filter(record => !archivedRecordIds.has(record.recordId));
+      }
+    }
+
     return this.formatRecordMap(records, commentCountMap, recordIds);
   }
 
   @Span()
-  async getBasicRecordsByRecordIds(dstId: string, recordIds: string[], isDeleted = false): Promise<IRecordMap> {
-    const records = await this.recordRepo.find({
-      select: ['recordId', 'data', 'createdAt', 'updatedAt', 'recordMeta'],
-      where: { recordId: In(recordIds), dstId, isDeleted },
-    });
+  async getBasicRecordsByRecordIds(dstId: string, recordIds: string[], isDeleted = false, includeArchivedRecords = false): Promise<IRecordMap> {
+    let records = await DBHelper.batchQueryByRecordIdIn(
+      this.recordRepo,
+      ['recordId', 'data', 'createdAt', 'updatedAt', 'recordMeta'],
+      recordIds,
+      { dstId, isDeleted },
+    );
+    if (!includeArchivedRecords) {
+      const archivedRecordIds = await this.recordArchiveRepo.getArchivedRecordIdsByDstIdAndRecordIds(dstId, recordIds);
+      if (archivedRecordIds && archivedRecordIds.size > 0) {
+        records = records.filter(record => !archivedRecordIds.has(record.recordId));
+      }
+    }
     return this.formatRecordMap(records, {}, recordIds);
   }
 
   @Span()
-  private formatRecordMap(records: DatasheetRecordEntity[], commentCountMap: { [key: string]: number }, recordIds?: string[]): IRecordMap {
+  private formatRecordMap(records: DatasheetRecordEntity[], commentCountMap: {
+    [key: string]: number
+  }, recordIds?: string[]): IRecordMap {
     if (recordIds) {
       // recordMap follows the order of 'records'
       const recordMap = keyBy(records, 'recordId');
@@ -126,8 +180,28 @@ export class DatasheetRecordService {
     }, {});
   }
 
-  getIdsByDstIdAndRecordIds(dstId: string, recordIds: string[]): Promise<string[] | null> {
-    return this.recordRepo.selectIdsByDstIdAndRecordIds(dstId, recordIds);
+  async getIdsByDstIdAndRecordIds(dstId: string, recordIds: string[], includeArchivedRecords = false): Promise<string[] | null> {
+    const records = await DBHelper.batchQueryByRecordIdIn(
+      this.recordRepo,
+      ['recordId'],
+      recordIds,
+      { dstId, isDeleted: false },
+    );
+    let dbRecordIds = records.map(entity => entity.recordId);
+    if (!dbRecordIds) {
+      return dbRecordIds;
+    }
+    if (!includeArchivedRecords) {
+      const archivedRecordIds = await this.recordArchiveRepo.getArchivedRecordIdsByDstIdAndRecordIds(dstId, dbRecordIds);
+      if (archivedRecordIds && archivedRecordIds.size > 0) {
+        dbRecordIds = dbRecordIds.filter(record => !archivedRecordIds.has(record));
+      }
+    }
+    return dbRecordIds;
+  }
+
+  async getArchivedIdsByDstIdAndRecordIds(dstId: string, recordIds: string[]): Promise<Set<String>> {
+    return await this.recordArchiveRepo.getArchivedRecordIdsByDstIdAndRecordIds(dstId, recordIds);
   }
 
   async getBaseRecordMap(dstId: string, includeCommentCount = false, ignoreDeleted = false, loadRecordMeta = false): Promise<IRecordMap> {
@@ -180,7 +254,7 @@ export class DatasheetRecordService {
       query.maxRevision && revisions.includes(query.maxRevision.toString()) ? revisions.indexOf(query.maxRevision.toString()) : revisions.length;
     const canLoopRevisions = query.maxRevision ? revisions.slice(0, maxRevisionIndex).reverse() : revisions.reverse();
     if (!canLoopRevisions.length) {
-      return { changesets, units, emojis, commentReplyMap: {}};
+      return { changesets, units, emojis, commentReplyMap: {} };
     }
     const doublePageSize = query.pageSize * 2;
     const maxTimes = Math.ceil(canLoopRevisions.length / doublePageSize);
@@ -214,8 +288,10 @@ export class DatasheetRecordService {
     changesets = changesets.map(item => {
       if (item.isComment) {
         mentionedRevisions.push(Number(item.revision));
-        const replyComment = get(item, 'operations.0.actions.0.li.commentMsg.reply');
-        if (!isEmpty(replyComment) && replyComment.commentId) {
+        const replyComment: {
+          commentId?: string
+        } = get(item, 'operations.0.actions.0.li.commentMsg.reply') as unknown as { commentId?: string };
+        if (replyComment && !isEmpty(replyComment) && replyComment.commentId) {
           // record replied comment ID
           replyCommentIds.add(replyComment.commentId);
         }
@@ -271,7 +347,9 @@ export class DatasheetRecordService {
     limitDays?: number,
   ): Promise<string[]> {
     if (type == RecordHistoryTypeEnum.MODIFY_HISTORY && showRecordHistory) {
-      const result: { revisionHistory: string } | undefined = await this.recordRepo.selectRevisionHistoryByDstIdAndRecordId(dstId, recordId);
+      const result: {
+        revisionHistory: string
+      } | undefined = await this.recordRepo.selectRevisionHistoryByDstIdAndRecordId(dstId, recordId);
       if (result && result.revisionHistory) {
         const revisions = result.revisionHistory.split(',');
         if (limitDays) {
@@ -320,5 +398,51 @@ export class DatasheetRecordService {
   async isRecordsDeleted(dstId: string, recordIds: string[]) {
     const count = await this.recordRepo.selectDeletedCountByDstIdAndRecordIs(dstId, recordIds);
     return count > 0;
+  }
+
+  async getArchivedRecordCount(dstId: string) {
+    return await this.recordArchiveRepo.countRowsByDstId(dstId);
+  }
+
+  async getDeletedRecordsByDstId(dstId: string): Promise<string[]>{
+    const records = await this.recordRepo.find({
+      select: ['recordId'],
+      where: {dstId, isDeleted: true},
+    });
+    return records.map(record => record.recordId);
+  }
+
+  async getArchivedRecords(dstId: string, query: IApiPaginateRo): Promise<IPaginateInfo<ArchivedRecord[]>> {
+    const total = await this.recordArchiveRepo.countRowsByDstId(dstId);
+    let { pageSize, pageNum } = query;
+    pageSize = pageSize || 10;
+    pageNum = pageNum || 1;
+    if (total === 0) {
+      return { total, pageSize: pageSize, pageNum: pageNum, records: [] };
+    }
+    const offset = (pageNum - 1) * pageSize;
+
+    const recordArchiveEntities = await this.recordArchiveRepo.getArchivedRecords(dstId, pageSize, offset);
+
+    const recordIds = recordArchiveEntities.map(record => record.recordId);
+    const userIds = recordArchiveEntities.map(record => record.archivedBy);
+    const recordMap = await this.getRecordsByDstIdAndRecordIds(dstId, recordIds, false, true, true);
+    const userMap = await this.userService.getUserBaseInfoMapByUserIds(userIds as any[]);
+    const resultData: ArchivedRecord[] = [];
+    for (const recordEntity of recordArchiveEntities) {
+      const user = userMap.get(recordEntity.archivedBy);
+      const recordInfo = recordMap[recordEntity.recordId];
+      resultData.push({
+        record: recordInfo,
+        archivedUser: user,
+        archivedAt: recordEntity.archivedAt.getTime(),
+      });
+    }
+    return {
+      total,
+      pageSize,
+      pageNum,
+      records: resultData,
+    };
   }
 }

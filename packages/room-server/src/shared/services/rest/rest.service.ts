@@ -31,7 +31,8 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { skipUsageVerification } from 'app.environment';
 import {
-  InternalCreateDatasheetVo,
+  InternalCreateDatasheetVo, InternalSpaceCreditUsageView,
+  InternalSpaceAutomationRunsMessageView,
   InternalSpaceInfoVo,
   InternalSpaceStatisticsRo,
   InternalSpaceSubscriptionView,
@@ -82,6 +83,8 @@ export class RestService {
   private DEL_FIELD_PERMISSION = 'internal/datasheet/%(dstId)s/field/permission/disable';
   private SPACE_CAPACITY = 'internal/space/%(spaceId)s/capacity';
   private SPACE_USAGES = 'internal/space/%(spaceId)s/usages';
+  private SPACE_CREDIT_USAGES = 'internal/space/%(spaceId)s/credit/usages';
+  private SPACE_AUTOMATION_RUNS_MESSAGE = 'internal/space/%(spaceId)s/automation/run/message';
   private SPACE_SUBSCRIPTION = 'internal/space/%(spaceId)s/subscription';
   private CREATE_DATASHEET_API_URL = 'internal/spaces/%(spaceId)s/datasheets';
   private DELETE_NODE_API_URL = 'internal/spaces/%(spaceId)s/nodes/%(nodeId)s/delete';
@@ -98,6 +101,7 @@ export class RestService {
   private GET_UPLOAD_PRESIGNED_URL = 'internal/asset/upload/preSignedUrl';
   private GET_UPLOAD_CALLBACK = 'asset/upload/callback';
   private GET_ASSET = 'internal/asset/get';
+  private GET_ASSET_SIGNATURES = 'internal/asset/signatures';
   // Calculate the references to datasheet OP attachments
   private DST_ATTACH_CITE = 'base/attach/cite';
   // Create notification
@@ -118,6 +122,7 @@ export class RestService {
     this.httpService.axiosRef.interceptors.request.use(
       (config) => {
         config.headers!['X-Internal-Request'] = 'yes';
+        config.headers!['X-Request-Start-Time'] = new Date().toISOString();
         return config;
       },
       (error) => {
@@ -127,6 +132,13 @@ export class RestService {
     );
     this.httpService.axiosRef.interceptors.response.use(
       (res) => {
+        const startTimeHeader = res.config.headers!['X-Request-Start-Time'];
+        if (startTimeHeader) {
+          const startTime = new Date(startTimeHeader);
+          const duration = new Date().getTime() - startTime.getTime();
+          // 在这里你可以记录或处理请求的耗时信息
+          this.logger.log(`RPC Request uri:${res.config.url}, took duration: ${duration}ms`);
+        }
         const restResponse = res.data as IHttpSuccessResponse<any>;
         if(containSkipHeader(res.config.headers)) {
           return res;
@@ -519,11 +531,15 @@ export class RestService {
       this.logger.log(`skipSpaceSubscription:${spaceId}`);
       return {
         maxRowsPerSheet: -1,
+        maxArchivedRowsPerSheet: -1,
         maxRowsInSpace: -1,
         maxGalleryViewsInSpace: -1,
         maxKanbanViewsInSpace: -1,
         maxGanttViewsInSpace: -1,
         maxCalendarViewsInSpace: -1,
+        maxMessageCredits: 0,
+        maxWidgetNums: -1,
+        maxAutomationRunsNums: -1,
         allowEmbed: true,
         allowOrgApi: true,
       };
@@ -547,9 +563,24 @@ export class RestService {
         kanbanViewNums: 0,
         ganttViewNums: 0,
         calendarViewNums: 0,
+        usedCredit: 0,
       };
     }
     const response = await lastValueFrom(this.httpService.get<InternalSpaceUsageView>(sprintf(this.SPACE_USAGES, { spaceId })));
+    return response!.data;
+  }
+
+  /**
+   * Obtain the credit usage of the space
+   * @param spaceId space id
+   */
+  async getSpaceCreditUsage(spaceId: string): Promise<InternalSpaceCreditUsageView> {
+    const response = await lastValueFrom(this.httpService.get<InternalSpaceCreditUsageView>(sprintf(this.SPACE_CREDIT_USAGES, { spaceId })));
+    return response!.data;
+  }
+
+  public async getSpaceAutomationRunsMessage(spaceId: string): Promise<InternalSpaceAutomationRunsMessageView> {
+    const response = await lastValueFrom(this.httpService.get<InternalSpaceAutomationRunsMessageView>(sprintf(this.SPACE_AUTOMATION_RUNS_MESSAGE, { spaceId })));
     return response!.data;
   }
 
@@ -656,4 +687,17 @@ export class RestService {
   async updateSpaceStatistics(spaceId: string, ro: InternalSpaceStatisticsRo): Promise<void> {
     await lastValueFrom(this.httpService.post(sprintf(this.SPACE_STATISTICS, { spaceId }), ro));
   }
+
+  public async getSignatures(keys: string[]): Promise<Array<{ resourceKey: string; url: string }>> {
+    const queryParams = new URLSearchParams();
+    keys.forEach(key => queryParams.append('resourceKeys', key));
+
+    const url = `${this.GET_ASSET_SIGNATURES}?${queryParams.toString()}`;
+
+    const response = await lastValueFrom(
+      this.httpService.get<Array<{ resourceKey: string; url: string }>>(url),
+    );
+    return response.data;
+  }
+
 }

@@ -16,18 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// eslint-disable-next-line no-restricted-imports
-import { Select, useThemeColors } from '@apitable/components';
-import { FieldType, FilterDuration, FOperator, IFilterCondition, Strings, t } from '@apitable/core';
 import produce from 'immer';
 // @ts-ignore
 import { snake } from 'naming-style';
+import * as React from 'react';
+import { useContext } from 'react';
+// eslint-disable-next-line no-restricted-imports
+import { Select, useThemeColors } from '@apitable/components';
+import { FieldType, FilterDuration, FOperator, IFilterCondition, Strings, t } from '@apitable/core';
 import { MobileSelect } from 'pc/components/common';
 import { ScreenSize } from 'pc/components/common/component_display';
 import { ViewFilterContext } from 'pc/components/tool_bar/view_filter/view_filter_context';
 import { useResponsive } from 'pc/hooks';
-import * as React from 'react';
-import { useContext } from 'react';
 import { ExecuteFilterFn } from '../../interface';
 import styles from '../style.module.less';
 
@@ -41,21 +41,23 @@ export const DateDuration = [
 ];
 
 interface IFilterDateDurationProps {
+  disabled?: boolean;
   conditionIndex: number;
   changeFilter: (cb: ExecuteFilterFn) => void;
   condition: IFilterCondition<FieldType>;
 }
 
-export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDurationProps>> = props => {
-  const { conditionIndex, condition, changeFilter } = props;
+export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDurationProps>> = (props) => {
+  const { conditionIndex, condition, disabled = false, changeFilter } = props;
   const colors = useThemeColors();
   const { screenIsAtMost } = useResponsive();
   const isMobile = screenIsAtMost(ScreenSize.md);
-  const { isViewLock } = useContext(ViewFilterContext);
+  const { isViewLock: isViewLockOrigin } = useContext(ViewFilterContext);
+  const isViewLock = isViewLockOrigin || disabled;
 
   function createOptionData() {
     const operate = condition.operator;
-    let filterDuration = Object.values(FilterDuration).filter(item => {
+    let filterDuration = Object.values(FilterDuration).filter((item) => {
       return item !== 'SomeDayAfter' && item !== 'SomeDayBefore';
     });
 
@@ -68,7 +70,7 @@ export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDur
       filterDuration = DateDuration;
     }
 
-    return filterDuration.map(item => {
+    return filterDuration.map((item) => {
       return {
         label: t(Strings[snake(FilterDuration[item]).toLowerCase()]),
         value: item,
@@ -77,9 +79,9 @@ export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDur
   }
 
   function onChange(selectValue: string) {
-    return changeFilter(value => {
+    return changeFilter((value) => {
       // TODO Need to compare.
-      return produce(value, draft => {
+      return produce(value, (draft) => {
         const condition = draft.conditions[conditionIndex];
         if (selectValue === FilterDuration.ExactDate) {
           condition.value = [FilterDuration.ExactDate, null];
@@ -114,7 +116,7 @@ export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDur
     <Select
       value={!condition.value ? '' : condition.value[0]}
       options={createOptionData()}
-      onSelected={option => {
+      onSelected={(option) => {
         onChange(option.value as string);
       }}
       triggerCls={styles.dataDuration}
@@ -122,7 +124,6 @@ export const FilterDateDuration: React.FC<React.PropsWithChildren<IFilterDateDur
       openSearch={false}
       triggerStyle={{ width: 100 }}
       disabled={isViewLock}
-      disabledTip={'123'}
     />
   );
 };

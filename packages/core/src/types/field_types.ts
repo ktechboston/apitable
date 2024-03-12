@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { t, Strings } from 'exports/i18n';
+import { Strings, t } from 'exports/i18n';
 import type { IFilterInfo } from './view_types';
 
 /* eslint-disable */
@@ -81,7 +81,7 @@ export enum RollUpFuncType {
   AND = 'AND',
   OR = 'OR',
   XOR = 'XOR',
-  
+
   // Currently processed in lookup
   // // will be converted to string
   CONCATENATE = 'CONCATENATE',
@@ -477,6 +477,7 @@ export interface ISelectFieldOption {
   color: number;
 }
 
+
 export interface ISelectFieldProperty {
   options: ISelectFieldOption[];
   defaultValue?: string | IMultiSelectedIds;
@@ -501,13 +502,29 @@ export interface ILinkFieldProperty {
   limitSingleRecord?: boolean; // Whether to limit only one block to be associated. Note: This is a soft limit that only takes effect on the current table interaction, there are actually multiple ways to break the limit.
 }
 
+export interface IOneWayLinkFieldProperty {
+  foreignDatasheetId: string;
+  limitToView?: string; // The limit is only on the optional record corresponding to the viewId. Note: viewId may not exist in the associated table with the modification of the associated table
+  limitSingleRecord?: boolean; // Whether to limit only one block to be associated. Note: This is a soft limit that only takes effect on the current table interaction, there are actually multiple ways to break the limit.
+}
+
 export interface ILinkField extends IBaseField {
   property: ILinkFieldProperty;
   type: FieldType.Link;
 }
 
+export interface IOneWayLinkField extends IBaseField {
+  property: IOneWayLinkFieldProperty;
+  type: FieldType.OneWayLink;
+}
+
 export enum LinkFieldSet {
   Add = 'add',
+}
+
+export interface IWorkDocValue {
+  documentId: string;
+  title: string;
 }
 
 export interface IAttachmentValue {
@@ -568,19 +585,77 @@ export interface ICascaderField extends IBaseField {
   property: ICascaderProperty;
 }
 
+export interface IWorkDocField extends IBaseField {
+  type: FieldType.WorkDoc;
+  property: IWorkDocProperty;
+}
+
 interface ILinkedFields {
   id: string;
   name: string;
   type: number;
 }
 
-interface ICascaderProperty {
+export interface ICascaderProperty {
   showAll: boolean,
   linkedDatasheetId: string,
   linkedViewId: string,
   linkedFields: ILinkedFields[],
   fullLinkedFields: ILinkedFields[],
 }
+
+export enum ButtonStyleType {
+  Background= 0,
+  OnlyText=1
+}
+
+export enum ButtonActionType {
+  OpenLink = 0,
+  TriggerAutomation = 1,
+}
+
+export interface IButtonStyle {
+  type: ButtonStyleType,
+  color: number
+}
+
+export enum OpenLinkType {
+  Url = 0,
+  Expression = 1,
+}
+
+export interface IButtonAction {
+  type?: ButtonActionType;
+  openLink?: {
+    type: OpenLinkType;
+    expression: string;
+  };
+  automation?: {
+    automationId: string;
+    triggerId: string;
+  };
+}
+
+export interface IButtonActionMeta {
+  type?: ButtonActionType;
+    expression?: string;
+    automationId?: string;
+    triggerId?: string;
+}
+
+export interface IButtonProperty {
+  datasheetId?: string;
+  text: string,
+  style: IButtonStyle
+  action: IButtonAction,
+}
+
+export interface IButtonField extends IBaseField {
+  type: FieldType.Button;
+  property: IButtonProperty;
+}
+
+type IWorkDocProperty = null;
 
 export type IField =
   | INotSupportField
@@ -592,6 +667,7 @@ export type IField =
   | IMultiSelectField
   | ISingleSelectField
   | ILinkField
+  | IOneWayLinkField
   | IURLField
   | IEmailField
   | IPhoneField
@@ -608,7 +684,9 @@ export type IField =
   | ILastModifiedTimeField
   | ICreatedByField
   | ILastModifiedByField
-  | ICascaderField;
+  | ICascaderField
+  | IButtonField
+  | IWorkDocField;
 
 export enum FieldType {
   NotSupport = 0,
@@ -637,6 +715,9 @@ export enum FieldType {
   CreatedBy = 23,
   LastModifiedBy = 24,
   Cascader = 25,
+  OneWayLink = 26,
+  WorkDoc = 27,
+  Button = 28,
   DeniedField = 999, // no permission column
 }
 
@@ -648,6 +729,7 @@ export const readonlyFields = new Set([
   FieldType.LastModifiedTime,
   FieldType.CreatedBy,
   FieldType.LastModifiedBy,
+  FieldType.Button
 ]);
 
 export interface IFieldTypeCollection {
@@ -658,6 +740,8 @@ export interface IFieldTypeCollection {
   fieldGroup: FieldGroup;
   help: string;
   hasOptSetting: boolean; // Whether the field has optional configuration, it is used to control whether the split line is displayed in the field configuration menu.
+  isBeta?: boolean;
+  isNew?: boolean;
 }
 
 export enum FieldGroup {
@@ -742,6 +826,15 @@ export const FieldTypeDescriptionMap: {
     fieldGroup: FieldGroup.Common,
     help: t(Strings.field_help_attachment),
     hasOptSetting: false,
+  },
+  [FieldType.OneWayLink]: {
+    title: t(Strings.field_title_one_way_link),
+    subTitle: t(Strings.field_desc_one_way_link),
+    type: FieldType.OneWayLink,
+    canBePrimaryField: false,
+    fieldGroup: FieldGroup.Advanced,
+    help: t(Strings.field_help_one_way_link),
+    hasOptSetting: true,
   },
   [FieldType.Link]: {
     title: t(Strings.field_title_link),
@@ -893,7 +986,27 @@ export const FieldTypeDescriptionMap: {
     type: FieldType.Cascader,
     canBePrimaryField: false,
     fieldGroup: FieldGroup.Advanced,
-    help:  t(Strings.field_help_cascader),
+    help: t(Strings.field_help_cascader),
     hasOptSetting: true,
+  },
+  [FieldType.Button]: {
+    title: t(Strings.field_title_button),
+    subTitle: t(Strings.field_desc_button),
+    type: FieldType.Button,
+    canBePrimaryField: false,
+    fieldGroup: FieldGroup.Advanced,
+    help: t(Strings.field_help_button),
+    hasOptSetting: true,
+    isBeta: true,
+  },
+  [FieldType.WorkDoc]: {
+    title: t(Strings.field_title_workdoc),
+    subTitle: t(Strings.field_desc_workdoc),
+    type: FieldType.WorkDoc,
+    canBePrimaryField: false,
+    fieldGroup: FieldGroup.Common,
+    help: t(Strings.field_help_workdoc),
+    hasOptSetting: false,
+    isBeta: true
   },
 };

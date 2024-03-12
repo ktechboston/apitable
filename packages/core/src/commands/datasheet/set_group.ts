@@ -17,12 +17,13 @@
  */
 
 import { IJOTAction } from 'engine/ot';
-import { DatasheetActions } from 'model';
-import { getActiveDatasheetId, getCurrentView, getDatasheet, getFieldPermissionMap, getFieldRoleByFieldId } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { getActiveDatasheetId, getDatasheet, getFieldPermissionMap, getFieldRoleByFieldId } from 'modules/database/store/selectors/resource/datasheet/base';
+import { getCurrentView } from 'modules/database/store/selectors/resource/datasheet/calc';
 import { IGridViewProperty, Role } from '../../exports/store/interfaces';
 import { IGroupInfo, ResourceType } from 'types';
 import { Strings, t } from '../../exports/i18n';
-import { CollaCommandName } from 'commands';
+import { CollaCommandName } from 'commands/enum';
 import { ExecuteResult, ICollaCommandDef } from 'command_manager';
 
 export interface ISetGroupOptions {
@@ -35,7 +36,7 @@ export const setGroup: ICollaCommandDef<ISetGroupOptions> = {
   undoable: true,
 
   execute: (context, options) => {
-    const { model: state } = context;
+    const { state: state } = context;
     const { data, viewId } = options;
     const datasheetId = getActiveDatasheetId(state)!;
     const datasheet = getDatasheet(state, datasheetId);

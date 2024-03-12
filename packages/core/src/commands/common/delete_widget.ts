@@ -17,8 +17,12 @@
  */
 
 import { ExecuteResult, ICollaCommandDef } from 'command_manager';
-import { DatasheetActions } from 'model';
-import { Selectors } from '../../exports/store';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import {
+  getResourceWidgetPanels,
+  getResourceActiveWidgetPanel
+} from 'modules/database/store/selectors/resource';
+
 import { ResourceType } from 'types';
 import { CollaCommandName } from 'commands/index';
 
@@ -33,11 +37,11 @@ export const deleteWidget: ICollaCommandDef<IDeleteWidgetAction> = {
   undoable: false,
 
   execute: (context, options) => {
-    const { model: state } = context;
+    const { state: state } = context;
     const { widgetId, resourceId, resourceType } = options;
 
-    const widgetPanels = Selectors.getResourceWidgetPanels(state, resourceId, resourceType);
-    const activeWidgetPanel = Selectors.getResourceActiveWidgetPanel(state, resourceId, resourceType);
+    const widgetPanels = getResourceWidgetPanels(state, resourceId, resourceType);
+    const activeWidgetPanel = getResourceActiveWidgetPanel(state, resourceId, resourceType);
 
     if (!widgetPanels || !activeWidgetPanel) {
       return null;

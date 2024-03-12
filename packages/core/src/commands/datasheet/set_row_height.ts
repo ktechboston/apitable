@@ -16,13 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { CollaCommandName } from 'commands';
+import { CollaCommandName } from 'commands/enum';
 import { ExecuteResult, ICollaCommandDef } from 'command_manager';
 import { IJOTAction } from 'engine/ot';
 import { Strings, t } from '../../exports/i18n';
-import { DatasheetActions } from 'model';
-import { RowHeightLevel } from '../../exports/store';
-import { getActiveDatasheetId, getDatasheet } from '../../exports/store/selectors';
+import { DatasheetActions } from 'commands_actions/datasheet';
+import { RowHeightLevel } from 'modules/shared/store/constants';
+import { getActiveDatasheetId, getDatasheet } from 'modules/database/store/selectors/resource/datasheet/base';
 import { ResourceType } from 'types';
 
 export interface ISetRowHeightOptions {
@@ -35,7 +35,7 @@ export const setRowHeight: ICollaCommandDef<ISetRowHeightOptions> = {
   undoable: true,
 
   execute: (context, options) => {
-    const { model: state } = context;
+    const { state: state } = context;
     const { level, viewId } = options;
     const datasheetId = getActiveDatasheetId(state)!;
     const datasheet = getDatasheet(state, datasheetId);

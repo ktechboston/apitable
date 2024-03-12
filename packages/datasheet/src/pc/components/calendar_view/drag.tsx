@@ -16,22 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useUnmount } from 'ahooks';
 import { Tooltip } from 'antd';
+import cls from 'classnames';
+import dayjs from 'dayjs';
 import { memo, useContext } from 'react';
 import * as React from 'react';
 import { useDrag, DragSourceMonitor } from 'react-dnd';
-import { RECORD, CALENDAR_RECORD_MENU, FORMAT_DATE } from './constants';
 import { ITask, useContextMenu } from '@apitable/components';
-import { expandRecordIdNavigate } from 'pc/components/expand_record';
-import { CalendarContext } from './calendar_context';
-import { RecordItem } from './record_item';
-import dayjs from 'dayjs';
-import styles from './styles.module.less';
-import cls from 'classnames';
-import { useUnmount } from 'ahooks';
 import { Selectors, Strings, t } from '@apitable/core';
-import { store } from 'pc/store';
 import { Message } from 'pc/components/common';
+import { expandRecordIdNavigate } from 'pc/components/expand_record';
+import { store } from 'pc/store';
+import { CalendarContext } from './calendar_context';
+import { RECORD, CALENDAR_RECORD_MENU, FORMAT_DATE } from './constants';
+import { RecordItem } from './record_item';
+import styles from './styles.module.less';
 interface IDrag {
   children: Element | string;
   id: string;
@@ -43,10 +43,8 @@ interface IDrag {
 
 const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
   const { startDate, endDate, title } = task;
-  const {
-    columns, setRecordModal, recordModal, currentSearchRecordId, draggable,
-    isCryptoStartField, isCryptoEndField, isMobile, activeCell
-  } = useContext(CalendarContext);
+  const { columns, currentSearchRecordId, draggable, isCryptoStartField, isCryptoEndField, isMobile, activeCell } =
+    useContext(CalendarContext);
 
   const { show } = useContextMenu({
     id: CALENDAR_RECORD_MENU,
@@ -67,8 +65,8 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
     e.preventDefault();
     show(e, {
       props: {
-        recordId: id
-      }
+        recordId: id,
+      },
     });
   };
   const [{ opacity }, drag] = useDrag(() => ({
@@ -83,16 +81,16 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
 
   const isCurrentSearchCell = currentSearchRecordId === id;
 
-  const formatStartDate = startDate ? dayjs(startDate).format(FORMAT_DATE) : '';
-  const formatEndDate = endDate ? dayjs(endDate).format(FORMAT_DATE) : '';
+  const formatStartDate = startDate ? dayjs.tz(startDate).format(FORMAT_DATE) : '';
+  const formatEndDate = endDate ? dayjs.tz(endDate).format(FORMAT_DATE) : '';
 
   const DragItem = () => {
-    const itemArray = (isMobile ? columns.slice(0, 1) : columns).map(column =>
-      <RecordItem key={column.fieldId} column={column} id={id} />
-    );
+    const itemArray = (isMobile ? columns.slice(0, 1) : columns).map((column) => <RecordItem key={column.fieldId} column={column} id={id} />);
     // More time, more rows to show date intervals
     if (isMore) {
-      itemArray.splice(1, 0, (
+      itemArray.splice(
+        1,
+        0,
         <div key="duration" className={styles.duration}>
           {formatStartDate}
           {formatStartDate !== formatEndDate && (
@@ -101,8 +99,8 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
               {formatEndDate}
             </>
           )}
-        </div>
-      ));
+        </div>,
+      );
     }
     return (
       <>
@@ -116,15 +114,6 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
           style={{
             opacity,
             ...listStyle,
-          }}
-          onMouseDown={() => {
-            /**
-             * Close modal when mouse is pressed
-             * Solve the problem of modal not disappearing when dragging
-             */
-            if (!isMobile && recordModal) {
-              setRecordModal(undefined);
-            }
           }}
           onContextMenu={isMobile ? undefined : onContextMenu}
           onClick={() => {
@@ -143,7 +132,7 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
 
   return (
     <Tooltip
-      title={(
+      title={
         <div className={styles.dragTip}>
           <header>
             <RecordItem column={{ fieldId: title }} id={id} />
@@ -154,7 +143,7 @@ const DragBase = ({ id, listStyle, task, disabled, isMore }: IDrag) => {
             {formatEndDate}
           </div>
         </div>
-      )}
+      }
     >
       <DragItem key={`drag-${id}`} />
     </Tooltip>

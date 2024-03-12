@@ -16,17 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Field, FieldType, IField, IRecord, IReduxState, IViewColumn, Selectors, Strings, t } from '@apitable/core';
-import { SubtractCircleFilled } from '@apitable/icons';
 import classNames from 'classnames';
 import Image from 'next/image';
+import * as React from 'react';
+import { useMemo } from 'react';
+import { Field, FieldType, IField, IRecord, IReduxState, IViewColumn, Selectors, Strings, t } from '@apitable/core';
+import { SubtractCircleFilled } from '@apitable/icons';
 import { DisplayFile } from 'pc/components/display_file';
 import { CellValue } from 'pc/components/multi_grid/cell/cell_value';
 import { useResponsive } from 'pc/hooks';
 import { store } from 'pc/store';
-import * as React from 'react';
-import { useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from 'pc/store/react-redux';
 import NoImage from 'static/icon/datasheet/gallery/emptystates_img_datasheet.png';
 import { ScreenSize } from '../component_display';
 import styles from './style.module.less';
@@ -41,17 +41,17 @@ export interface IRecordCardProps {
   className?: string;
 }
 
-export const RecordCard: React.FC<React.PropsWithChildren<IRecordCardProps>> = props => {
+export const RecordCard: React.FC<React.PropsWithChildren<IRecordCardProps>> = (props) => {
   const { record, columns, fieldMap, onClick, onDelete, datasheetId } = props;
   const [firstColumn, ...remainingColumns] = columns;
   const primaryField = fieldMap[firstColumn.fieldId];
   const state = store.getState();
-  const attachmentColumn = remainingColumns.find(column => {
+  const attachmentColumn = remainingColumns.find((column) => {
     const field = fieldMap[column.fieldId];
     return field?.type === FieldType.Attachment;
   });
 
-  const { formId, primaryCellValue } = useSelector(state => {
+  const { formId, primaryCellValue } = useAppSelector((state) => {
     const primaryCellValue = Selectors.getCellValue(
       state,
       {
@@ -69,14 +69,14 @@ export const RecordCard: React.FC<React.PropsWithChildren<IRecordCardProps>> = p
   });
   const { screenIsAtMost } = useResponsive();
 
-  const _foreignDstReadable = useSelector((state: IReduxState) => Selectors.getPermissions(state, datasheetId).readable);
+  const _foreignDstReadable = useAppSelector((state: IReduxState) => Selectors.getPermissions(state, datasheetId).readable);
   const foreignDstReadable = Boolean(_foreignDstReadable || formId);
 
   const normalColumnsCount = attachmentColumn || screenIsAtMost(ScreenSize.md) ? 4 : 5;
 
   const normalColumns = useMemo(() => {
     return remainingColumns
-      .filter(column => {
+      .filter((column) => {
         const field = fieldMap[column.fieldId];
         return field.type !== FieldType.Attachment;
       })
@@ -95,12 +95,12 @@ export const RecordCard: React.FC<React.PropsWithChildren<IRecordCardProps>> = p
         <h3 className={classNames(styles.cardTitle, title ? '' : styles.gray, 'ellipsis')}>{title || t(Strings.record_unnamed)}</h3>
         {foreignDstReadable && (
           <div className={styles.cellRow}>
-            {normalColumns.map(column => {
+            {normalColumns.map((column) => {
               const field = fieldMap[column.fieldId];
               const cellValue = Selectors.getCellValue(
                 state,
                 {
-                  meta: { fieldMap: { [field.id]: field }},
+                  meta: { fieldMap: { [field.id]: field } },
                   recordMap: { [record.id]: record },
                   datasheetId,
                 },
@@ -131,7 +131,7 @@ export const RecordCard: React.FC<React.PropsWithChildren<IRecordCardProps>> = p
     const cellValue = Selectors.getCellValue(
       state,
       {
-        meta: { fieldMap: { [field.id]: field }},
+        meta: { fieldMap: { [field.id]: field } },
         recordMap: { [record.id]: record },
       },
       record.id,

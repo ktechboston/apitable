@@ -22,7 +22,7 @@ import {
   AttachmentField, AutoNumberField,
   CascaderField, CheckboxField, CreatedByField, CreatedTimeField, CurrencyField, DateTimeField, EmailField, FormulaField,
   LastModifiedByField, LastModifiedTimeField, LinkField, LookUpField, MemberField, MultiSelectField, NumberField, PercentField, PhoneField,
-  RatingField, SingleSelectField, SingleTextField, TextField, UrlField,
+  RatingField, SingleSelectField, SingleTextField, TextField, UrlField, WorkDocField
 } from 'fusion/field';
 import { CacheConfigService } from 'shared/cache/cache.config.service';
 import { ApiRequestMiddleware } from './middleware/api.request.middleware';
@@ -45,6 +45,7 @@ import { UnitModule } from 'unit/unit.module';
 import { FusionApiV2Controller } from './fusion.api.v2.controller';
 import { FusionNodeApiService } from './services/fusion.node.api.service';
 import { DeveloperModule } from '../developer/developer.module';
+import { OneWayLinkField } from './field/one_way_link.field';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { DeveloperModule } from '../developer/developer.module';
     LastModifiedByField,
     LastModifiedTimeField,
     LinkField,
+    OneWayLinkField,
     LookUpField,
     MemberField,
     MultiSelectField,
@@ -95,6 +97,7 @@ import { DeveloperModule } from '../developer/developer.module';
     SingleTextField,
     TextField,
     UrlField,
+    WorkDocField,
     FusionApiTransformer,
     FusionApiFilter,
   ],

@@ -16,71 +16,79 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import {
-  memo,
-  ChangeEvent,
-  useState,
-  useRef,
-  forwardRef,
-  useImperativeHandle,
-  useMemo,
-  useEffect,
-} from 'react';
+import { useDebounceFn } from 'ahooks';
+import { Input } from 'antd';
+import classnames from 'classnames';
+import isNumber from 'lodash/isNumber';
+import { memo, ChangeEvent, useState, useRef, forwardRef, useImperativeHandle, useMemo, useEffect } from 'react';
 
 import * as React from 'react';
-import { IBaseEditorProps, IEditor } from '../interface';
+import { useThemeColors } from '@apitable/components';
 import {
-  FieldType, t, Strings, number2str, str2NumericStr, numberToShow,
-  str2Currency, str2number, times, divide, digitLength, numberThresholdValue,
+  FieldType,
+  t,
+  Strings,
+  number2str,
+  str2NumericStr,
+  numberToShow,
+  str2Currency,
+  str2number,
+  times,
+  divide,
+  digitLength,
+  numberThresholdValue,
 } from '@apitable/core';
-import style from './style.module.less';
-import classnames from 'classnames';
-import { printableKey, isNumeralKey, stopPropagation } from 'pc/utils';
-import { Input } from 'antd';
 // eslint-disable-next-line no-restricted-imports
 import { Tooltip } from 'pc/components/common';
-import isNumber from 'lodash/isNumber';
-import { useThemeColors } from '@apitable/components';
-import { useDebounceFn } from 'ahooks';
+import { printableKey, isNumeralKey, stopPropagation } from 'pc/utils';
+import { IBaseEditorProps, IEditor } from '../interface';
+import style from './style.module.less';
 
 export interface INumberEditorProps extends IBaseEditorProps {
   style: React.CSSProperties;
-  editable: boolean;
   editing: boolean;
+
   commandFn?: (data: string) => void;
   isFromFormat?: boolean;
-  isFromFieldEditor?: boolean;
+  isLeftTextAlign?: boolean;
   onBlur?: (...args: any) => void;
 }
 
 const NumberEditorBase: React.ForwardRefRenderFunction<IEditor, INumberEditorProps> = (props, ref) => {
-  const {
-    isFromFieldEditor, field, editing, commandFn, onSave, onBlur,
-    editable, isFromFormat, disabled, style: propStyle, height, onChange
-  } = props;
+  const { isLeftTextAlign, field, editing, commandFn, onSave, onBlur, isFromFormat, disabled = false, style: propStyle, height, onChange } = props;
   const colors = useThemeColors();
   const [value, setValue] = useState('');
   const [canInput, setCanInput] = useState<boolean>(true);
   const editorRef = useRef<HTMLInputElement>(null);
   const [showTip, setShowTip] = useState(false);
   const fieldType = field.type;
-  const { run: hideTipDebounce } = useDebounceFn(
-    () => setShowTip(false),
-    {
-      wait: 2000,
-    },
-  );
+  const { run: hideTipDebounce } = useDebounceFn(() => setShowTip(false), {
+    wait: 2000,
+  });
 
-  useImperativeHandle(ref, (): IEditor => ({
-    focus: (preventScroll) => { focus(preventScroll); },
-    blur: () => { blur(); },
-    onEndEdit: (cancel: boolean) => { onEndEdit(cancel); },
-    onStartEdit: (value?: number | null) => { onStartEdit(value); },
-    setValue: (value?: number | null) => { 
-      setEditorValue( isNumber(value) ? value : null, true);
-    },
-    saveValue: () => { saveValue(); },
-  }));
+  useImperativeHandle(
+    ref,
+    (): IEditor => ({
+      focus: (preventScroll) => {
+        focus(preventScroll);
+      },
+      blur: () => {
+        blur();
+      },
+      onEndEdit: (cancel: boolean) => {
+        onEndEdit(cancel);
+      },
+      onStartEdit: (value?: number | null) => {
+        onStartEdit(value);
+      },
+      setValue: (value?: number | null) => {
+        setEditorValue(isNumber(value) ? value : null, true);
+      },
+      saveValue: () => {
+        saveValue();
+      },
+    }),
+  );
 
   /**
    * Input state data
@@ -149,7 +157,7 @@ const NumberEditorBase: React.ForwardRefRenderFunction<IEditor, INumberEditorPro
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     const printable = printableKey(event.nativeEvent);
-    // Currently checking, safari, Chrome in Windows, etc. 
+    // Currently checking, safari, Chrome in Windows, etc.
     // when calling the system's Chinese input method (e.g., mac's Chinese and Microsoft's own Chinese)
     // If the KeyCode is listened to via the KeyUp event, the correct value is returned. However, there are two problems with KeyUp.
     // 1. Frequent triggers can be missed
@@ -215,7 +223,7 @@ const NumberEditorBase: React.ForwardRefRenderFunction<IEditor, INumberEditorPro
     disabled,
     value,
     onKeyDown,
-    readOnly: !editable,
+    readOnly: disabled,
     onChange: updateValue,
   };
 
@@ -223,42 +231,32 @@ const NumberEditorBase: React.ForwardRefRenderFunction<IEditor, INumberEditorPro
     <div
       className={style.numberEditor}
       style={{
-        boxShadow: (isFromFormat || isFromFieldEditor || commandFn) ? 'none' : `0px 0px 0px 2px ${colors.primaryColor}`,
+        boxShadow: isFromFormat || isLeftTextAlign || commandFn ? 'none' : `0px 0px 0px 2px ${colors.primaryColor}`,
         ...propStyle,
         height,
       }}
       onMouseMove={stopPropagation}
     >
       {/* Here the judgement logic is wrapped in an outer layer, otherwise it would cause a Tooltip positioning error */}
-      {!isFromFormat && <Tooltip
-        visible={showTip}
-        title={toolTip}
-        placement="top"
-      >
-        <div
-          style={{ width: '100%' }}
-        >
-          <input
-            className={classnames(style.numberInput, 'numberEditorInput')}
-            style={{ textAlign: isFromFieldEditor ? 'left' : 'right' }}
-            ref={editorRef}
-            onBlur={onBlur}
-            {...commonProps}
-          />
-        </div>
-      </Tooltip>}
+      {!isFromFormat && (
+        <Tooltip visible={showTip} title={toolTip} placement="top">
+          <div style={{ width: '100%' }}>
+            <input
+              className={classnames(style.numberInput, 'numberEditorInput', { [style.numberEditorDisabled]: disabled })}
+              style={{ textAlign: isLeftTextAlign ? 'left' : 'right' }}
+              ref={editorRef}
+              onBlur={onBlur}
+              {...commonProps}
+            />
+          </div>
+        </Tooltip>
+      )}
 
-      {isFromFormat && <Tooltip
-        visible={showTip}
-        title={toolTip}
-        placement="top"
-      >
-        <Input
-          {...commonProps}
-          onBlur={onBlur}
-          placeholder={t(Strings.currency_field_configuration_default_placeholder)}
-        />
-      </Tooltip>}
+      {isFromFormat && (
+        <Tooltip visible={showTip} title={toolTip} placement="top">
+          <Input {...commonProps} onBlur={onBlur} placeholder={t(Strings.currency_field_configuration_default_placeholder)} />
+        </Tooltip>
+      )}
     </div>
   );
 };

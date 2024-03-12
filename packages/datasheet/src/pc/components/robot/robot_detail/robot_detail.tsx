@@ -16,68 +16,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Box } from '@apitable/components';
-import { IFormNodeItem } from 'pc/components/tool_bar/foreign_form/form_list_panel';
-import { useState, useRef } from 'react';
-import { useActionTypes, useRobot, useTriggerTypes } from '../hooks';
-import { IRobotTrigger } from '../interface';
+import { memo } from 'react';
+import { Box, Typography } from '@apitable/components';
+import { Strings, t } from '@apitable/core';
+import { CONST_MAX_ACTION_COUNT, CONST_MAX_TRIGGER_COUNT } from 'pc/components/automation/config';
+import { CONST_BG_CLS_NAME } from 'pc/components/automation/content';
+import { useActionTypes, useAutomationRobot, useTriggerTypes } from '../hooks';
 import { RobotActions } from './action/robot_actions';
-import { RobotBaseInfo } from './robot_base_info';
-import { RobotTrigger } from './trigger/robot_trigger';
+import { EditType, RobotTrigger } from './trigger/robot_trigger';
+import { useCssColors } from './trigger/use_css_colors';
 
-interface IRobotDetailProps {
-  index: number,
-  datasheetId: string,
-  formList: IFormNodeItem[],
-}
-export const RobotDetailForm = ({ formList }: IRobotDetailProps) => {
-  const [trigger, setTrigger] = useState<IRobotTrigger>();
-  const ref = useRef<HTMLDivElement | null>(null);
+export const RobotDetailForm = memo(() => {
   const { loading, data: actionTypes } = useActionTypes();
   const { loading: triggerTypeLoading, data: triggerTypes } = useTriggerTypes();
-  const { robot } = useRobot();
+  const { robot } = useAutomationRobot();
 
+  const colors = useCssColors();
   if (loading || !actionTypes || triggerTypeLoading || !triggerTypes || !robot) {
     return null;
   }
 
-  const scrollBottom = () => {
-    const scrollBox = ref.current;
-    if (!scrollBox) {
-      return;
-    }
-    const { scrollHeight, offsetHeight } = scrollBox;
-    if (scrollHeight > offsetHeight) {
-      scrollBox.scrollTop = scrollHeight - offsetHeight;
-    }
-  };
-
-  // const nodeList = (robot.nodes || []).map((node, index) => {
-  //   if (index === 0) {
-  //     return node.triggerId;
-  //   }
-  //   return node.actionId;
-  // });
-  // console.log(nodeList);
   return (
-    <Box
-      ref={ref}
-    >
-      <RobotBaseInfo />
-      <RobotTrigger
-        robotId={robot.robotId}
-        triggerTypes={triggerTypes}
-        formList={formList}
-        setTrigger={setTrigger}
-      />
-      <RobotActions
-        robotId={robot.robotId}
-        trigger={trigger}
-        triggerTypes={triggerTypes}
-        actionTypes={actionTypes}
-        onScrollBottom={scrollBottom}
-      />
-      {/* <NodeConnectionLine nodeList={nodeList} /> */}
-    </Box >
+    <>
+      <Box paddingTop={'40px'} paddingBottom={'16px'} className={CONST_BG_CLS_NAME}>
+        <Typography variant="h5" color={colors.textCommonPrimary}>
+          {t(Strings.when)} ( {robot?.triggers?.length ?? 0} / {CONST_MAX_TRIGGER_COUNT} )
+        </Typography>
+      </Box>
+
+      <RobotTrigger editType={EditType.entry} robotId={robot.robotId} triggerTypes={triggerTypes} />
+
+      <Box paddingTop={'40px'} paddingBottom={'16px'} className={CONST_BG_CLS_NAME}>
+        <Typography variant="h5" color={colors.textCommonPrimary}>
+          {t(Strings.then)} ( {robot?.actions?.length ?? 0} / {CONST_MAX_ACTION_COUNT} )
+        </Typography>
+      </Box>
+      <RobotActions robotId={robot.robotId} triggerTypes={triggerTypes} />
+    </>
   );
-};
+});

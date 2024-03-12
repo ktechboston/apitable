@@ -16,10 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { getResourceWidgetPanels } from '../../exports/store/selectors';
+import { getResourceWidgetPanels } from 'modules/database/store/selectors/resource';
 import { ResourceType } from 'types';
 import { ExecuteResult, ICollaCommandDef, ICollaCommandExecuteContext } from '../../command_manager';
-import { DatasheetActions } from '../../model/datasheet';
+import { DatasheetActions } from '../../commands_actions/datasheet';
 import { CollaCommandName } from '..';
 
 export interface IMoveWidgetPanel {
@@ -34,7 +34,7 @@ export const moveWidgetPanel: ICollaCommandDef<IMoveWidgetPanel> = {
   undoable: false,
 
   execute(context: ICollaCommandExecuteContext, options: IMoveWidgetPanel) {
-    const { model: state } = context;
+    const { state: state } = context;
     const { targetIndex, panelId, resourceId, resourceType } = options;
 
     if (targetIndex > 2) {

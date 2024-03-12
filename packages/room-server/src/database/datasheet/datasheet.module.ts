@@ -18,16 +18,20 @@
 
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AutomationRobotRepository } from 'automation/repositories/automation.robot.repository';
+import { AutomationTriggerRepository } from 'automation/repositories/automation.trigger.repository';
+import { RobotModule } from 'automation/robot.module';
 import { CommandModule } from 'database/command/command.module';
-import { NodeModule } from 'node/node.module';
 import { ResourceModule } from 'database/resource/resource.module';
 import { SubscriptionDynamicModule } from 'database/subscription/subscription.dynamic.module';
+import { NodeModule } from 'node/node.module';
 import { UnitModule } from 'unit/unit.module';
 import { UserModule } from 'user/user.module';
 import { DatasheetController } from './controllers/datasheet.controller';
 import { DatasheetChangesetRepository } from './repositories/datasheet.changeset.repository';
 import { DatasheetChangesetSourceRepository } from './repositories/datasheet.changeset.source.repository';
 import { DatasheetMetaRepository } from './repositories/datasheet.meta.repository';
+import { DatasheetRecordArchiveRepository } from './repositories/datasheet.record.archive.repository';
 import { DatasheetRecordRepository } from './repositories/datasheet.record.repository';
 import { DatasheetRecordSourceRepository } from './repositories/datasheet.record.source.repository';
 import { DatasheetRepository } from './repositories/datasheet.repository';
@@ -41,13 +45,14 @@ import { DatasheetMetaService } from './services/datasheet.meta.service';
 import { DatasheetRecordService } from './services/datasheet.record.service';
 import { DatasheetRecordSourceService } from './services/datasheet.record.source.service';
 import { DatasheetService } from './services/datasheet.service';
-import { RecordCommentService } from './services/record.comment.service';
 import { DatasheetWidgetService } from './services/datasheet.widget.service';
+import { RecordCommentService } from './services/record.comment.service';
 
 @Module({
   imports: [
-    forwardRef(()=>ResourceModule),
-    forwardRef(()=>NodeModule),
+    forwardRef(() => ResourceModule),
+    forwardRef(() => NodeModule),
+    forwardRef(() => RobotModule),
     UnitModule,
     UserModule,
     CommandModule,
@@ -57,10 +62,13 @@ import { DatasheetWidgetService } from './services/datasheet.widget.service';
       DatasheetChangesetSourceRepository,
       DatasheetMetaRepository,
       DatasheetRecordRepository,
+      DatasheetRecordArchiveRepository,
       DatasheetRecordSourceRepository,
       DatasheetRepository,
       DatasheetWidgetRepository,
       RecordCommentRepository,
+      AutomationRobotRepository,
+      AutomationTriggerRepository,
     ]),
   ],
   providers: [
@@ -73,7 +81,7 @@ import { DatasheetWidgetService } from './services/datasheet.widget.service';
     RecordCommentService,
     DatasheetFieldHandler,
     ComputeFieldReferenceManager,
-    DatasheetWidgetService
+    DatasheetWidgetService,
   ],
   controllers: [DatasheetController],
   exports: [
@@ -86,7 +94,7 @@ import { DatasheetWidgetService } from './services/datasheet.widget.service';
     RecordCommentService,
     DatasheetFieldHandler,
     ComputeFieldReferenceManager,
-    DatasheetWidgetService
+    DatasheetWidgetService,
   ],
 })
 export class DatasheetModule {}

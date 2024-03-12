@@ -14,7 +14,7 @@
     <!-- Java -->
     <img src="https://img.shields.io/badge/Java-ED8B00?logo=spring&logoColor=white" alt="Idioma de Java, Spring Framework" />
     <!-- hub.docker.com-->
-    <a target="_blank" href="#installation">
+    <a target="_blank" href="#Instalación">
         <img src="https://img.shields.io/docker/pulls/apitable/init-db" />
     </a>
     <!-- Github Release Latest -->
@@ -70,7 +70,7 @@ Si solo quieres probar APITable [^info], utiliza nuestra versión alojada en la 
 
 Si quieres demostrar este proyecto de código abierto de APITable, haz clic aquí para la demo en línea de [⚡️Gitpod](https://gitpod.io/#https://github.com/apitable/apitable).
 
-Si quieres instalar APITable en tu entorno local o en la nube, consulta [💾 Instalación](#installation)
+Si quieres instalar APITable en tu entorno local o en la nube, consulta [💾 Instalación](#Instalación)
 
 Si quieres configurar tu entorno de desarrollo local, lee nuestra guía de [🧑● 💻 Developer Guide](./docs/contribute/developer-guide.md)
 
@@ -252,7 +252,7 @@ Para instalar apitable usando docker-compose, abra su terminal y ejecute lo sigu
 curl https://apitable.github.io/install.sh | bash
 ```
 
-Luego abre [https://localhost:80](https://localhost:80) en tu navegador para visitarlo.
+Luego abre [http://localhost:80](http://localhost:80) en tu navegador para visitarlo.
 
 También proporcionamos una imagen todo en uno basada en [pm2](https://pm2.keymetrics.io/) para propósitos de demostración o prueba (no recomendada para uso empresarial o producción):
 

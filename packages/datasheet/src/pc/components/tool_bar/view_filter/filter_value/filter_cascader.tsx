@@ -1,28 +1,44 @@
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
-import { DatasheetApi, ICascaderField, ICascaderNode, ILinkField, ILinkedField, Selectors } from '@apitable/core';
-import styles from './style.module.less';
-import { Cascader } from '../../../cascader';
+import {
+  DatasheetApi,
+  Field,
+  FieldType,
+  ICascaderField,
+  ICascaderNode,
+  IField,
+  ILinkedField,
+  ILinkField,
+  LookUpField,
+  Selectors
+} from '@apitable/core';
+import { useAppSelector } from 'pc/store/react-redux';
 import { ICascaderOption, mapTreeNodesRecursively } from '../../../../utils';
+import { Cascader } from '../../../cascader';
+import styles from './style.module.less';
 
 interface IFilterCascader {
   field: ICascaderField;
   onChange: (val: any) => void;
   value: string[];
+  disabled?: boolean;
   linkedFieldId?: string;
+  primaryField: IField;
 }
 
 export const FilterCascader = (props: IFilterCascader) => {
-  const datasheetId = useSelector(state => Selectors.getActiveDatasheetId(state))!;
-  const fieldMap = useSelector(state => Selectors.getFieldMap(state, datasheetId));
-  const { field, onChange, value, linkedFieldId } = props;
-  const linkedDatasheetId = linkedFieldId ? (fieldMap?.[linkedFieldId] as ILinkField)?.property.foreignDatasheetId : '';
+  const datasheetId = useAppSelector((state) => Selectors.getActiveDatasheetId(state))!;
+  const fieldMap = useAppSelector((state) => Selectors.getFieldMap(state, datasheetId));
+  const { field, disabled, onChange, value, linkedFieldId, primaryField } = props;
+  const lookUpFieldInfo = primaryField.type === FieldType.LookUp ?
+    (Field.bindModel(primaryField) as any as LookUpField).getLookUpEntityFieldInfo() : null;
+  const linkedDatasheetId = lookUpFieldInfo?.field.type === FieldType.Cascader ? lookUpFieldInfo.datasheetId :
+    linkedFieldId ? (fieldMap?.[linkedFieldId] as ILinkField)?.property.foreignDatasheetId : '';
   const [options, setOptions] = useState<ICascaderOption[]>([]);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const loadTreeSnapshot = useCallback(async() => {
+  const loadTreeSnapshot = useCallback(async () => {
     setLoading(true);
     const res = await DatasheetApi.getCascaderSnapshot({
       datasheetId: linkedDatasheetId || datasheetId,
@@ -45,7 +61,11 @@ export const FilterCascader = (props: IFilterCascader) => {
     <div className={styles.cascaderEditorContainer} ref={containerRef}>
       <Cascader
         loading={loading}
+        disabled={disabled}
         onChange={(val) => {
+          if (disabled) {
+            return;
+          }
           onChange(val);
         }}
         options={options}
@@ -53,10 +73,10 @@ export const FilterCascader = (props: IFilterCascader) => {
           height: '40px',
           lineHeight: '40px',
         }}
-        displayRender={label => {
+        displayRender={(label) => {
           return field.property.showAll ? label.join('/') : label[label.length - 1];
         }}
-        value={value?.map(cv => cv.split(('/')))}
+        value={value?.map((cv) => cv.split('/'))}
       />
     </div>
   );

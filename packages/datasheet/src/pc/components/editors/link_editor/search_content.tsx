@@ -16,16 +16,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Button, LinkButton, useThemeColors, ThemeName } from '@apitable/components';
-import {
-  CollaCommandName, ExecuteResult, Field, FieldType, ILinkField, ILinkIds, IReduxState, ISegment, IViewRow, SegmentType, Selectors, StoreActions,
-  Strings, t, TextBaseField, ViewDerivateBase,
-} from '@apitable/core';
-import { Align, FixedSizeList } from 'react-window';
 import { useDebounce, useUpdateEffect } from 'ahooks';
 import classNames from 'classnames';
 import Fuse from 'fuse.js';
 import { isEqual } from 'lodash';
+import * as React from 'react';
+import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Align, FixedSizeList } from 'react-window';
+import { Button, LinkButton, ThemeName, useThemeColors } from '@apitable/components';
+import {
+  CollaCommandName,
+  ExecuteResult,
+  Field,
+  FieldType,
+  ILinkField,
+  ILinkIds,
+  IOneWayLinkField,
+  IReduxState,
+  ISegment,
+  IViewRow,
+  SegmentType,
+  Selectors,
+  StoreActions,
+  Strings,
+  t,
+  TextBaseField,
+  ViewDerivateBase,
+} from '@apitable/core';
+import { AddOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Loading, Tooltip } from 'pc/components/common';
 import { TComponent } from 'pc/components/common/t_component';
@@ -34,18 +52,15 @@ import { expandPreviewModalClose } from 'pc/components/preview_file';
 import { useDispatch, useGetViewByIdWithDefault } from 'pc/hooks';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
-import * as React from 'react';
-import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from 'pc/store/react-redux';
 import EmptyPngDark from 'static/icon/datasheet/empty_state_dark.png';
 import EmptyPngLight from 'static/icon/datasheet/empty_state_light.png';
 
 import { RecordList } from './record_list';
 import style from './style.module.less';
-import { AddOutlined } from '@apitable/icons';
 
 interface ISearchContentProps {
-  field: ILinkField;
+  field: ILinkField | IOneWayLinkField
   searchValue: string;
   cellValue: ILinkIds;
   onlyShowSelected: boolean;
@@ -58,23 +73,24 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
   const { field, searchValue: _searchValue, onlyShowSelected, cellValue, onChange, focusIndex, datasheetId } = props;
   const foreignDatasheetId = field.property.foreignDatasheetId;
   const colors = useThemeColors();
-  const { foreignDatasheet, foreignDatasheetErrorCode } = useSelector((state: IReduxState) => {
+  const { foreignDatasheet, foreignDatasheetErrorCode } = useAppSelector((state: IReduxState) => {
     return {
       foreignDatasheet: Selectors.getDatasheet(state, foreignDatasheetId)!,
       foreignDatasheetErrorCode: Selectors.getDatasheetErrorCode(state, foreignDatasheetId),
     };
   });
-  const { readable: foreignDatasheetReadable, rowCreatable: foreignDatasheetEditable } = useSelector(state => {
+  const { readable: foreignDatasheetReadable, rowCreatable: foreignDatasheetEditable } = useAppSelector((state) => {
     return Selectors.getPermissions(state, foreignDatasheetId);
   });
-  const { formId, mirrorId, datasheetId: urlDsId } = useSelector(state => state.pageParams);
-  const themeName = useSelector(state => state.theme);
+  const { formId, mirrorId, datasheetId: urlDsId } = useAppSelector((state) => state.pageParams);
+  const themeName = useAppSelector((state) => state.theme);
   const ImageNoRecord = themeName === ThemeName.Light ? EmptyPngLight : EmptyPngDark;
 
   const foreignView = useGetViewByIdWithDefault(field.property.foreignDatasheetId, field.property.limitToView) as any;
   const hasLimitToView = Boolean(field.property.limitToView && foreignView?.id === field.property.limitToView);
   const { recordMap, meta } = foreignDatasheet.snapshot;
   const fieldMap = meta.fieldMap;
+  const archivedRecordIds = meta.archivedRecordIds || [];
   const recordListRef = useRef<FixedSizeList>(null);
   const dispatch = useDispatch();
   const searchValue = useDebounce(_searchValue, { wait: 300 });
@@ -84,8 +100,9 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
 
   const foreignDataMap = useMemo(() => {
     if (hasLimitToView && !foreignDatasheet.isPartOfData) {
+      const state = store.getState();
       return {
-        foreignRows: new ViewDerivateBase(store.getState(), foreignDatasheetId).getViewDerivation(foreignView).rowsWithoutSearch,
+        foreignRows: new ViewDerivateBase(state, foreignDatasheetId).getViewDerivation(foreignView).rowsWithoutSearch,
         foreignColumns: Selectors.getVisibleColumnsBase(foreignView),
       };
     }
@@ -96,28 +113,37 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
     }
     return {
       foreignRows,
-      foreignColumns: Selectors.getVisibleColumns(store.getState(), foreignDatasheet.id)
+      foreignColumns: Selectors.getVisibleColumns(store.getState(), foreignDatasheet.id),
     };
   }, [hasLimitToView, foreignDatasheet, foreignView, formId, foreignDatasheetId]);
 
   const { foreignRows, foreignColumns } = foreignDataMap;
 
-  const saveValue = useCallback((recordId: string) => {
-    let value: string[] = [];
+  const saveValue = useCallback(
+    (recordId: string) => {
+      let value: string[] = [];
 
-    if (field.property.limitSingleRecord) {
-      value = [recordId];
-      onChange(value);
-      return;
-    }
+      if (field.property.limitSingleRecord) {
+        value = [recordId];
+        onChange(value);
+        return;
+      }
 
-    if (cellValue && cellValue.includes(recordId)) {
-      value = cellValue.filter(id => id !== recordId);
-    } else {
-      value = cellValue ? cellValue.concat([recordId]) : [recordId];
-    }
-    onChange(value.length ? value : null);
-  }, [cellValue, onChange, field]);
+      // filter one way link record
+      const filterCellValue = field.type === FieldType.Link ? cellValue : cellValue?.filter((id) => {
+        return foreignRows.some(row => row.recordId === id) || archivedRecordIds.includes(id);
+      });
+
+      if (filterCellValue && filterCellValue.includes(recordId)) {
+        value = filterCellValue.filter((id) => id !== recordId);
+      } else {
+        value = filterCellValue ? filterCellValue.concat([recordId]) : [recordId];
+      }
+      onChange(value.length ? value : null);
+    },
+
+    [cellValue, onChange, field, archivedRecordIds],
+  );
 
   const addNewRecord = () => {
     let newCellValue: ISegment[] | undefined;
@@ -150,7 +176,9 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
           recordIds: [recordId],
           viewId: hasLimitToView ? foreignView.id : undefined,
           datasheetId: foreignDatasheet.id,
-          onClose: () => { recordListRef.current && recordListRef.current.scrollToItem(foreignRows.length); },
+          onClose: () => {
+            recordListRef.current && recordListRef.current.scrollToItem(foreignRows.length);
+          },
         });
       } else {
         recordListRef.current && recordListRef.current.scrollToItem(0);
@@ -160,7 +188,7 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
 
   useEffect(() => {
     const onlyRecordIdMap = {};
-    Object.keys(recordMap).forEach(recordId => {
+    Object.keys(recordMap).forEach((recordId) => {
       onlyRecordIdMap[recordId] = recordId;
     });
     if (!isEqual(onlyRecordIdMap, filteredRecordIdMap)) {
@@ -169,8 +197,8 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
   }, [filteredRecordIdMap, recordMap]);
 
   useEffect(() => {
-    if (cellValue?.length) {
-      const currentSelectedRecordIds: IViewRow[] = cellValue.map(recordId => ({ recordId }));
+    if (cellValue?.length && Array.isArray(cellValue)) {
+      const currentSelectedRecordIds: IViewRow[] = cellValue.map((recordId) => ({ recordId }));
       return setSelectedRecordIds(currentSelectedRecordIds);
     }
     return setSelectedRecordIds([]);
@@ -187,7 +215,7 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
   const entityForeignRows = useMemo(() => {
     const foreignRowMap: { [recordId: string]: string } = {};
     const restForeignRows: IViewRow[] = [];
-    foreignRows.map(({ recordId }) => foreignRowMap[recordId] = recordId);
+    foreignRows.map(({ recordId }) => (foreignRowMap[recordId] = recordId));
     selectedRecordIds.forEach(({ recordId }) => {
       if (!foreignRowMap[recordId]) {
         restForeignRows.push({ recordId });
@@ -223,28 +251,31 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
     if (onlyShowRows) {
       rows = onlyShowRows;
     }
-    return rows.filter(row => {
-      return Boolean(filteredRecordIdMap[row.recordId]);
-    }).map(row => {
-      const recordId = row.recordId;
-      const result: {
-        recordId: string, content: { [fieldId: string]: string | null },
-      } = { recordId: recordId, content: {}};
-      // Search set construction for visible columns only
-      foreignColumns.slice(0, 6).forEach(column => {
-        const field = fieldMap[column.fieldId];
+    return rows
+      .filter((row) => {
+        return Boolean(filteredRecordIdMap[row.recordId]);
+      })
+      .map((row) => {
+        const recordId = row.recordId;
+        const result: {
+          recordId: string;
+          content: { [fieldId: string]: string | null };
+        } = { recordId: recordId, content: {} };
+        // Search set construction for visible columns only
+        foreignColumns.slice(0, 6).forEach((column) => {
+          const field = fieldMap[column.fieldId];
 
-        // Filtering of attachment fields
-        if (!field || field.type === FieldType.Attachment) {
-          return;
-        }
-        const state = store.getState();
-        const foreignDatasheet = Selectors.getDatasheet(state, foreignDatasheetId)!;
-        const cellValue = Selectors.getCellValue(state, foreignDatasheet.snapshot, recordId, field.id);
-        result.content[field.id] = Field.bindModel(field).cellValueToString(cellValue);
+          // Filtering of attachment fields
+          if (!field || field.type === FieldType.Attachment) {
+            return;
+          }
+          const state = store.getState();
+          const foreignDatasheet = Selectors.getDatasheet(state, foreignDatasheetId)!;
+          const cellValue = Selectors.getCellValue(state, foreignDatasheet.snapshot, recordId, field.id);
+          result.content[field.id] = Field.bindModel(field).cellValueToString(cellValue);
+        });
+        return result;
       });
-      return result;
-    });
     // eslint-disable-next-line
   }, [entityForeignRows, foreignColumns, filteredRecordIdMap, fieldMap, foreignDatasheetId, onlyShowRows, searchedFlag, store]);
 
@@ -254,8 +285,8 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
       return null;
     }
     // Readable permissions on related tables and above are required to support queries on data other than the first column
-    const searchKeys = (formId || foreignDatasheetReadable) ?
-      foreignColumns.slice(1).map(column => ({ name: 'content.' + column.fieldId, weight: 1 })) : [];
+    const searchKeys =
+      formId || foreignDatasheetReadable ? foreignColumns.slice(1).map((column) => ({ name: 'content.' + column.fieldId, weight: 1 })) : [];
     // Give higher weights to the first column, the main field
     const fuse = new Fuse(searchSource, {
       keys: [{ name: 'content.' + foreignColumns[0].fieldId, weight: 2 }, ...searchKeys],
@@ -280,12 +311,12 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
     }
     // Theoretically fuse will not be null, but here is a compatibility
     if (!searchValue || fuse == null) {
-      return rows;
+      return rows.filter(row => !archivedRecordIds.includes(row.recordId));
     }
 
-    return fuse.search(searchValue).map(result => {
+    return fuse.search(searchValue).map((result) => {
       return { recordId: (result as any).item.recordId }; // FIXME:TYPE
-    });
+    }).filter(row => !archivedRecordIds.includes(row.recordId));
 
     // If the records of the associated table are not added or subtracted, the query results are only updated when the searchValue changes
     // eslint-disable-next-line
@@ -321,58 +352,61 @@ const SearchContentBase: React.ForwardRefRenderFunction<{ getFilteredRows(): { [
   return (
     <>
       <div className={style.cardMiddle}>
-        {foreignDatasheet.isPartOfData && !foreignDatasheetErrorCode ? <Loading className={style.loading} /> :
-          rows.length ?
-            <RecordList
-              ref={recordListRef}
-              datasheetId={foreignDatasheet.id}
-              rows={rows}
-              view={foreignView}
-              focusIndex={focusIndex}
-              selectedRecordIds={cellValue}
-              onClick={saveValue}
-              foreignDatasheetReadable={foreignDatasheetReadable}
-            /> :
-            <div className={style.empty}>
-              {onlyShowSelected ?
-                <>
-                  <img height={150} width={200} src={ImageNoRecord.src} alt="no record" />
-                  <div className={style.text}>{t(Strings.no_selected_record)}</div>
-                </> :
-                <>
-                  <div className={style.text}>{
+        {foreignDatasheet.isPartOfData && !foreignDatasheetErrorCode ? (
+          <Loading className={style.loading} />
+        ) : rows.length ? (
+          <RecordList
+            ref={recordListRef}
+            datasheetId={foreignDatasheet.id}
+            rows={rows}
+            view={foreignView}
+            focusIndex={focusIndex}
+            selectedRecordIds={cellValue}
+            onClick={saveValue}
+            foreignDatasheetReadable={foreignDatasheetReadable}
+          />
+        ) : (
+          <div className={style.empty}>
+            {onlyShowSelected ? (
+              <>
+                <img height={150} width={200} src={ImageNoRecord.src} alt="no record" />
+                <div className={style.text}>{t(Strings.no_selected_record)}</div>
+              </>
+            ) : (
+              <>
+                <div className={style.text}>
+                  {
                     <TComponent
                       tkey={t(Strings.not_found_record_contains_value)}
                       params={{
                         searchValueSpan: <span className={style.searchValue}>{searchValue}</span>,
                       }}
                     />
-                  }</div>
-                  {
-                    foreignDatasheetEditable && !formId &&
-                    <Button
-                      className={classNames(style.addRecordBtn, 'textButton')}
-                      onClick={addNewRecord}
-                      color="primary"
-                      prefixIcon={<AddOutlined color={colors.black[50]} size={14} />}
-                    >
-                      {<TComponent
+                  }
+                </div>
+                {foreignDatasheetEditable && !formId && (
+                  <Button
+                    className={classNames(style.addRecordBtn, 'textButton')}
+                    onClick={addNewRecord}
+                    color="primary"
+                    prefixIcon={<AddOutlined color={colors.black[50]} size={14} />}
+                  >
+                    {
+                      <TComponent
                         tkey={t(Strings.add_new_record_by_name)}
                         params={{
                           span: searchValue && <span className={style.searchValue}>{searchValue}</span>,
                         }}
-                      />}
-                    </Button>
-                  }
-                </>
-              }
-            </div>
-        }
+                      />
+                    }
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
-      <Tooltip
-        title={foreignDatasheetEditable ? '' : t(Strings.no_permission_to_edit_datasheet)}
-        trigger="hover"
-      >
+      <Tooltip title={foreignDatasheetEditable ? '' : t(Strings.no_permission_to_edit_datasheet)} trigger="hover">
         <div className={classNames(style.addRecord)}>
           <LinkButton
             component="button"

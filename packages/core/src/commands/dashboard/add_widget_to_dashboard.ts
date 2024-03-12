@@ -21,8 +21,9 @@ import { ResourceType } from 'types';
 import { CollaCommandName } from '..';
 import { ExecuteResult, ICollaCommandDef, ICollaCommandExecuteContext } from '../../command_manager';
 import { Strings, t } from '../../exports/i18n';
-import { IDashboardLayout, Selectors } from '../../exports/store';
-import { DashboardAction } from '../../model/dashboard';
+import { IDashboardLayout } from '../../exports/store/interfaces';
+import { getDashboardSnapshot } from 'modules/database/store/selectors/resource/dashboard';
+import { DashboardAction } from '../../commands_actions/dashboard';
 
 export interface IAddWidgetToDashboard {
   cmd: CollaCommandName.AddWidgetToDashboard;
@@ -37,9 +38,9 @@ export const addWidgetToDashboard: ICollaCommandDef<IAddWidgetToDashboard> = {
   undoable: false,
 
   execute(context: ICollaCommandExecuteContext, options: IAddWidgetToDashboard) {
-    const { model: state } = context;
+    const { state: state } = context;
     const { dashboardId, widgetIds, cols } = options;
-    const dashboardSnapshot = Selectors.getDashboardSnapshot(state, dashboardId);
+    const dashboardSnapshot = getDashboardSnapshot(state, dashboardId);
 
     if (!dashboardSnapshot) {
       return null;

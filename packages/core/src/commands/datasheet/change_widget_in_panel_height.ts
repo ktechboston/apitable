@@ -17,10 +17,10 @@
  */
 
 import { ICollaCommandDef, ICollaCommandExecuteContext, ExecuteResult } from 'command_manager';
-import { getResourceWidgetPanels } from '../../exports/store/selectors';
-import { DatasheetActions } from 'model';
+import { getResourceWidgetPanels } from 'modules/database/store/selectors/resource';
+import { DatasheetActions } from 'commands_actions/datasheet';
 import { ResourceType } from 'types';
-import { CollaCommandName } from 'commands';
+import { CollaCommandName } from 'commands/enum';
 
 export interface IChangeWidgetInPanelHeight {
   cmd: CollaCommandName.ChangeWidgetInPanelHeight;
@@ -35,7 +35,7 @@ export const changeWidgetInPanelHeight: ICollaCommandDef<IChangeWidgetInPanelHei
   undoable: false,
 
   execute(context: ICollaCommandExecuteContext, options) {
-    const { model: state } = context;
+    const { state: state } = context;
     const { widgetId, resourceId, resourceType, panelId, widgetHeight } = options;
     const widgetPanels = getResourceWidgetPanels(state, resourceId, resourceType);
 
@@ -47,14 +47,14 @@ export const changeWidgetInPanelHeight: ICollaCommandDef<IChangeWidgetInPanelHei
 
     const widgets = widgetPanels[widgetPanelIndex]!.widgets;
     const widgetIndex = widgets.findIndex(item => item.id === widgetId);
-    
+
     if (widgetIndex < 0) { return null; }
 
     const changeWidgetHeightAction = DatasheetActions.changeWidgetHeight2Action(
       state, { widgetIndex, widgetPanelIndex, widgetHeight, resourceId, resourceType }
     );
 
-    if (!changeWidgetHeightAction) { 
+    if (!changeWidgetHeightAction) {
       return null;
     }
 

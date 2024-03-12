@@ -22,11 +22,11 @@ import { ISwitchProps } from './interface';
 
 const duration = '.3s';
 
-const SIZE_MAP = {
+export const SIZE_MAP = {
   small: {
-    height: 14,
-    width: 24,
-    innerSize: 10,
+    height: 16,
+    width: 28,
+    innerSize: 12,
   },
   default: {
     height: 20,
@@ -37,6 +37,12 @@ const SIZE_MAP = {
     height: 28,
     width: 48,
     innerSize: 20,
+  },
+
+  xl: {
+    height: 48,
+    width: 116,
+    innerSize: 40,
   }
 };
 

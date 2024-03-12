@@ -16,28 +16,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Api, IReduxState, ITeamTreeNode, StoreActions, Strings, t } from '@apitable/core';
-import { Button, ButtonGroup, Skeleton, useThemeColors } from '@apitable/components';
 import { Input, TreeSelect } from 'antd';
+import type { DataNode } from 'antd/es/tree';
+import { useEffect, useState } from 'react';
+import { shallowEqual } from 'react-redux';
+import { Button, ButtonGroup, Skeleton, useThemeColors } from '@apitable/components';
+import { Api, IReduxState, ITeamTreeNode, StoreActions, Strings, t } from '@apitable/core';
+import { ChevronDownOutlined, DeleteOutlined, TimeOutlined, CopyOutlined, TriangleRightFilled } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Message, Popconfirm, Tooltip } from 'pc/components/common';
 import { ComponentDisplay, ScreenSize } from 'pc/components/common/component_display';
 import { Modal } from 'pc/components/common/mobile/modal';
 import { useAppDispatch } from 'pc/hooks/use_app_dispatch';
+import { useAppSelector } from 'pc/store/react-redux';
 import { copy2clipBoard } from 'pc/utils';
-import { useEffect, useState } from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
 import { InviteAlert } from '../components/invite-alert';
 import styles from './style.module.less';
-import { ChevronDownOutlined, DeleteOutlined, TimeOutlined, CopyOutlined, TriangleRightFilled } from '@apitable/icons';
-import type { DataNode } from 'antd/es/tree';
 
 const { TreeNode } = TreeSelect;
 
 export const LinkInvite = () => {
   const colors = useThemeColors();
   const dispatch = useAppDispatch();
-  const { linkList, userInfo, teamList } = useSelector(
+  const { linkList, userInfo, teamList } = useAppSelector(
     (state: IReduxState) => ({
       linkList: state.invite.linkList,
       userInfo: state.user.info,
@@ -60,7 +61,7 @@ export const LinkInvite = () => {
   useEffect(() => {
     if (!firstTeamId) return;
 
-    const linkAds = linkList.map(item => item.teamId);
+    const linkAds = linkList.map((item) => item.teamId);
     if (linkAds.includes(firstTeamId)) {
       setValue('');
     } else {
@@ -77,30 +78,26 @@ export const LinkInvite = () => {
   };
 
   const renderTreeNodes = (data: ITeamTreeNode[]) => {
-    const tempList = linkList.map(item => item.teamId);
+    const tempList = linkList.map((item) => item.teamId);
     if (!data || data.length === 0) {
       return <></>;
     }
-    return data.map(item => {
+    return data.map((item) => {
       const config = {
         title: item.teamName,
         value: item.teamId,
         disabled: tempList.includes(item.teamId),
       };
-      
+
       return (
-        <TreeNode 
-          {...config} 
-          key={item.teamId}
-          isLeaf={!item.hasChildren}
-        >
-          { item.children && item.children.length > 0 && renderTreeNodes(item.children)}
+        <TreeNode {...config} key={item.teamId} isLeaf={!item.hasChildren}>
+          {item.children && item.children.length > 0 && renderTreeNodes(item.children)}
         </TreeNode>
       );
     });
   };
 
-  const createBtnClick = async(teamId: string) => {
+  const createBtnClick = async (teamId: string) => {
     if (!teamId) {
       Message.warning({ content: t(Strings.placeholder_choose_group) });
       return;
@@ -117,7 +114,7 @@ export const LinkInvite = () => {
     }
   };
 
-  const deleteLink = async(teamId: string) => {
+  const deleteLink = async (teamId: string) => {
     const {
       data: { success, message },
     } = await Api.deleteLink(teamId);
@@ -149,8 +146,8 @@ export const LinkInvite = () => {
     if (linkList.length === 0) {
       return null;
     }
-    const joinToken = linkList.map(item => ({ ...item, token: getLinkUrl(item.token) }));
-    return joinToken.map(item => {
+    const joinToken = linkList.map((item) => ({ ...item, token: getLinkUrl(item.token) }));
+    return joinToken.map((item) => {
       const teamTitle = item.parentTeamName ? `${item.parentTeamName} - ${item.teamName}` : item.teamName;
       return (
         <div className={styles.linkItem} key={item.teamId}>
@@ -175,7 +172,7 @@ export const LinkInvite = () => {
                   trigger="click"
                   okText={t(Strings.delete)}
                   visible={showPopconfirmKey === item.token}
-                  onVisibleChange={v => popconfirmVisibleChange(item.token, v)}
+                  onVisibleChange={(v) => popconfirmVisibleChange(item.token, v)}
                 >
                   <Button>
                     <DeleteOutlined color={colors.secondLevelText} />
@@ -203,11 +200,10 @@ export const LinkInvite = () => {
     });
   };
 
-  const onExpand = (expandedKeys: DataNode['key'][]) => {   
+  const onExpand = (expandedKeys: DataNode['key'][]) => {
     const teamId = expandedKeys[expandedKeys.length - 1];
-    
+
     dispatch(StoreActions.getSubTeam(teamId));
-  
   };
 
   return (
@@ -222,12 +218,12 @@ export const LinkInvite = () => {
             <TreeSelect
               value={value === '' ? undefined : value}
               placeholder={t(Strings.placeholder_choose_group)}
-              onChange={value => onChange(value)}
+              onChange={(value) => onChange(value)}
               suffixIcon={<ChevronDownOutlined />}
               treeIcon
               switcherIcon={<TriangleRightFilled size={12} />}
               showSearch={false}
-              dropdownClassName="dropdownInvite"
+              popupClassName="dropdownInvite"
               treeDefaultExpandedKeys={[firstTeamId]}
               listHeight={200}
               onTreeExpand={onExpand}

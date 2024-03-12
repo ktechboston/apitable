@@ -20,6 +20,7 @@ package com.apitable.organization.service;
 
 import com.apitable.organization.dto.MemberDTO;
 import com.apitable.organization.dto.TenantMemberDto;
+import com.apitable.organization.dto.UnitMemberTeamDTO;
 import com.apitable.organization.dto.UploadDataDTO;
 import com.apitable.organization.entity.MemberEntity;
 import com.apitable.organization.ro.TeamAddMemberRo;
@@ -28,7 +29,9 @@ import com.apitable.organization.ro.UpdateMemberRo;
 import com.apitable.organization.vo.MemberBriefInfoVo;
 import com.apitable.organization.vo.MemberInfoVo;
 import com.apitable.organization.vo.UploadParseResultVO;
+import com.apitable.workspace.vo.NodeRoleMemberVo;
 import com.baomidou.mybatisplus.extension.service.IService;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -55,12 +58,30 @@ public interface IMemberService extends IService<MemberEntity> {
     Long getMemberIdByUserIdAndSpaceId(Long userId, String spaceId);
 
     /**
+     * Get user id.
+     *
+     * @param memberId member table id
+     * @return user id
+     * @author Chambers
+     */
+    Long getUserIdByMemberId(Long memberId);
+
+    /**
      * get user id list.
      *
      * @param memberIds member id list
      * @return user id list
      */
     List<Long> getUserIdsByMemberIds(List<Long> memberIds);
+
+    /**
+     * Get emails.
+     *
+     * @param memberIds member table ids
+     * @return email list
+     * @author Chambers
+     */
+    List<String> getEmailsByMemberIds(List<Long> memberIds);
 
     /**
      * get user info.
@@ -70,6 +91,15 @@ public interface IMemberService extends IService<MemberEntity> {
      * @return MemberId
      */
     MemberEntity getByUserIdAndSpaceId(Long userId, String spaceId);
+
+    /**
+     * Get member include deleted.
+     *
+     * @param userId  user id
+     * @param spaceId space id
+     * @return MemberId
+     */
+    MemberEntity getByUserIdAndSpaceIdIncludeDeleted(Long userId, String spaceId);
 
     /**
      * get user info.
@@ -96,6 +126,22 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param spaceId space id
      */
     void checkUserIfInSpace(Long userId, String spaceId);
+
+    /**
+     * queries whether a member is in a space.
+     *
+     * @param spaceId  space id
+     * @param memberId memberId
+     */
+    void checkMemberInSpace(String spaceId, Long memberId);
+
+    /**
+     * batch queries whether a member is in a space.
+     *
+     * @param spaceId   space id
+     * @param memberIds memberIds
+     */
+    void checkMembersInSpace(String spaceId, List<Long> memberIds);
 
     /**
      * set the main admin.
@@ -223,6 +269,14 @@ public interface IMemberService extends IService<MemberEntity> {
     String getOpenIdByMemberId(Long memberId);
 
     /**
+     * get userId by openId.
+     *
+     * @param openId open id
+     * @return user id
+     */
+    Long getUserIdByOpenId(String spaceId, String openId);
+
+    /**
      * get member id even if he was deleted.
      *
      * @param spaceId space id
@@ -256,20 +310,20 @@ public interface IMemberService extends IService<MemberEntity> {
     List<String> getSpaceIdByUserId(Long userId);
 
     /**
+     * get all user's spaces' id.
+     *
+     * @param userId user id
+     * @return space id
+     */
+    List<String> getSpaceIdByUserIdIgnoreDeleted(Long userId);
+
+    /**
      * get all id of user's spaces which user never modify his member's nickname.
      *
      * @param userId user id
      * @return space ids
      */
     List<String> getSpaceIdWithoutNameModifiedByUserId(Long userId);
-
-    /**
-     * get inactive member by email.
-     *
-     * @param email email
-     * @return MemberDto List
-     */
-    List<MemberDTO> getInactiveMemberByEmails(String email);
 
     /**
      * update the user's member name in all spaces.
@@ -318,6 +372,15 @@ public interface IMemberService extends IService<MemberEntity> {
     List<MemberBriefInfoVo> getMemberBriefInfo(List<Long> memberIds);
 
     /**
+     * Get node role member with sort.
+     *
+     * @param memberIds member ids
+     * @return List of NodeRoleMemberVo
+     * @author Chambers
+     */
+    List<NodeRoleMemberVo> getNodeRoleMemberWithSort(Collection<Long> memberIds);
+
+    /**
      * create members in batches.
      * the primary key ID for each member must be specified
      * the root department has been bound
@@ -340,9 +403,19 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param inviteUserId invite user id
      * @param spaceId      space id
      * @param emails       email list
-     * @return invite member id list
+     * @return invite email list
      */
-    List<Long> emailInvitation(Long inviteUserId, String spaceId, List<String> emails);
+    List<String> emailInvitation(Long inviteUserId, String spaceId, List<String> emails);
+
+    /**
+     * Create invitation member.
+     *
+     * @param inviteUserId invite user id
+     * @param spaceId      space id
+     * @param emails       email list
+     * @author Chambers
+     */
+    void createInvitationMember(Long inviteUserId, String spaceId, List<String> emails);
 
     /**
      * send invite email to email.
@@ -350,8 +423,9 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param spaceId      space id
      * @param fromMemberId the member who invite user
      * @param email        email
+     * @return invite token
      */
-    void sendInviteEmail(String lang, String spaceId, Long fromMemberId, String email);
+    String sendInviteEmail(String lang, String spaceId, Long fromMemberId, String email);
 
     /**
      * send an invitation space notification email.
@@ -395,7 +469,7 @@ public interface IMemberService extends IService<MemberEntity> {
      *
      * @param data member info
      */
-    void updateMember(UpdateMemberRo data);
+    void updateMember(Long userId, UpdateMemberRo data);
 
     /**
      * batch update member departments.
@@ -527,7 +601,7 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param spaceId space id
      * @return member amount
      */
-    int getTotalMemberCountBySpaceId(String spaceId);
+    long getTotalMemberCountBySpaceId(String spaceId);
 
     /**
      * get space's total active member amount.
@@ -535,7 +609,7 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param spaceId space id
      * @return member amount
      */
-    int getTotalActiveMemberCountBySpaceId(String spaceId);
+    long getTotalActiveMemberCountBySpaceId(String spaceId);
 
     /**
      * pre delete user info.
@@ -559,6 +633,15 @@ public interface IMemberService extends IService<MemberEntity> {
      * @param memberId member id
      */
     void clearOpenIdById(Long memberId);
+
+    /**
+     * get member info by user id.
+     *
+     * @param spaceId space id
+     * @param userIds user id list
+     * @return MemberEntity List
+     */
+    List<MemberEntity> getByUserIds(String spaceId, List<Long> userIds);
 
     /**
      * get open ids by user ids.
@@ -594,12 +677,12 @@ public interface IMemberService extends IService<MemberEntity> {
     List<MemberDTO> getInactiveMemberDtoByMobile(String mobile);
 
     /**
-     * get inactive space by email.
+     * get inactive member by email.
      *
      * @param email email
      * @return MemberDto List
      */
-    List<MemberDTO> getInactiveMemberDtoByEmail(String email);
+    List<MemberDTO> getInactiveMemberByEmail(String email);
 
     /**
      * get the user's space's amount.
@@ -662,4 +745,29 @@ public interface IMemberService extends IService<MemberEntity> {
      * @return member id
      */
     Long getMemberIdByUnitId(String spaceId, String unitId);
+
+    /**
+     * select space id by user id.
+     *
+     * @param userId user id
+     * @return space ids
+     */
+    List<String> getUserOwnSpaceIds(Long userId);
+
+    /**
+     * check space invited record.
+     *
+     * @param spaceId space id
+     * @return boolean
+     */
+    boolean shouldPreventInvitation(String spaceId);
+
+    /**
+     * get member base info.
+     *
+     * @param spaceId space id
+     * @param userIds user id
+     * @return List UnitMemberTeamDTO
+     */
+    List<UnitMemberTeamDTO> getMemberBySpaceIdAndUserIds(String spaceId, List<Long> userIds);
 }

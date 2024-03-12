@@ -17,8 +17,8 @@
  */
 
 import { utils } from '@rjsf/core';
+import { Box, Typography, useTheme } from '@apitable/components';
 import { IFieldTemplateProps } from '../../core/interface';
-import { Typography, useTheme } from '@apitable/components';
 
 const { getSchemaType } = utils;
 
@@ -52,12 +52,17 @@ export const FieldTemplate = (props: IFieldTemplateProps) => {
   // console.log('errors', errors);
   return (
     <div className={classNames} style={{ width: '100%', paddingTop, marginBottom }}>
-      {
-        showTitle() && <Typography variant="h7" color={theme.color.fc2}>
-          {required ? <span style={{ color: 'red' }}>* </span> : null}{label}
+      {showTitle() && (
+        <Typography variant="h7" color={theme.color.textCommonPrimary} >
+          {required ? <span style={{ color: 'red' }}>* </span> : null}
+          {label}
         </Typography>
-      }
-      {description}
+      )}
+
+      <Box padding={'4px 0'}>
+        {description}
+      </Box>
+
       {children}
       {errors}
       {help}

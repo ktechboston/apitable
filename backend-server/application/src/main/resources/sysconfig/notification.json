@@ -367,7 +367,7 @@
       "is_mobile": true,
       "is_mail": true,
       "is_notification": true,
-      "mail_template_subject": "assignedToGroup",
+      "mail_template_subject": "addSubAdmin",
       "notifications_type": "member",
       "to_tag": "members",
       "url": "/management"
@@ -422,7 +422,7 @@
       "mail_template_subject": "assignedToGroup",
       "notifications_type": "member",
       "to_tag": "members",
-      "url": "/management"
+      "url": "/org"
     },
     "assigned_to_role": {
       "can_jump": true,
@@ -436,7 +436,7 @@
       "mail_template_subject": "assignedToRole",
       "notifications_type": "member",
       "to_tag": "members",
-      "url": "/management"
+      "url": "/workbench"
     },
     "auto_cancel_record_subscription": {
       "can_jump": true,
@@ -656,7 +656,7 @@
       "mail_template_subject": "removeFromRole",
       "notifications_type": "member",
       "to_tag": "members",
-      "url": "/management"
+      "url": "/workbench"
     },
     "removed_from_space_toadmin": {
       "can_jump": true,
@@ -710,6 +710,7 @@
       "is_mail": true,
       "is_mobile": true,
       "is_notification": true,
+      "mail_template_subject": "remindComment",
       "notifications_type": "record",
       "to_tag": "members",
       "url": "/workbench"
@@ -1144,6 +1145,14 @@
       "to_tag": "space_admins",
       "url": "/management"
     },
+    "space_refresh_contact_seats_limit": {
+      "format_string": "space_refresh_contact_seats_limit",
+      "id": "space_refresh_contact_seats_limit",
+      "is_browser": true,
+      "is_notification": true,
+      "notifications_type": "space",
+      "to_tag": "space_admins"
+    },
     "space_yozooffice_notify": {
       "billing_notify": "integration_yozo_office",
       "can_jump": true,
@@ -1166,6 +1175,32 @@
       "is_mobile": true,
       "is_notification": true,
       "mail_template_subject": "subscribedRecordCellUpdated",
+      "notifications_type": "record",
+      "to_tag": "members",
+      "url": "/workbench"
+    },
+    "subscribed_record_unarchived": {
+      "can_jump": true,
+      "format_string": "subscribed_record_unarchived",
+      "id": "subscribed_record_unarchived",
+      "is_browser": true,
+      "is_mail": true,
+      "is_mobile": true,
+      "is_notification": true,
+      "mail_template_subject": "subscribedRecordUnarchived",
+      "notifications_type": "record",
+      "to_tag": "members",
+      "url": "/workbench"
+    },
+    "subscribed_record_archived": {
+      "can_jump": true,
+      "format_string": "subscribed_record_archived",
+      "id": "subscribed_record_archived",
+      "is_browser": true,
+      "is_mail": true,
+      "is_mobile": true,
+      "is_notification": true,
+      "mail_template_subject": "subscribedRecordArchived",
       "notifications_type": "record",
       "to_tag": "members",
       "url": "/workbench"
@@ -1217,6 +1252,20 @@
       "is_mobile": true,
       "notifications_type": "system",
       "to_tag": "all_users"
+    },
+    "workflow_execute_failed_notify": {
+      "can_jump": true,
+      "format_string": "workflow_execute_failed_notify",
+      "id": "workflow_execute_failed_notify",
+      "is_browser": true,
+      "is_mail": true,
+      "is_mobile": false,
+      "is_notification": true,
+      "mail_template_subject": "automationError",
+      "notifications_type": "space",
+      "is_component": true,
+      "to_tag": "users",
+      "url": "/workbench"
     }
   },
   "types": {

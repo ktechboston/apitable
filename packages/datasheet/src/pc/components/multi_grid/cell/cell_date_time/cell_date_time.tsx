@@ -16,31 +16,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AlarmUsersType, CollaCommandName, Field, IDateTimeField, Selectors, shallowEqual, Strings, t } from '@apitable/core';
-import { NotificationOutlined } from '@apitable/icons';
 import classNames from 'classnames';
 import dayjs from 'dayjs';
+import { useMemo } from 'react';
+import * as React from 'react';
+import { useThemeColors } from '@apitable/components';
+import { AlarmUsersType, CollaCommandName, Field, IDateTimeField, Selectors, shallowEqual, Strings, t } from '@apitable/core';
+import { NotificationOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Tooltip } from 'pc/components/common';
 import { resourceService } from 'pc/resource_service';
-import { useThemeColors } from '@apitable/components';
+import { useAppSelector } from 'pc/store/react-redux';
+import { INNER_DAY_ALARM_SUBTRACT } from 'pc/utils';
 import { getEnvVariables } from 'pc/utils/env';
-import { useMemo } from 'react';
-import * as React from 'react';
-import { useSelector } from 'react-redux';
 import { ICellComponentProps } from '../cell_value/interface';
-import styles from './styles.module.less';
 // @ts-ignore
-import { AlarmTipText } from 'enterprise';
+import { AlarmTipText } from 'enterprise/alarm/alarm_tip_text';
+import styles from './styles.module.less';
 
 interface ICellDateTime extends ICellComponentProps {
   field: IDateTimeField;
 }
 
-export const CellDateTime: React.FC<React.PropsWithChildren<ICellDateTime>> = props => {
+export const CellDateTime: React.FC<React.PropsWithChildren<ICellDateTime>> = (props) => {
   const colors = useThemeColors();
   const { className, field, recordId, cellValue, toggleEdit, showAlarm } = props;
-  const { snapshot, user, dstId } = useSelector(state => {
+  const userTimeZone = useAppSelector(Selectors.getUserTimeZone)!;
+  const { snapshot, user, dstId } = useAppSelector((state) => {
     return {
       snapshot: Selectors.getSnapshot(state)!,
       user: state.user.info,
@@ -52,27 +54,28 @@ export const CellDateTime: React.FC<React.PropsWithChildren<ICellDateTime>> = pr
   const cellString = Field.bindModel(field).cellValueToString(cellValue);
   const [date, time, timeRule, abbr] = cellString ? cellString.split(' ') : [];
   const { RECORD_TASK_REMINDER_VISIBLE } = getEnvVariables();
-  const timeZone = field.property.timeZone;
+  const timeZone = field.property.timeZone || userTimeZone;
 
+  // let alarmTime = alarm?.time || dayjs.tz(alarm?.alarmAt).tz(timeZone).format('HH:mm');
+  const isInnerDay = alarm?.subtract && Object.keys(INNER_DAY_ALARM_SUBTRACT).includes(alarm?.subtract);
   const alarmRealTime = useMemo(() => {
-    let alarmDate = timeZone ? dayjs(cellValue as number).tz(timeZone) : dayjs(cellValue as number);
-    const subtractMatch = alarm?.subtract?.match(/^([0-9]+)(\w{1,2})$/);
-
-    if (subtractMatch) {
-      alarmDate = alarmDate.subtract(Number(subtractMatch[1]), subtractMatch[2] as any);
+    let alarmTime = alarm?.time || dayjs.tz(alarm?.alarmAt).tz(timeZone).format('HH:mm');
+    const alarmDate = dayjs.tz(cellValue as number).tz(timeZone);
+    if (isInnerDay) {
+      alarmTime = alarmDate.format('HH:mm');
     }
-    return alarm?.time || alarmDate.format('HH:mm');
-  }, [alarm?.subtract, alarm?.time, cellValue, timeZone]);
+    return alarmTime;
+  }, [alarm?.alarmAt, alarm?.time, cellValue, isInnerDay, timeZone]);
 
   return (
     <div
       className={classNames('dateTime', styles.dateTime, className, {
-        [styles.hoverAlarm]: showAlarm && !alarm && date
+        [styles.hoverAlarm]: showAlarm && !alarm && date,
       })}
       onDoubleClick={toggleEdit}
     >
       {cellValue != null && (
-        <div className='dateTimeValue'>
+        <div className="dateTimeValue">
           <div className={classNames(styles.date, !time && styles.single, 'cellDateTimeDate')}>{date}</div>
           {time && <div className={classNames(styles.time, 'time')}>{time}</div>}
           {timeRule && <div className={classNames(styles.time, 'time')}>{timeRule}</div>}
@@ -80,37 +83,36 @@ export const CellDateTime: React.FC<React.PropsWithChildren<ICellDateTime>> = pr
         </div>
       )}
       {showAlarm && Boolean(alarm) && date && Boolean(snapshot) && RECORD_TASK_REMINDER_VISIBLE && (
-        <Tooltip
-          title={AlarmTipText && <AlarmTipText datasheetId={dstId!} recordId={recordId!} dateTimeFieldId={field.id!} />}
-        >
+        <Tooltip title={AlarmTipText && <AlarmTipText datasheetId={dstId!} recordId={recordId!} dateTimeFieldId={field.id!} />}>
           <span className={styles.alarm} onClick={toggleEdit}>
             <NotificationOutlined color={colors.deepPurple[500]} size={16} />
-            <span className={styles.alarmTime}>
-              {alarmRealTime}
-            </span>
+            <span className={styles.alarmTime}>{alarmRealTime}</span>
           </span>
         </Tooltip>
       )}
       {showAlarm && !alarm && date && RECORD_TASK_REMINDER_VISIBLE && Boolean(snapshot) && (
-        <Tooltip
-          title={t(Strings.task_reminder_hover_cell_tooltip)}
-        >
-          <span className={classNames(styles.quickAlarm)} onMouseDown={async() => {
-            toggleEdit && await toggleEdit();
-            resourceService.instance!.commandManager.execute({
-              cmd: CollaCommandName.SetDateTimeCellAlarm,
-              recordId: recordId!,
-              fieldId: field.id,
-              alarm: {
-                subtract: '',
-                alarmAt: cellValue as string,
-                alarmUsers: [{
-                  type: AlarmUsersType.Member,
-                  data: user?.unitId!
-                }],
-              },
-            });
-          }}>
+        <Tooltip title={t(Strings.task_reminder_hover_cell_tooltip)}>
+          <span
+            className={classNames(styles.quickAlarm)}
+            onMouseDown={async () => {
+              toggleEdit && (await toggleEdit());
+              resourceService.instance!.commandManager.execute({
+                cmd: CollaCommandName.SetDateTimeCellAlarm,
+                recordId: recordId!,
+                fieldId: field.id,
+                alarm: {
+                  subtract: '',
+                  alarmAt: cellValue as string,
+                  alarmUsers: [
+                    {
+                      type: AlarmUsersType.Member,
+                      data: user?.unitId!,
+                    },
+                  ],
+                },
+              });
+            }}
+          >
             <NotificationOutlined color={colors.fc3} size={16} />
           </span>
         </Tooltip>

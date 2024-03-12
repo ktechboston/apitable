@@ -19,7 +19,7 @@
 import { FormulaFunc, IFormulaParam } from './basic';
 import { BasicValueType, FormulaFuncType } from 'types';
 import { AstNode, ValueOperandNode } from 'formula_parser/parser/ast';
-import { Field } from 'model';
+import { Field } from 'model/field';
 import dayjs from 'dayjs';
 import { t, Strings } from '../../exports/i18n';
 
@@ -82,9 +82,9 @@ export class ArrayJoin extends ArrayFunc {
     const { value, node } = valuesParam;
     const separator = (separatorParam && separatorParam.value) || ', ';
 
-    if (node.valueType === BasicValueType.Array) {
+    if (value && node.valueType === BasicValueType.Array) {
       const { field, context } = node as ValueOperandNode;
-      if (Field.bindContext(field, context.state).isComputed) {
+      if (context && Field.bindContext(field, context.state).isComputed) {
         const v = (Field.bindContext(field, context.state) as any).arrayValueToArrayStringValueArray(value);
         return v?.join(separator);
       }
@@ -232,10 +232,10 @@ export class CountIf extends ArrayFunc {
     const symbol = params[2]?.value || '=';
     const reg = /^(=)|(!=|！=)|(>)|(<)$/g;
     const finalSymbol = symbol.replace(reg, (_m: string, $1?: string, $2?: string, $3?: string, $4?: string) => {
-      return ($1 && SymbolType.Equal) || 
+      return ($1 && SymbolType.Equal) ||
         ($2 && SymbolType.NotEqual) ||
         ($3 && SymbolType.Greater) ||
-        ($4 && SymbolType.Less) || 
+        ($4 && SymbolType.Less) ||
         SymbolType.Equal;
     });
 

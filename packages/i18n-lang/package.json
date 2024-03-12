@@ -1,6 +1,6 @@
 {
   "name": "@apitable/i18n-lang",
-  "version": "0.99.0",
+  "version": "1.10.0",
   "private": true,
   "description": "datasheet i18n lang package",
   "author": "APITable Ltd. <support@apitable.com>",
@@ -11,11 +11,11 @@
     "lib"
   ],
   "scripts": {
-    "build": "rm -rf ./dist && yarn tsc",
+    "build": "rm -rf ./dist && tsc",
     "build:publish": "rm -rf ./dist && tsc -b tsconfig.publish.json && mv ./dist/index-publish.d.ts ./dist/index.d.ts",
     "start": "tsc -w"
   },
   "devDependencies": {
-    "typescript": "^4.8.2"
+    "typescript": "4.8.2"
   }
 }

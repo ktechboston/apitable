@@ -16,59 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// eslint-disable-next-line no-restricted-imports
-import { ITheme, Select, useTheme } from '@apitable/components';
+import { ITheme, DropdownSelect as Select, useTheme } from '@apitable/components';
 import { FieldType, IField } from '@apitable/core';
-import {
-  UserOutlined, AttachmentOutlined,
-  AutonumberOutlined,
-  CalendarOutlined, CheckboxOutlined,
-  UserAddOutlined,
-  TimeOutlined,
-  CurrencyUsdOutlined,
-  EmailOutlined,
-  NumberOutlined, FormulaOutlined,
-  UserEditOutlined, HistoryFilled,
-  LinktableOutlined,
-  LongtextOutlined,
-  LookupOutlined, SelectMultipleOutlined, PercentOutlined,
-  TelephoneOutlined,
-  StarOutlined, SelectSingleOutlined, TextOutlined,
-  LinkOutlined,
-  LockFilled, CascadeOutlined,
-} from '@apitable/icons';
-
-const FieldIconMap = {
-  [FieldType.DeniedField]: LockFilled,
-  [FieldType.Text]: LongtextOutlined,
-  [FieldType.Number]: NumberOutlined,
-  [FieldType.SingleSelect]: SelectSingleOutlined,
-  [FieldType.MultiSelect]: SelectMultipleOutlined,
-  [FieldType.DateTime]: CalendarOutlined,
-  [FieldType.Attachment]: AttachmentOutlined,
-  [FieldType.Link]: LinktableOutlined,
-  [FieldType.URL]: LinkOutlined,
-  [FieldType.Email]: EmailOutlined,
-  [FieldType.Phone]: TelephoneOutlined,
-  [FieldType.Checkbox]: CheckboxOutlined,
-  [FieldType.Rating]: StarOutlined,
-  [FieldType.Member]: UserOutlined,
-  [FieldType.LookUp]: LookupOutlined,
-  [FieldType.Formula]: FormulaOutlined,
-  [FieldType.Currency]: CurrencyUsdOutlined,
-  [FieldType.Percent]: PercentOutlined,
-  [FieldType.SingleText]: TextOutlined,
-  [FieldType.AutoNumber]: AutonumberOutlined,
-  [FieldType.CreatedTime]: TimeOutlined,
-  [FieldType.LastModifiedTime]: HistoryFilled,
-  [FieldType.CreatedBy]: UserAddOutlined,
-  [FieldType.LastModifiedBy]: UserEditOutlined,
-  [FieldType.Cascader]: CascadeOutlined,
-};
+import { FieldIconMapFieldType as FieldIconMap } from '@apitable/widget-sdk';
 
 const transformOptions = (fields: IField[], theme: ITheme) => {
-
-  return fields.map(field => {
+  return fields.map((field) => {
     const res = {
       label: field.name,
       value: field.id,
@@ -85,13 +38,15 @@ const transformOptions = (fields: IField[], theme: ITheme) => {
 interface IFieldSelectProps {
   fields: IField[];
   value: string;
+  disabled?: boolean;
   onChange?: (value: any) => void;
 }
-export const FieldSelect = ({ fields, value, onChange }: IFieldSelectProps) => {
+export const FieldSelect = ({ disabled, fields, value, onChange }: IFieldSelectProps) => {
   const theme = useTheme();
   const options = transformOptions(fields, theme);
-  return <>
+  return (
     <Select
+      disabled={disabled}
       options={options}
       value={value}
       onSelected={(option) => {
@@ -106,5 +61,5 @@ export const FieldSelect = ({ fields, value, onChange }: IFieldSelectProps) => {
       dropdownMatchSelectWidth
       openSearch={options.length > 7}
     />
-  </>;
+  );
 };

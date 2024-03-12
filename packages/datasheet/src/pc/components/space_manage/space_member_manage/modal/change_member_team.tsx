@@ -18,11 +18,12 @@
 
 import { FC } from 'react';
 import * as React from 'react';
-import { SelectUnitModal, SelectUnitSource }
-  from 'pc/components/catalog/permission_settings/permission/select_unit_modal';
+import { shallowEqual } from 'react-redux';
 import { IReduxState, UnitItem, ITeam, ITeamsInSpace } from '@apitable/core';
-import { useSelector, shallowEqual } from 'react-redux';
+import { SelectUnitModal, SelectUnitSource } from 'pc/components/catalog/permission_settings/permission/select_unit_modal';
 import { useMemberManage } from 'pc/hooks';
+
+import { useAppSelector } from 'pc/store/react-redux';
 
 interface IAddMember {
   onCancel: () => void;
@@ -31,22 +32,22 @@ interface IAddMember {
   teamList?: ITeamsInSpace[];
 }
 export const ChangeMemberTeam: FC<React.PropsWithChildren<IAddMember>> = ({ onCancel, inEditMember, setTeamList, teamList }) => {
-  const {
-    selectedTeamInfoInSpace,
-    selectMemberListInSpace,
-  } = useSelector((state: IReduxState) => ({
-    selectedTeamInfoInSpace: state.spaceMemberManage.selectedTeamInfoInSpace,
-    selectMemberListInSpace: state.spaceMemberManage.selectMemberListInSpace,
-  }), shallowEqual);
+  const { selectedTeamInfoInSpace, selectMemberListInSpace } = useAppSelector(
+    (state: IReduxState) => ({
+      selectedTeamInfoInSpace: state.spaceMemberManage.selectedTeamInfoInSpace,
+      selectMemberListInSpace: state.spaceMemberManage.selectMemberListInSpace,
+    }),
+    shallowEqual,
+  );
 
   const { changeMemberTeam } = useMemberManage();
   const onSubmit = (checkedList: UnitItem[]) => {
     if (inEditMember) {
       if (setTeamList && teamList) {
         const arr: ITeamsInSpace[] = [...teamList];
-        const teamListIdArr = teamList.map(item => item.teamId);
-        checkedList.forEach(item => {
-          if (teamListIdArr.includes((item as ITeam).teamId)){
+        const teamListIdArr = teamList.map((item) => item.teamId);
+        checkedList.forEach((item) => {
+          if (teamListIdArr.includes((item as ITeam).teamId)) {
             return;
           }
           arr.push({
@@ -58,21 +59,10 @@ export const ChangeMemberTeam: FC<React.PropsWithChildren<IAddMember>> = ({ onCa
       }
     }
     if (!inEditMember && selectedTeamInfoInSpace && checkedList.length > 0) {
-      const newTeamIds = checkedList.map(item => (item as ITeam).teamId);
-      changeMemberTeam(
-        selectedTeamInfoInSpace ? selectedTeamInfoInSpace.teamId : '',
-        selectMemberListInSpace,
-        newTeamIds,
-      );
+      const newTeamIds = checkedList.map((item) => (item as ITeam).teamId);
+      changeMemberTeam(selectedTeamInfoInSpace ? selectedTeamInfoInSpace.teamId : '', selectMemberListInSpace, newTeamIds);
     }
   };
-  const disableIdList = inEditMember ? teamList?.map(item => (item as ITeam).teamId) : [];
-  return (
-    <SelectUnitModal
-      source={SelectUnitSource.ChangeMemberTeam}
-      onCancel={onCancel}
-      onSubmit={onSubmit}
-      disableIdList={disableIdList}
-    />
-  );
+  const disableIdList = inEditMember ? teamList?.map((item) => (item as ITeam).teamId) : [];
+  return <SelectUnitModal source={SelectUnitSource.ChangeMemberTeam} onCancel={onCancel} onSubmit={onSubmit} disableIdList={disableIdList} />;
 };

@@ -23,6 +23,8 @@ import type { APIMetaFieldPropertyFormatEnums, APIMetaMemberType, TSymbolAlign }
 import type { IAPIMetaField } from './field_api_types';
 import type { BasicValueType, ILookUpSortInfo, LookUpLimitType, RollUpFuncType } from './field_types';
 import type { IOpenLookUpFilterInfo } from './open';
+import { ButtonFieldActionNameEnum, ButtonFieldActionOpenLinkNameEnum, ButtonFieldStyleNameEnum } from './open';
+
 /**
  * Field properties
  */
@@ -69,6 +71,25 @@ export interface IAPIMetaSelectOption {
 
 export interface IAPIMetaSingleSelectFieldProperty {
   options?: IAPIMetaSelectOption[];
+}
+
+export interface IAPIMetaButtonFieldProperty {
+  text: string;
+  style: {
+    type: ButtonFieldStyleNameEnum,
+    color: object
+  },
+  action: {
+    type?: ButtonFieldActionNameEnum,
+    openLink?: {
+      type: ButtonFieldActionOpenLinkNameEnum,
+      expression: string
+    },
+    automation?: {
+      automationId: string,
+      triggerId: string
+    }
+  }
 }
 
 export type IAPIMetaMultiSelectFieldProperty = IAPIMetaSingleSelectFieldProperty;
@@ -128,6 +149,12 @@ export type IAPIMetaDateTimeFieldProperty = IAPIMetaDateTimeBaseFieldProperty;
 export type IAPIMetaCreatedTimeFieldProperty = IAPIMetaDateTimeBaseFieldProperty;
 
 export type IAPIMetaLastModifiedTimeFieldProperty = IAPIMetaCreatedTimeFieldProperty;
+
+export interface IAPIMetaOneWayLinkFieldProperty {
+  foreignDatasheetId: string;
+  limitToViewId?: string;
+  limitSingleRecord?: boolean;
+}
 
 export interface IAPIMetaLinkFieldProperty {
   foreignDatasheetId: string;
@@ -209,6 +236,8 @@ export type IAPIMetaFieldProperty =
   | IAPIMetaDateTimeFieldProperty
   | IAPIMetaCreatedTimeFieldProperty
   | IAPIMetaLastModifiedTimeFieldProperty
+  | IAPIMetaOneWayLinkFieldProperty
   | IAPIMetaLinkFieldProperty
   | IAPIMetaLookupFieldProperty
-  | IAPIMetaFormulaFieldProperty;
+  | IAPIMetaFormulaFieldProperty
+  | IAPIMetaButtonFieldProperty;

@@ -18,11 +18,11 @@
 
 import { useRouter } from 'next/router';
 import { getSpaceNavList } from 'pc/components/space_manage/space_menu_tree';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables } from 'pc/utils/env';
-import { useSelector } from 'react-redux';
 
 export const ManageAuth = ({ children }: any) => {
-  const spaceResource = useSelector(state => state.spacePermissionManage.spaceResource);
+  const spaceResource = useAppSelector((state) => state.spacePermissionManage.spaceResource);
   const { SPACE_INTEGRATION_PAGE_VISIBLE } = getEnvVariables();
   const router = useRouter();
   const { subPage } = router.query as { subPage: string };
@@ -57,7 +57,5 @@ export const ManageAuth = ({ children }: any) => {
   if (invalidRoute) {
     return invalidRoute;
   }
-  return <>
-    {children}
-  </>;
+  return <>{children}</>;
 };

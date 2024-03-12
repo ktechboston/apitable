@@ -24,6 +24,7 @@ import {
   databus,
   ExecuteResult,
   FieldKeyEnum,
+  FieldType,
   getViewTypeString,
   IAddFieldOptions,
   ICollaCommandOptions,
@@ -39,6 +40,7 @@ import {
   IViewRow,
   NoticeTemplatesConstant,
   Selectors,
+  IRemoteChangeset,
 } from '@apitable/core';
 import { Inject, Injectable } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
@@ -65,7 +67,7 @@ import {
 import { OrderEnum } from 'shared/enums';
 import { SourceTypeEnum } from 'shared/enums/changeset.source.type.enum';
 import { ApiException, DatasheetException, ServerException } from 'shared/exception';
-import { IAuthHeader, ILinkedRecordMap, IServerConfig } from 'shared/interfaces';
+import {IAuthHeader, ILinkedRecordMap, IOssConfig, IServerConfig} from 'shared/interfaces';
 import { IAPINode, IAPINodeDetail } from 'shared/interfaces/node.interface';
 import { IAPISpace } from 'shared/interfaces/space.interface';
 import { EnvConfigService } from 'shared/services/config/env.config.service';
@@ -310,7 +312,8 @@ export class FusionApiService {
       },
     });
 
-    const recordVos = this.getRecordViewObjects(records, query.cellFormat);
+    const recordVos = await this.getRecordViewObjects(records, query.cellFormat);
+
 
     getRecordsProfiler.done({
       message: `getRecords ${dstId} profiler`,
@@ -322,6 +325,16 @@ export class FusionApiService {
       pageNum: query.pageNum,
       pageSize: records.length,
     };
+  }
+
+
+  /**
+   * Query datasheet records have deleted
+   *
+   * @param dstId datasheet id
+   */
+  public async getDeletedRecords(dstId: string): Promise<string[]> {
+    return this.fusionApiRecordService.getDeletedRecordsByDstId(dstId);
   }
 
   public async getFieldCreateDtos(datasheetId: string): Promise<FieldCreateDto[]> {
@@ -367,6 +380,9 @@ export class FusionApiService {
         auth,
         loadBasePacks: {
           foreignDstIds: [],
+          options: {
+            loadRecordMeta: true
+          }
         },
       },
       createStore: (dst) => this.createStoreForBaseDstPacks(dst),
@@ -428,6 +444,7 @@ export class FusionApiService {
   public async updateRecords(dstId: string, body: RecordUpdateRo, viewId: string): Promise<ListVo> {
     // Validate the existence in advance to prevent repeatedly swiping all the count table data
     const updateRecordsProfiler = this.logger.startTimer();
+    await this.fusionApiRecordService.validateArchivedRecordIncludes(dstId, body.getRecordIds(), ApiTipConstant.api_param_record_archived);
     await this.fusionApiRecordService.validateRecordExists(dstId, body.getRecordIds(), ApiTipConstant.api_param_record_not_exists);
 
     const meta: IMeta = this.request[DATASHEET_META_HTTP_DECORATE];
@@ -491,7 +508,7 @@ export class FusionApiService {
       }
 
       const records = await view.getRecords({});
-      const recordViewObjects = this.getRecordViewObjects(records);
+      const recordViewObjects = await this.getRecordViewObjects(records);
       updateRecordsProfiler.done({ message: `update ${dstId}'s records profiler, records count: ${records.length}` });
       return {
         records: recordViewObjects,
@@ -558,9 +575,9 @@ export class FusionApiService {
     }
 
     const records = await newView.getRecords({});
-
+    const recordVos = await this.getRecordViewObjects(records);
     return {
-      records: this.getRecordViewObjects(records),
+      records: recordVos,
     };
   }
 
@@ -606,11 +623,14 @@ export class FusionApiService {
     }
 
     const updateFieldOperations = await this.getFieldUpdateOps(datasheet, auth);
-
+    let viewIndex = meta.views.findIndex(view => view.id === viewId);
+    if (viewIndex === -1){
+      viewIndex = 0;
+    }
     const result = await datasheet.addRecords(
       {
-        viewId: meta.views[0]!.id,
-        index: meta.views[0]!.rows.length,
+        viewId: meta.views[viewIndex]!.id,
+        index: meta.views[viewIndex]!.rows.length,
         recordValues: body.records.map((record) => record.fields),
         ignoreFieldPermission: true,
       },
@@ -620,7 +640,7 @@ export class FusionApiService {
       throw ApiException.tipError(ApiTipConstant.api_insert_error);
     }
 
-    const userId = result.saveResult as string;
+    const userId = this.request[USER_HTTP_DECORATE].id;
     const recordIds = result.data as string[];
 
     // API submission requires a record source for tracking the source of the record
@@ -642,8 +662,90 @@ export class FusionApiService {
     return this.getNewRecordListVo(datasheet, { viewId, rows, fieldMap });
   }
 
-  private getRecordViewObjects(records: databus.Record[], cellFormat: CellFormatEnum = CellFormatEnum.JSON): ApiRecordDto[] {
-    return records.map((record) => record.getViewObject<ApiRecordDto>((id, options) => this.transform.recordVoTransform(id, options, cellFormat)));
+  private async getRecordViewObjects(records: databus.Record[], cellFormat: CellFormatEnum = CellFormatEnum.JSON): Promise<ApiRecordDto[]> {
+    const roomConfig = this.envConfigService.getRoomConfig(EnvConfigKey.OSS) as IOssConfig;
+    const ossSignatureEnabled = roomConfig.ossSignatureEnabled;
+    const apiRecordDtos = records.map((record) => record.getViewObject<ApiRecordDto>((id, options) => this.transform.recordVoTransform(id, options, cellFormat)));
+    if (!ossSignatureEnabled){
+      return apiRecordDtos;
+    }
+
+    const attachmentColmns: string[] = [];
+    const attachmentTokens: string[] = [];
+
+    // Fields for recording attachment types
+    if (records.length){
+      const record = records[0]!;
+      const voTransformOptions = record.getVoTransformOptions();
+      const fieldMap = voTransformOptions.fieldMap;
+      Object.keys(fieldMap).forEach(fieldId => {
+        const fieldValue = fieldMap[fieldId]!;
+        if (fieldValue.type === FieldType.Attachment) {
+          attachmentColmns.push(fieldId);
+        }
+      });
+    }
+
+    if (!attachmentColmns.length) {
+      // attachmentColmns is empty
+      return apiRecordDtos;
+    }
+
+    // Collect all attachment URL
+    apiRecordDtos.forEach(apiRecordDto => {
+      const fields = apiRecordDto.fields;
+      Object.keys(fields).forEach(fieldId => {
+        if (attachmentColmns.includes(fieldId)) {
+          const fieldValue = fields[fieldId];
+          if (Array.isArray(fieldValue)) {
+            fieldValue.forEach(obj => {
+              attachmentTokens.push(obj.token);
+              if(obj.preview){
+                attachmentTokens.push(obj.preview);
+              }
+            });
+          }
+        }
+      });
+    });
+
+    if (!attachmentTokens.length) {
+      // attachmentTokens is empty
+      return apiRecordDtos;
+    }
+
+    // Retrieve in batches, fetching 100 at a time.
+    const batchSize = 100;
+    const signatureMap = new Map();
+
+    for (let i = 0; i < attachmentTokens.length; i += batchSize) {
+      const batchTokens = attachmentTokens.slice(i, i + batchSize);
+      const batchSignatures = await this.restService.getSignatures(batchTokens);
+      batchSignatures.forEach(obj => {
+        const key = obj.resourceKey;
+        const value = obj.url;
+        signatureMap.set(key, value);
+      });
+    }
+
+    // Loop Replace URL
+    apiRecordDtos.forEach(apiRecordDto => {
+      const fields = apiRecordDto.fields;
+      Object.keys(fields).forEach(fieldId => {
+        if (attachmentColmns.includes(fieldId)) {
+          const fieldValue = fields[fieldId];
+          if (Array.isArray(fieldValue)) {
+            fieldValue.forEach(obj => {
+              obj.url = signatureMap.get(obj.token);
+              if(obj.preview){
+                obj.preview = signatureMap.get(obj.preview);
+              }
+            });
+          }
+        }
+      });
+    });
+    return apiRecordDtos;
   }
 
   /**
@@ -654,6 +756,7 @@ export class FusionApiService {
    */
   public async deleteRecord(dstId: string, recordIds: string[]): Promise<boolean> {
     // Validate the existence in advance to prevent repeatedly swiping all the count table data
+    await this.fusionApiRecordService.validateArchivedRecordIncludes(dstId, recordIds, ApiTipConstant.api_param_record_archived);
     await this.fusionApiRecordService.validateRecordExists(dstId, recordIds, ApiTipConstant.api_param_record_not_exists);
     const auth = { token: this.request.headers.authorization };
     const datasheet = await this.databusService.getDatasheet(dstId, {
@@ -736,6 +839,25 @@ export class FusionApiService {
     }
     return result.saveResult as string;
   }
+
+  /**
+   * Customize rust command
+   */
+  public async executeCommandFromRust(datasheetId: string, commandBody: IRemoteChangeset[], auth: IAuthHeader): Promise<string> {
+      const linkedRecordMap = undefined;
+      const datasheet = await this.databusService.getDatasheet(datasheetId, {
+        loadOptions: {
+          auth,
+          linkedRecordMap,
+          includeCommentCount: false
+        },
+      });
+      if (datasheet === null) {
+        throw ApiException.tipError(ApiTipConstant.api_datasheet_not_exist);
+      }
+      await datasheet.nestRoomChangeFromRust(datasheetId, commandBody);
+      return 'executeCommandFromRoomServer';
+    }
 
   private async addDatasheetField(dst: databus.Datasheet, fieldOptions: IAddFieldOptions, auth: IAuthHeader): Promise<string> {
     const result = await dst.addFields([fieldOptions], { auth });

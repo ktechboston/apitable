@@ -18,14 +18,13 @@
 
 package com.apitable.asset.enums;
 
+import com.apitable.core.exception.BusinessException;
+import com.apitable.core.support.serializer.IBaseEnum;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import com.apitable.core.exception.BusinessException;
-import com.apitable.core.support.serializer.IBaseEnum;
-
 /**
- * asset type
+ * asset type.
  *
  * @author Chambers
  */
@@ -41,7 +40,10 @@ public enum AssetType implements IBaseEnum {
 
     COVER(3),
 
-    NODE_DESC(4);
+    NODE_DESC(4),
+
+    DOCUMENT(5),
+    ;
 
     private final int value;
 
@@ -50,6 +52,12 @@ public enum AssetType implements IBaseEnum {
         return this.value;
     }
 
+    /**
+     * transform value to enum.
+     *
+     * @param value value
+     * @return enum
+     */
     public static AssetType of(Integer value) {
         for (AssetType type : AssetType.values()) {
             if (type.getValue().equals(value)) {
@@ -60,11 +68,11 @@ public enum AssetType implements IBaseEnum {
     }
 
     public static boolean isSpaceAsset(AssetType type) {
-        return type.equals(DATASHEET) || type.equals(COVER) || type.equals(NODE_DESC);
+        return type.getValue() > SPACE_LOGO.getValue();
     }
 
     public static boolean isPublishAsset(Integer value) {
         AssetType type = AssetType.of(value);
-        return type.equals(USER_AVATAR) || type.equals(SPACE_LOGO);
+        return type.getValue() <= SPACE_LOGO.getValue();
     }
 }

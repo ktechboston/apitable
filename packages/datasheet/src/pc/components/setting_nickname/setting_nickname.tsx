@@ -16,24 +16,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { useMount } from 'ahooks';
+import { Form, Input } from 'antd';
+import * as React from 'react';
+import { FC, useEffect, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Button, useThemeColors } from '@apitable/components';
 import { Api, IReduxState, IUnitValue, Navigation, StoreActions, Strings, t } from '@apitable/core';
 import { EditOutlined } from '@apitable/icons';
-import { useMount } from 'ahooks';
-import { Form, Input } from 'antd';
 import { Avatar, AvatarSize, ButtonBase, Emoji, ImageCropUpload, ISelectInfo, IUploadType, Wrapper } from 'pc/components/common';
 import { Router } from 'pc/components/route_manager/router';
 import { useRequest, useUserRequest } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { isLocalSite } from 'pc/utils';
-import * as React from 'react';
-import { FC, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useQuery } from '../../hooks/use_home';
 import { defaultAvatars } from '../navigation/account_center_modal/basic_setting/default_avatar';
 import styles from './style.module.less';
 
 const customTips = {
-  cropDesc: t(Strings.support_image_formats_limits, { number: 2 })
+  cropDesc: t(Strings.support_image_formats_limits, { number: 2 }),
 };
 
 const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
@@ -41,8 +42,8 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
   const colors = useThemeColors();
   const [avatarSelectModalVisible, setAvatarSelectModalVisible] = useState(false);
   const dispatch = useDispatch();
-  const error = useSelector((state: IReduxState) => state.user.err);
-  const user = useSelector((state: IReduxState) => state.user.info);
+  const error = useAppSelector((state: IReduxState) => state.user.err);
+  const user = useAppSelector((state: IReduxState) => state.user.info);
   const { getLoginStatusReq, customOrOfficialAvatarUpload } = useUserRequest();
   const { loading } = useRequest(getLoginStatusReq);
   const { run: updateAvatar } = useRequest(customOrOfficialAvatarUpload, { manual: true });
@@ -55,14 +56,14 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
   const [nickName, setNickName] = useState(defaultName);
 
   const { run } = useRequest(() => Api.loadOrSearch({ unitIds: user?.unitId }), {
-    onSuccess: res => {
+    onSuccess: (res) => {
       const unitInfo = res.data.data[0] as IUnitValue;
       if (!unitInfo.isActive) {
         setNickName(unitInfo.name);
       }
     },
     onError: () => {},
-    manual: true
+    manual: true,
   });
 
   useEffect(() => {
@@ -139,20 +140,22 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
     Router.push(Navigation.HOME);
   }
 
-  const handleSubmit = async() => {
+  const handleSubmit = async () => {
     if (!nickName) {
       await redirect();
       return;
     }
-    Api.updateUser({ nickName, init: true }).then(async res => {
+    Api.updateUser({ nickName, init: true }).then(async (res) => {
       const { success, message, code } = res.data;
       if (success) {
         await redirect();
       } else {
-        dispatch(StoreActions.setHomeErr({
-          code,
-          msg: message,
-        }));
+        dispatch(
+          StoreActions.setHomeErr({
+            code,
+            msg: message,
+          }),
+        );
       }
     });
   };
@@ -194,9 +197,9 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
               />
               <ButtonBase
                 className={styles.editAvatarBtn}
-                size='x-small'
+                size="x-small"
                 shadow
-                shape='circle'
+                shape="circle"
                 icon={<EditOutlined color={colors.secondLevelText} />}
                 onClick={() => setAvatarSelectModalVisible(true)}
               />
@@ -210,7 +213,7 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
                   minCount: 1,
                   maxCount: 20,
                 })}
-                ref={function(input) {
+                ref={function (input) {
                   if (input != null) {
                     input.focus();
                     if (nickName.startsWith(t(Strings.planet_dwellers))) {
@@ -222,18 +225,10 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
               />
             </div>
           </div>
-          <div className={styles.errorMsg}>
-            {error ? error.msg : ''}
-          </div>
-          <Button
-            className={styles.submit}
-            onClick={handleSubmit}
-            color='primary'
-            size='large'
-            block
-          >
+          <div className={styles.errorMsg}>{error ? error.msg : ''}</div>
+          <Button className={styles.submit} onClick={handleSubmit} color="primary" size="large" block>
             <div className={styles.button}>
-              <Emoji emoji='airplane' size={18} set='apple' />
+              <Emoji emoji="airplane" size={18} set="apple" />
               {t(Strings.button_come_on)}
             </div>
           </Button>
@@ -244,12 +239,14 @@ const SettingNickname: FC<React.PropsWithChildren<unknown>> = () => {
           avatarName={user?.nickName}
           avatarColor={user?.avatarColor}
           title={t(Strings.upload_avatar)}
-          confirm={data => uploadImgConfirm(data)}
+          confirm={(data) => uploadImgConfirm(data)}
           visible={avatarSelectModalVisible}
           officialImgs={defaultAvatars}
           initPreview={renderAvatar({ width: '100%', height: '100%' })}
           fileLimit={2}
-          cancel={() => { setAvatarSelectModalVisible(false); }}
+          cancel={() => {
+            setAvatarSelectModalVisible(false);
+          }}
           customTips={customTips}
         />
       </div>

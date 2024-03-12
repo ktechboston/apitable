@@ -18,6 +18,7 @@
 
 package com.apitable.space.vo;
 
+import com.apitable.shared.support.serializer.CreditUnitSerializer;
 import com.apitable.shared.support.serializer.ImageSerializer;
 import com.apitable.shared.support.serializer.LocalDateTimeToMilliSerializer;
 import com.apitable.shared.support.serializer.NullBooleanSerializer;
@@ -25,7 +26,9 @@ import com.apitable.shared.support.serializer.NullNumberSerializer;
 import com.apitable.shared.support.serializer.NullStringSerializer;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -153,7 +156,34 @@ public class SpaceInfoVO {
     @JsonSerialize(nullsUsing = NullNumberSerializer.class)
     private Long mirrorNums;
 
+    @Schema(description = "Number of used credit", example = "5.0001")
+    @JsonSerialize(nullsUsing = CreditUnitSerializer.class)
+    private BigDecimal usedCredit;
+
     @Schema(description = "Whether enable chatbot feature")
     @JsonSerialize(nullsUsing = NullBooleanSerializer.class)
     private Boolean isEnableChatbot;
+
+    @Schema(description = "Seat usage")
+    private SeatUsage seatUsage;
+
+    @Schema(description = "Number of widget", example = "5")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long widgetNums;
+
+    @Schema(description = "Automation Runs Count", example = "5")
+    @JsonSerialize(nullsUsing = NullNumberSerializer.class)
+    private Long automationRunsNums;
+
+    @Schema(description = "space feature")
+    private SpaceGlobalFeature feature;
+
+    @Schema(description = "User's resource information view in the space")
+    private UserSpaceVo userResource;
+
+    @Schema(description = "List of experimental functions",
+            type = "java.util.List", example = "[\"RENDER_PROMPT\", \"ASYNC_COMPUTE\", \"ROBOT\"]")
+    private List<String> labsKeys;
+
+
 }

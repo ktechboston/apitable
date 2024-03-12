@@ -16,15 +16,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import * as React from 'react';
+import { useEffect } from 'react';
+import { shallowEqual } from 'react-redux';
 import { useThemeColors } from '@apitable/components';
 
 import {
-  BasicValueType, CollaCommandName, ExecuteResult, Field, FieldType, FieldTypeDescriptionMap, getMaxFieldCountPerSheet, getUniqName, IReduxState,
-  isSelectField, Selectors, SetFieldFrom, StoreActions, Strings, t, ToolBarMenuCardOpenState
+  BasicValueType,
+  CollaCommandName, ConfigConstant,
+  ExecuteResult,
+  Field,
+  FieldType,
+  FieldTypeDescriptionMap,
+  getMaxFieldCountPerSheet,
+  getUniqName,
+  IReduxState,
+  isSelectField,
+  Selectors,
+  SetFieldFrom,
+  StoreActions,
+  Strings,
+  t,
+  ToolBarMenuCardOpenState,
 } from '@apitable/core';
 import {
-  ArrowDownOutlined, ArrowLeftOutlined, ArrowRightOutlined, ArrowUpOutlined, DuplicateOutlined, DeleteOutlined, InfoCircleOutlined, EditOutlined,
-  FilterOutlined, EyeOpenOutlined, LockOutlined
+  ArrowDownOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  ArrowUpOutlined,
+  DuplicateOutlined,
+  DeleteOutlined,
+  InfoCircleOutlined,
+  EditOutlined,
+  FilterOutlined,
+  EyeOpenOutlined,
+  LockOutlined,
 } from '@apitable/icons';
 import { Message, MobileContextMenu } from 'pc/components/common';
 import { notifyWithUndo } from 'pc/components/common/notify';
@@ -33,10 +59,8 @@ import { expandFieldPermission } from 'pc/components/field_permission';
 import { getShowFieldName } from 'pc/components/multi_grid/context_menu/utils';
 import { useAppDispatch } from 'pc/hooks/use_app_dispatch';
 import { resourceService } from 'pc/resource_service';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables } from 'pc/utils/env';
-import * as React from 'react';
-import { useEffect } from 'react';
-import { shallowEqual, useSelector } from 'react-redux';
 
 import { useActiveFieldSetting, useDeleteField, useFilterField, useHideField, useSortField } from '../multi_grid/hooks';
 import { expandFieldDescEditorMobile } from './field_desc_editor';
@@ -46,24 +70,13 @@ interface IFieldMenu {
   fieldId: string;
 }
 
-export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
-  {
-    onClose,
-    fieldId,
-  }) => {
+export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = ({ onClose, fieldId }) => {
   const colors = useThemeColors();
-  const {
-    datasheetId,
-    fieldMap,
-    view,
-    permissions,
-    field,
-    fieldIndex,
-  } = useSelector((state: IReduxState) => {
+  const { datasheetId, fieldMap, view, permissions, field, fieldIndex } = useAppSelector((state: IReduxState) => {
     const datasheetId = Selectors.getActiveDatasheetId(state)!;
     const fieldMap = Selectors.getFieldMap(state, datasheetId)!;
     const view = Selectors.getCurrentView(state)!;
-    const fieldIndex = view.columns.findIndex(field => field.fieldId === fieldId);
+    const fieldIndex = view.columns.findIndex((field) => field.fieldId === fieldId);
 
     const field = fieldMap[fieldId];
     const permissions = Selectors.getPermissions(state, undefined, fieldId);
@@ -77,15 +90,17 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
       fieldIndex,
     };
   }, shallowEqual);
-  const fieldPermissionMap = useSelector(Selectors.getFieldPermissionMap);
-  const mirrorId = useSelector(state => state.pageParams.mirrorId);
+  const catalogTreeActiveType = useAppSelector((state) => state.catalogTree.activeType);
+  const isPrivate = catalogTreeActiveType === ConfigConstant.Modules.PRIVATE;
+  const fieldPermissionMap = useAppSelector(Selectors.getFieldPermissionMap);
+  const mirrorId = useAppSelector((state) => state.pageParams.mirrorId);
   const dispatch = useAppDispatch();
   const handleHideField = useHideField(view);
   const handleSortField = useSortField();
   const handleFilterField = useFilterField();
   const activeFieldSettings = useActiveFieldSetting();
   const deleteField = useDeleteField(field.id, datasheetId);
-  const embedId = useSelector(state => state.pageParams.embedId);
+  const embedId = useAppSelector((state) => state.pageParams.embedId);
   /**
    * Give a warning when a field is deleted during collaboration.
    * Ends rendering early.
@@ -102,17 +117,11 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
     return null;
   }
 
-  const {
-    fieldPropertyEditable,
-    descriptionEditable,
-    fieldCreatable,
-    fieldRemovable,
-    editable,
-    fieldSortable,
-    fieldPermissionManageable,
-  } = permissions;
+  const { fieldPropertyEditable, descriptionEditable, fieldCreatable, fieldRemovable, editable, fieldSortable, fieldPermissionManageable } =
+    permissions;
 
   const fieldError = Boolean(Field.bindModel(field).validateProperty().error);
+  const canFilter = Boolean(Field.bindModel(field).canFilter);
   const showFieldName = getShowFieldName(field.name);
   // Special judgment, when the link field error, need to allow the user to delete the current link field
   const linkedFieldError = field.type === FieldType.Link && fieldError;
@@ -120,17 +129,22 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
   function addField(index: number, fieldId: string, offset: number) {
     const result = resourceService.instance!.commandManager.execute({
       cmd: CollaCommandName.AddFields,
-      data: [{
-        data: {
-          name: getUniqName(FieldTypeDescriptionMap[FieldType.Text].title, Object.keys(fieldMap).map(id => fieldMap[id].name)),
-          type: FieldType.Text,
-          property: null,
+      data: [
+        {
+          data: {
+            name: getUniqName(
+              FieldTypeDescriptionMap[FieldType.Text].title,
+              Object.keys(fieldMap).map((id) => fieldMap[id].name),
+            ),
+            type: FieldType.Text,
+            property: null,
+          },
+          viewId: view.id,
+          index,
+          fieldId,
+          offset,
         },
-        viewId: view.id,
-        index,
-        fieldId,
-        offset,
-      }],
+      ],
     });
     if (ExecuteResult.Success === result.result) {
       notifyWithUndo(t(Strings.toast_insert_field_success), NotifyKey.InsertField);
@@ -142,20 +156,22 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
       cmd: CollaCommandName.AddFields,
       copyCell: true,
       fieldId: field.id,
-      data: [{
-        data: {
-          name: getUniqName(
-            field.name + t(Strings.copy),
-            Object.keys(fieldMap).map(id => fieldMap[id].name),
-          ),
-          type: field.type,
-          property: field.property,
+      data: [
+        {
+          data: {
+            name: getUniqName(
+              field.name + t(Strings.copy),
+              Object.keys(fieldMap).map((id) => fieldMap[id].name),
+            ),
+            type: field.type,
+            property: field.property,
+          },
+          viewId: view.id,
+          index: index,
+          fieldId,
+          offset,
         },
-        viewId: view.id,
-        index: index,
-        fieldId,
-        offset,
-      }],
+      ],
     });
 
     if (ExecuteResult.Success === result.result) {
@@ -241,11 +257,13 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
         onClick: () => {
           expandFieldPermission(field);
         },
-        disabled: !fieldPermissionManageable || !getEnvVariables().FIELD_PERMISSION_VISIBLE ,
+        disabled: !fieldPermissionManageable || !getEnvVariables().FIELD_PERMISSION_VISIBLE,
         hidden(arg: any) {
-          const { props: { fieldId }} = arg;
+          const {
+            props: { fieldId },
+          } = arg;
 
-          if (!fieldId || embedId) {
+          if (!fieldId || embedId || isPrivate) {
             return true;
           }
 
@@ -253,13 +271,7 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
             return true;
           }
 
-          return Boolean(
-            (
-              fieldPermissionMap &&
-              !fieldPermissionMap[fieldId] &&
-              Object.keys(fieldPermissionMap).length > getMaxFieldCountPerSheet()
-            ),
-          );
+          return Boolean(fieldPermissionMap && !fieldPermissionMap[fieldId] && Object.keys(fieldPermissionMap).length > getMaxFieldCountPerSheet());
         },
       },
     ],
@@ -307,7 +319,7 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = (
       {
         icon: <FilterOutlined color={colors.thirdLevelText} />,
         text: t(Strings.filter_fields, { field_name: showFieldName }),
-        hidden: !editable || Boolean(mirrorId),
+        hidden: !editable || Boolean(mirrorId) || !canFilter,
         onClick: filterField,
       },
     ],

@@ -42,8 +42,10 @@ import { CreateDatasheetPipe } from './create.datasheet.pipe';
 
 @Injectable()
 export class CreateFieldPipe implements PipeTransform {
-  constructor(@Inject(REQUEST) private readonly request: FastifyRequest, private readonly metaService: DatasheetMetaService) {
-  }
+  constructor(
+    @Inject(REQUEST) private readonly request: FastifyRequest,
+    private readonly metaService: DatasheetMetaService,
+  ) {}
 
   async transform(ro: FieldCreateRo): Promise<FieldCreateRo> {
     await this.validate(ro);
@@ -76,7 +78,7 @@ export class CreateFieldPipe implements PipeTransform {
     const fieldContext = Field.bindContext(fieldInfo, {} as IReduxState);
     const { error } = fieldContext.validateAddOpenFieldProperty(field.property || null, true);
     if (error) {
-      throw ApiException.tipError(ApiTipConstant.api_params_invalid_value, { property: 'property', value: field.property });
+      throw ApiException.tipError(ApiTipConstant.api_param_validate_error, { message: error.message });
     }
     if (fieldType === FieldType.LookUp) {
       await this.validateLookUpField(field);
@@ -91,7 +93,7 @@ export class CreateFieldPipe implements PipeTransform {
     if (!linkField) {
       throw ApiException.tipError(ApiTipConstant.api_params_lookup_related_link_field_not_exists, { fieldId: property.relatedLinkFieldId });
     }
-    if (linkField.type !== FieldType.Link) {
+    if (linkField.type !== FieldType.Link && linkField.type !== FieldType.OneWayLink) {
       throw ApiException.tipError(ApiTipConstant.api_params_lookup_related_field_not_link, { fieldId: property.relatedLinkFieldId });
     }
     const dstId = (this.request.params as any).dstId;

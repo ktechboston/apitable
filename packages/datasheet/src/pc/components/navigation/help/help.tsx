@@ -16,16 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* eslint-disable no-script-url */
+import classnames from 'classnames';
+import RcTrigger from 'rc-trigger';
+import { FC, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { Typography, useThemeColors } from '@apitable/components';
 import { isPrivateDeployment, NAV_ID, StoreActions, Strings, t } from '@apitable/core';
 import {
-  AdviseOutlined, CodeFilled, CommentOutlined, DownloadOutlined, KeyboardOutlined, QuestionCircleOutlined, RoadmapOutlined, TimeOutlined,
-  GiftOutlined, WebOutlined, UserGroupOutlined
+  AdviseOutlined,
+  CodeFilled,
+  CommentOutlined,
+  DownloadOutlined,
+  KeyboardOutlined,
+  QuestionCircleOutlined,
+  RoadmapOutlined,
+  TimeOutlined,
+  WebOutlined,
+  UserGroupOutlined,
 } from '@apitable/icons';
-import classnames from 'classnames';
-// @ts-ignore
-import { inSocialApp, showTodoList, destroyTodoList } from 'enterprise';
 // eslint-disable-next-line no-restricted-imports
 import { ContextmenuItem, MobileContextMenu, Tooltip } from 'pc/components/common';
 import { ComponentDisplay, ScreenSize } from 'pc/components/common/component_display';
@@ -33,9 +41,8 @@ import { navigationToUrl } from 'pc/components/route_manager/navigation_to_url';
 import { useResponsive } from 'pc/hooks';
 import { useContactUs } from 'pc/hooks/use_contact_us';
 import { getEnvVariables } from 'pc/utils/env';
-import RcTrigger from 'rc-trigger';
-import { FC, useState } from 'react';
-import { useDispatch } from 'react-redux';
+// @ts-ignore
+import { inSocialApp } from 'enterprise/home/social_platform/utils';
 import styles from './style.module.less';
 
 export interface IHelpProps {
@@ -60,7 +67,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
       icon: <WebOutlined />,
       text: t(Strings.official_website_without_abbr),
       onClick: () => navigationToUrl(getEnvVariables().HELP_MENU_OFFICIAL_WEBSITE_URL),
-      hidden: !getEnvVariables().HELP_MENU_OFFICIAL_WEBSITE_URL
+      hidden: !getEnvVariables().HELP_MENU_OFFICIAL_WEBSITE_URL,
     },
     {
       icon: <QuestionCircleOutlined />,
@@ -71,7 +78,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
       icon: <CodeFilled />,
       text: t(Strings.api_sdk),
       onClick: () => navigationToUrl(getEnvVariables().HELP_MENU_DEVELOPERS_CENTER_URL),
-      hidden: !getEnvVariables().HELP_MENU_DEVELOPERS_CENTER_URL
+      hidden: !getEnvVariables().HELP_MENU_DEVELOPERS_CENTER_URL,
     },
     {
       icon: <DownloadOutlined />,
@@ -102,7 +109,9 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
     {
       icon: <AdviseOutlined />,
       text: t(Strings.vomit_a_slot),
-      onClick: () => navigationToUrl(getEnvVariables().USER_FEEDBACK_FORM_URL),
+      onClick: () => {
+        navigationToUrl(getEnvVariables().USER_FEEDBACK_FORM_URL);
+      },
       hidden: isPrivateDeployment(),
     },
     {
@@ -113,31 +122,17 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
       hidden: isMobile,
     },
     {
-      icon: <GiftOutlined color={colors.thirdLevelText} />,
-      text: t(Strings.assistant_beginner_task),
-      onClick: () => {
-        const taskStyle: React.CSSProperties = {
-          position: 'absolute',
-          top: '242px',
-          right: '20px'
-        };
-        showTodoList?.({ style: taskStyle, onClose: destroyTodoList });
-      },
-    },
-    {
       icon: <UserGroupOutlined color={colors.thirdLevelText} />,
       text: t(Strings.help_partner_program),
       id: NAV_ID.USER_PARTNER_PROGRAM,
       onClick: () => navigationToUrl(`${window.location.origin}/partners/`),
-      hidden: !(getEnvVariables().IS_APITABLE && getEnvVariables().IS_ENTERPRISE),
+      hidden: !(getEnvVariables().IS_APITABLE && getEnvVariables().IS_ENTERPRISE) || getEnvVariables().IS_SELFHOST,
     },
   ];
 
   // Return menu data for mobile
   const getMobileMenuData = () => {
-    return [
-      menuData.filter(v => v),
-    ];
+    return [menuData.filter((v) => v)];
   };
 
   const HelpBtn = () => {
@@ -157,13 +152,13 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
   const ContextmenuList: FC<React.PropsWithChildren<{ menuItems: any[] }>> = ({ menuItems }) => {
     return (
       <>
-        {menuItems.map(item => (
+        {menuItems.map((item) => (
           <ContextmenuItem
             key={item.text}
             className={styles.menuItem}
             {...item}
             name={item.text}
-            onClick={e => {
+            onClick={(e) => {
               setVisible(false);
               item.onClick && item.onClick(e);
             }}
@@ -184,7 +179,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
   const HelpMenu = () => {
     return (
       <div className={styles.helpMenu}>
-        <Typography className={styles.title} variant='h8' color={colors.fc1}>
+        <Typography className={styles.title} variant="h8" color={colors.fc1}>
           {t(Strings.help)}
         </Typography>
         <div className={styles.wrapper}>
@@ -205,7 +200,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
     <>
       <ComponentDisplay minWidthCompatible={ScreenSize.md}>
         <RcTrigger
-          action='click'
+          action="click"
           popup={<HelpMenu />}
           destroyPopupOnHide
           popupAlign={{
@@ -214,7 +209,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
           }}
           popupStyle={{ width: 'fit-content' }}
           popupVisible={visible}
-          onPopupVisibleChange={visible => setVisible(visible)}
+          onPopupVisibleChange={(visible) => setVisible(visible)}
           zIndex={1000}
         >
           <Tooltip title={t(Strings.help)} placement="right">
@@ -227,7 +222,7 @@ export const Help: FC<React.PropsWithChildren<IHelpProps>> = ({ className, templ
 
       <ComponentDisplay maxWidthCompatible={ScreenSize.md}>
         <HelpBtn />
-        <MobileContextMenu title={t(Strings.help)} data={getMobileMenuData()} height='auto' visible={visible} onClose={() => setVisible(false)} />
+        <MobileContextMenu title={t(Strings.help)} data={getMobileMenuData()} height="auto" visible={visible} onClose={() => setVisible(false)} />
       </ComponentDisplay>
     </>
   );

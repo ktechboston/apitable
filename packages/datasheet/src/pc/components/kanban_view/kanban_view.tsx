@@ -16,6 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import classNames from 'classnames';
+import CSSMotion from 'rc-motion';
+import { useEffect, useRef, useState } from 'react';
+import * as React from 'react';
+import { DragDropContext, Draggable, DraggableProvided, DraggableStateSnapshot, DragStart, Droppable, DropResult } from 'react-beautiful-dnd';
+import ReactDOM from 'react-dom';
+import { useDispatch } from 'react-redux';
+import { Message } from '@apitable/components';
 import {
   CollaCommandName,
   ConfigConstant,
@@ -33,14 +41,11 @@ import {
   t,
   UN_GROUP,
 } from '@apitable/core';
-import classNames from 'classnames';
-import { resourceService } from 'pc/resource_service';
+import { GroupHeadMenu } from 'pc/components/kanban_view/group_header/head_more_option';
 import { useResponsive } from 'pc/hooks';
+import { resourceService } from 'pc/resource_service';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getStorage, setStorage, StorageName } from 'pc/utils/storage/storage';
-import { useEffect, useRef, useState } from 'react';
-import * as React from 'react';
-import { DragDropContext, Draggable, DraggableProvided, DraggableStateSnapshot, DragStart, Droppable, DropResult } from 'react-beautiful-dnd';
-import { useDispatch, useSelector } from 'react-redux';
 import { stopPropagation } from '../../utils/dom';
 import { ScreenSize } from '../common/component_display';
 import { RecordMenu } from '../multi_grid/context_menu/record_menu';
@@ -49,31 +54,27 @@ import { GroupHeader } from './group_header';
 import { useCommand } from './hooks/use_command';
 import { KanbanFieldSettingModal } from './kanban_field_setting';
 import { KanbanGroup } from './kanban_group/kanban_group';
-import styles from './styles.module.less';
-import { Message } from '@apitable/components';
-import { GroupHeadMenu } from 'pc/components/kanban_view/group_header/head_more_option';
-import ReactDOM from 'react-dom';
-import CSSMotion from 'rc-motion';
 import { KanbanSkeleton } from './kanban_skeleton';
+import styles from './styles.module.less';
 
 interface IKanbanViewProps {
   height: number;
   width: number;
 }
 
-export const KanbanView: React.FC<React.PropsWithChildren<IKanbanViewProps>> = props => {
+export const KanbanView: React.FC<React.PropsWithChildren<IKanbanViewProps>> = (props) => {
   const { width, height } = props;
-  const groupIds = useSelector(Selectors.getKanbanGroupMapIds) || [];
-  const view = useSelector(Selectors.getCurrentView) as IKanbanViewProperty;
+  const groupIds = useAppSelector(Selectors.getKanbanGroupMapIds) || [];
+  const view = useAppSelector(Selectors.getCurrentView) as IKanbanViewProperty;
   const hiddenGroupMap = view.style.hiddenGroupMap || {};
-  const visibleGroupIds = groupIds.filter(id => !hiddenGroupMap[id]);
-  const kanbanGroupMap = useSelector(Selectors.getKanbanGroupMap)!;
-  const kanbanFieldId = useSelector(Selectors.getKanbanFieldId);
-  const { viewId, datasheetId } = useSelector(state => state.pageParams);
-  const field = useSelector(state => Selectors.getField(state, kanbanFieldId || ''));
-  const collapse = useSelector(Selectors.getKanbanGroupCollapse);
+  const visibleGroupIds = groupIds.filter((id) => !hiddenGroupMap[id]);
+  const kanbanGroupMap = useAppSelector(Selectors.getKanbanGroupMap)!;
+  const kanbanFieldId = useAppSelector(Selectors.getKanbanFieldId);
+  const { viewId, datasheetId } = useAppSelector((state) => state.pageParams);
+  const field = useAppSelector((state) => Selectors.getField(state, kanbanFieldId || ''));
+  const collapse = useAppSelector(Selectors.getKanbanGroupCollapse);
   const command = useCommand();
-  const { fieldPropertyEditable } = useSelector(Selectors.getPermissions);
+  const { fieldPropertyEditable } = useAppSelector(Selectors.getPermissions);
   const [draggingInfo, setDraggingInfo] = useState({
     isDragging: false,
     dragId: '',
@@ -85,7 +86,7 @@ export const KanbanView: React.FC<React.PropsWithChildren<IKanbanViewProps>> = p
 
   const [toolTipLeft, setToolTipLeft] = useState(0);
 
-  const fieldRole = useSelector(state => {
+  const fieldRole = useAppSelector((state) => {
     if (!kanbanFieldId) {
       return;
     }
@@ -301,7 +302,7 @@ export const KanbanView: React.FC<React.PropsWithChildren<IKanbanViewProps>> = p
       ) : (
         <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <Droppable droppableId={viewId!} direction="horizontal" type="column">
-            {provided => {
+            {(provided) => {
               provided?.innerRef(ref.current);
               return (
                 <div
@@ -379,7 +380,7 @@ export const KanbanView: React.FC<React.PropsWithChildren<IKanbanViewProps>> = p
 };
 
 export const FancyTooltip: React.FC<React.PropsWithChildren<{ left: number }>> = ({ left }) => {
-  const shareId = useSelector(state => state.pageParams.shareId);
+  const shareId = useAppSelector((state) => state.pageParams.shareId);
 
   return ReactDOM.createPortal(
     <CSSMotion motionName="zoom-big-fast">

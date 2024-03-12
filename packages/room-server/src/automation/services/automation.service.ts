@@ -24,19 +24,33 @@ import {
   IActionType,
   IRobot,
   IRobotTask,
-  validateMagicForm
+  IRobotTaskExtraTrigger,
+  NoticeTemplatesConstant,
+  Strings,
+  validateMagicForm,
 } from '@apitable/core';
-import { AmqpConnection, Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { RedisService } from '@apitable/nestjs-redis';
+import { Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { TriggerEventHelper } from 'automation/events/helpers/trigger.event.helper';
+import { isEmpty } from 'class-validator';
+import { I18nService } from 'nestjs-i18n';
 import fetch from 'node-fetch';
 import { NodeService } from 'node/services/node.service';
-import { InjectLogger } from 'shared/common';
+import { InjectLogger, SPACE_AUTOMATION_RUN_COUNT_KEY } from 'shared/common';
 import { RunHistoryStatusEnum } from 'shared/enums/automation.enum';
 import { UnreachableCaseError } from 'shared/errors';
 import { CommonException, PermissionException, ServerException } from 'shared/exception';
 import { IdWorker } from 'shared/helpers/snowflake';
 import { IUserBaseInfo } from 'shared/interfaces';
-import { automationExchangeName, automationRunning, automationRunningQueueName } from 'shared/services/queue/queue.module';
+import {
+  automationExchangeName,
+  automationRunning,
+  automationRunningQueueName,
+  notificationQueueExchangeName,
+} from 'shared/services/queue/queue.module';
+import { QueueSenderBaseService } from 'shared/services/queue/queue.sender.base.service';
+import { RestService } from 'shared/services/rest/rest.service';
 import { In } from 'typeorm';
 import * as services from '../actions';
 import { customActionMap } from '../actions/decorators/automation.action.decorator';
@@ -60,22 +74,27 @@ import { RobotRobotService } from './robot.robot.service';
 export class AutomationService {
   robotRunner: AutomationRobotRunner;
 
-  // @ts-ignore
-  // @ts-ignore
   constructor(
+    // @ts-ignore
     @InjectLogger() private readonly logger: Logger,
     private readonly automationRobotRepository: AutomationRobotRepository,
     private readonly automationRunHistoryRepository: AutomationRunHistoryRepository,
     private readonly automationActionRepository: AutomationActionRepository,
     private readonly automationTriggerRepository: AutomationTriggerRepository,
     private readonly robotService: RobotRobotService,
+    @Inject(forwardRef(() => NodeService))
     private readonly nodeService: NodeService,
-    // @ts-ignore
-    private readonly amqpConnection: AmqpConnection
+    private readonly restService: RestService,
+    private readonly queueSenderService: QueueSenderBaseService,
+    private readonly i18n: I18nService,
+    private readonly redisService: RedisService,
+    @Inject(forwardRef(() => TriggerEventHelper))
+    private readonly triggerEventHelper: TriggerEventHelper,
   ) {
     this.robotRunner = new AutomationRobotRunner({
       requestActionOutput: this.getActionOutput.bind(this),
       getRobotById: this.getRobotById.bind(this),
+      getRobotByRobotIdAndTriggerId: this.getRobotByRobotIdAndTriggerId.bind(this),
       reportResult: this.updateTaskRunHistory.bind(this),
     });
   }
@@ -83,72 +102,57 @@ export class AutomationService {
   async recoverRobots(robots: AutomationRobotEntity[], actions: AutomationActionEntity[], triggers: AutomationTriggerEntity[]) {
     const robotIdMap = new Map<string, string>();
     if (robots) {
-      robots.forEach(r => {
+      robots.forEach((r) => {
         r.id = IdWorker.nextId() + '';
         r.isActive = false;
         const oldId = r.robotId;
         const newId = 'arb' + generateRandomString(15);
         r.robotId = newId;
         robotIdMap.set(oldId, newId);
-      }
-      );
-      await this.automationRobotRepository
-        .createQueryBuilder()
-        .insert()
-        .values(robots)
-        .execute();
+      });
+      await this.automationRobotRepository.createQueryBuilder().insert().values(robots).execute();
     }
     if (actions) {
-      actions.forEach(r => {
+      actions.forEach((r) => {
         r.id = IdWorker.nextId() + '';
         r.actionId = 'aac' + generateRandomString(15);
         const oldId = r.robotId;
         r.robotId = robotIdMap.get(oldId) || oldId;
-      }
-      );
-      await this.automationActionRepository
-        .createQueryBuilder()
-        .insert()
-        .values(actions)
-        .execute();
+      });
+      await this.automationActionRepository.createQueryBuilder().insert().values(actions).execute();
     }
     if (triggers) {
-      triggers.forEach(r => {
+      triggers.forEach((r) => {
         r.id = IdWorker.nextId() + '';
         r.triggerId = 'att' + generateRandomString(15);
         const oldId = r.robotId;
         r.robotId = robotIdMap.get(oldId) || oldId;
-      }
-      );
-      await this.automationTriggerRepository
-        .createQueryBuilder()
-        .insert()
-        .values(triggers)
-        .execute();
+      });
+      await this.automationTriggerRepository.createQueryBuilder().insert().values(triggers).execute();
     }
   }
 
   async getRobotsByDstId(dstId: string) {
     return await this.automationRobotRepository.find({
       where: {
-        resourceId: dstId
-      }
+        resourceId: dstId,
+      },
     });
   }
 
   async getActionByRobotIds(robotIds: string[]) {
     return await this.automationActionRepository.find({
       where: {
-        robotId: In(robotIds)
-      }
+        robotId: In(robotIds),
+      },
     });
   }
 
   async getTriggersByRobotIds(robotIds: string[]) {
     return await this.automationTriggerRepository.find({
       where: {
-        robotId: In(robotIds)
-      }
+        robotId: In(robotIds),
+      },
     });
   }
 
@@ -164,22 +168,8 @@ export class AutomationService {
     return await this.robotService.getRobotById(robotId);
   }
 
-  /**
-   * create an execution record before the task is about to run
-   * @param robotId
-   * @param taskId
-   * @param spaceId
-   * @param data context
-   */
-  private async createRunHistory(robotId: string, taskId: string, spaceId: string, data?: any) {
-    const newRunHistory = this.automationRunHistoryRepository.create({
-      taskId,
-      robotId,
-      spaceId,
-      status: RunHistoryStatusEnum.RUNNING,
-      data
-    });
-    await this.automationRunHistoryRepository.insert(newRunHistory);
+  async getRobotByRobotIdAndTriggerId(robotId: string, triggerId: string) {
+    return await this.robotService.getRobotById(robotId, triggerId);
   }
 
   async saveTaskContext(robotTask: IRobotTask, robot: IRobot) {
@@ -190,9 +180,13 @@ export class AutomationService {
       robotId: robotTask.robotId,
       spaceId,
       status: robotTask.status,
-      data: context.context
+      data: context.context,
     });
     await this.automationRunHistoryRepository.insert(newRunHistory);
+    // save space monthly task run count
+    if (robotTask.status != RunHistoryStatusEnum.EXCESS) {
+      await this.increaseSpaceAutomationTaskRunCount(spaceId);
+    }
   }
 
   /**
@@ -208,6 +202,9 @@ export class AutomationService {
     } else {
       await this.automationRunHistoryRepository.update({ taskId }, { status });
     }
+    if (!success) {
+      await this.sendFailureMessage(taskId);
+    }
   }
 
   async getActionOutput(actionRuntimeInput: any, actionType: IActionType): Promise<IActionOutput> {
@@ -218,16 +215,13 @@ export class AutomationService {
       case 'http:': // some self-hosted service may use http
       case 'https:': {
         url.pathname = actionType.endpoint;
-        const resp = await fetch(
-          url.toString(),
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json'
-            },
-            body: JSON.stringify(actionRuntimeInput)
-          }
-        );
+        const resp = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(actionRuntimeInput),
+        });
         return await this.getOutputResult(resp);
       }
       case 'automation:': {
@@ -256,53 +250,26 @@ export class AutomationService {
     }
   }
 
-  /**
-   * Processes a response object and extracts the relevant output.
-   * @param resp The response object to process.
-   * @returns An object containing the success flag and the extracted data.
-   */
-  private async getOutputResult(resp: any) {
-    const contentType = resp.headers.get('content-type');
-    const success = true;
-
-    if (contentType && contentType.includes('application/json')) {
-      // Response is JSON
-      const data = await resp.json();
-      return { success, data };
-    }
-    // Response is not JSON
-    const data = { data: await resp.text() };
-    return { success, data };
-  }
-
-  private async getSpaceIdByRobotId(robotId: string) {
-    const resourceId = await this.automationRobotRepository.getResourceIdByRobotId(robotId);
-    const rawResult = await this.nodeService.selectSpaceIdByNodeId(resourceId!);
-    if (!rawResult?.spaceId) {
-      throw new ServerException(PermissionException.NODE_NOT_EXIST);
-    }
-    return rawResult.spaceId;
-  }
-
-  async handleTask(robotId: string, trigger: { input: any; output: any }) {
+  async handleTask(robotId: string, trigger: { triggerId: string; input: any; output: any }): Promise<string> {
     const spaceId = await this.getSpaceIdByRobotId(robotId);
-    // there is no billing plan yet, so there is no limit. self-hosted should not limit the call.
-    // there limit by billing plan
-    // const spaceRobotRunTimes = await this.getRobotRunTimesBySpaceId(spaceId);
-    // if (spaceRobotRunTimes >= 100000) {
-    //   return;
-    // }
-    const taskId = IdWorker.nextId().toString();// TODO: use uuid
+    const taskId = IdWorker.nextId().toString();
+    const isAutomationRunnableInSpace = await this.isAutomationRunnableInSpace(spaceId);
+    if (!isAutomationRunnableInSpace) {
+      await this.createRunHistory(robotId, taskId, spaceId, RunHistoryStatusEnum.EXCESS);
+      return taskId;
+    }
     // 1. create run history
     await this.createRunHistory(robotId, taskId, spaceId);
     try {
       // 2. execute the robot
       await this.robotRunner.run({
         robotId,
+        triggerId: trigger.triggerId,
         triggerInput: trigger.input,
         triggerOutput: trigger.output,
         taskId,
-        status: RunHistoryStatusEnum.RUNNING
+        status: RunHistoryStatusEnum.RUNNING,
+        extraTrigger: await this.getAutomationExtraTriggers(robotId, trigger),
       });
     } catch (error) {
       // 3. update run history when failed
@@ -310,6 +277,7 @@ export class AutomationService {
       await this.updateTaskRunHistory(taskId, false, null);
       this.logger.error(`RobotRuntimeError[${taskId}]`, (error as Error).message);
     }
+    return taskId;
   }
 
   @RabbitSubscribe({
@@ -317,7 +285,7 @@ export class AutomationService {
     routingKey: automationRunning,
     queue: automationRunningQueueName,
   })
-  async handleTaskByTaskIdAndTriggerId(message: { taskId: string, triggerId: string }) {
+  async handleTaskByTaskIdAndTriggerId(message: { taskId: string; triggerId: string }) {
     const { taskId, triggerId } = message;
     this.logger.log('RobotRunning', { ...message });
     try {
@@ -333,6 +301,8 @@ export class AutomationService {
       // 3. update run history when failed
       // runtime error should not be saved to database, it should be logged. then we can find the error by taskId.
       await this.updateTaskRunHistory(taskId, false);
+      // await this.sendFailureMessage(robotId);
+
       this.logger.error(`RobotRuntimeError[${taskId}]`, (error as Error).message);
     }
     // todo justify
@@ -342,6 +312,7 @@ export class AutomationService {
   async activeRobot(robotId: string, user: IUserBaseInfo) {
     const errorsByNodeId: any = {};
     try {
+      // todo validate resource ?
       const robot = await this.robotService.getRobotDetailById(robotId);
       const actions = Object.values(robot.actionsById);
       const { trigger, triggerType } = robot as any;
@@ -356,20 +327,22 @@ export class AutomationService {
           errorsByNodeId[trigger.triggerId] = validationError ? [...errors, ...validationError] : errors;
           return {
             ok: false,
-            errorsByNodeId
+            errorsByNodeId,
           };
         }
       }
       this.logger.debug(`trigger is valid: ${isTriggerValid}`);
-      const noErrors = actions.length > 0 && actions.every(node => {
-        const actionType = robot.actionTypesById[node.typeId]!;
-        // FIXME: type
-        const { hasError, errors, validationError } = validateMagicForm((actionType.inputJSONSchema as any).schema, node.input);
-        if (hasError) {
-          errorsByNodeId[node.id] = validationError ? [...errors, ...validationError] : errors;
-        }
-        return !hasError;
-      });
+      const noErrors =
+        actions.length > 0 &&
+        actions.every((node: any) => {
+          const actionType = robot.actionTypesById[node.typeId]!;
+          // FIXME: type
+          const { hasError, errors, validationError } = validateMagicForm((actionType.inputJSONSchema as any).schema, node.input);
+          if (hasError) {
+            errorsByNodeId[node.id] = validationError ? [...errors, ...validationError] : errors;
+          }
+          return !hasError;
+        });
       this.logger.debug(`no errors: ${noErrors},${actions}`);
       if (isTriggerValid && noErrors) {
         await this.automationRobotRepository.activeRobot(robotId, user.userId);
@@ -383,11 +356,177 @@ export class AutomationService {
     }
     return {
       ok: false,
-      errorsByNodeId
+      errorsByNodeId,
     };
   }
 
   async isResourcesHasRobots(resourceIds: string[]) {
-    return await this.automationRobotRepository.isResourcesHasRobots(resourceIds);
+    const hasRobots = await this.automationRobotRepository.isResourcesHasRobots(resourceIds);
+    if (!hasRobots) {
+      return await this.isResourcesHasTriggers(resourceIds);
+    }
+    return true;
+  }
+
+  async isResourcesHasTriggers(resourceIds: string[]) {
+    const triggers = await this.automationTriggerRepository.selectRobotIdAndResourceIdByResourceIds(resourceIds);
+    if (triggers.length > 0) {
+      const robotIds = new Set(triggers.map((i) => i.robotId));
+      const number = await this.automationRobotRepository.selectActiveCountByRobotIds(Array.from(robotIds));
+      return number > 0;
+    }
+    return false;
+  }
+
+  async analysisStatus(taskId: string | void): Promise<string | void> {
+    if (!taskId) {
+      return;
+    }
+    const status = await this.automationRunHistoryRepository.selectStatusByTaskId(taskId);
+    if (RunHistoryStatusEnum.FAILED === status) {
+      return await this.i18n.translate(Strings.robot_run_history_fail);
+    }
+    if (RunHistoryStatusEnum.EXCESS === status) {
+      return await this.i18n.translate(Strings.automation_run_times_over_limit);
+    }
+  }
+
+  /**
+   * add on multi-trigger.
+   * @param robotId robot id
+   * @param trigger trigger
+   */
+  private async getAutomationExtraTriggers(
+    robotId: string,
+    trigger: {
+      triggerId: string;
+      input: any;
+      output: any;
+    },
+  ): Promise<IRobotTaskExtraTrigger[]> {
+    const triggers = await this.automationTriggerRepository.selectTriggerInfosByRobotId(robotId);
+    let currentTriggerResourceId = '';
+    const extraTriggers = [];
+    for (const item of triggers) {
+      if (item.triggerId != trigger.triggerId && !isEmpty(item.resourceId) && !isEmpty(item.triggerTypeId)) {
+        extraTriggers.push(item);
+      }
+      if (item.triggerId == trigger.triggerId) {
+        currentTriggerResourceId = item.resourceId!;
+      }
+    }
+    const resourceIds = extraTriggers.map<string>((i) => i.resourceId!);
+    const resources = await this.nodeService.getNodeInfoMapByNodeIds(resourceIds);
+    return extraTriggers.map<IRobotTaskExtraTrigger>((item) => {
+      const nodeInfo = resources.get(item.resourceId!);
+      return {
+        triggerId: item.triggerId,
+        triggerTypeId: item.triggerTypeId!,
+        triggerInput: item.input,
+        triggerOutput:
+          item.resourceId === currentTriggerResourceId || nodeInfo?.relNodeId === currentTriggerResourceId
+            ? trigger.output
+            : this.triggerEventHelper.getDefaultTriggerOutput(item.resourceId!, nodeInfo?.nodeName!),
+      };
+    });
+  }
+  /**
+   * create an execution record before the task is about to run
+   * @param robotId
+   * @param taskId
+   * @param spaceId
+   * @param status run status
+   * @param data context
+   */
+  public async createRunHistory(robotId: string, taskId: string, spaceId: string, status = RunHistoryStatusEnum.RUNNING, data?: any) {
+    const newRunHistory = this.automationRunHistoryRepository.create({
+      taskId,
+      robotId,
+      spaceId,
+      status,
+      data,
+    });
+    await this.automationRunHistoryRepository.insert(newRunHistory);
+    // save space monthly task run count
+    if (status != RunHistoryStatusEnum.EXCESS) {
+      await this.increaseSpaceAutomationTaskRunCount(spaceId);
+    }
+  }
+
+  /**
+   * Processes a response object and extracts the relevant output.
+   * @param resp The response object to process.
+   * @returns An object containing the success flag and the extracted data.
+   */
+  private async getOutputResult(resp: any) {
+    const contentType = resp.headers.get('content-type');
+    const success = true;
+
+    if (contentType && contentType.includes('application/json')) {
+      // Response is JSON
+      const data = await resp.json();
+      return { success: !data?.errors, data };
+    }
+    // Response is not JSON
+    const data = { data: await resp.text() };
+    return { success, data };
+  }
+
+  public async getSpaceIdByRobotId(robotId: string) {
+    const resourceId = await this.automationRobotRepository.getResourceIdByRobotId(robotId);
+    const rawResult = await this.nodeService.selectSpaceIdByNodeId(resourceId!);
+    if (!rawResult?.spaceId) {
+      throw new ServerException(PermissionException.NODE_NOT_EXIST);
+    }
+    return rawResult.spaceId;
+  }
+
+  public async isAutomationRunnableInSpace(spaceId: string): Promise<boolean> {
+    try {
+      const automationRunsMessage = await this.restService.getSpaceAutomationRunsMessage(spaceId);
+      const allowRun = automationRunsMessage?.allowRun;
+      if (!allowRun) {
+        // The number of space station automation runs exceeds the limit and an excess record is generated.
+        this.logger.log('Automation Subscription UsageExceeded', { spaceId });
+      }
+      return allowRun;
+    } catch (e) {
+      this.logger.error('Automation Subscription Error', { e });
+    }
+    return true;
+  }
+
+  private async sendFailureMessage(taskId: string) {
+    const robotId = await this.automationRunHistoryRepository.selectRobotIdByTaskId(taskId);
+    if (!robotId) {
+      return;
+    }
+    const robot = await this.automationRobotRepository.selectRobotSimpleInfoByRobotId(robotId);
+    if (robot?.props?.failureNotifyEnable) {
+      const spaceId = (await this.nodeService.selectSpaceIdByNodeId(robot.resourceId))?.spaceId;
+      const message = {
+        nodeId: robot.resourceId,
+        spaceId: spaceId,
+        body: {
+          extras: {
+            robotId,
+            automationName: robot.name || (await this.i18n.translate(Strings.robot_unnamed)),
+            endAt: Date.now(),
+          },
+        },
+        templateId: NoticeTemplatesConstant.workflow_execute_failed_notify,
+        toUserId: [robot.createdBy],
+      };
+      await this.queueSenderService.sendMessage(notificationQueueExchangeName, 'notification.message', message);
+    }
+  }
+
+  private async increaseSpaceAutomationTaskRunCount(spaceId: string) {
+    const redisClient = this.redisService.getClient();
+    const spaceTaskRunCountKey = SPACE_AUTOMATION_RUN_COUNT_KEY(spaceId);
+    const keyExists = await redisClient.exists(spaceTaskRunCountKey);
+    if (keyExists) {
+      await redisClient.incr(spaceTaskRunCountKey);
+    }
   }
 }

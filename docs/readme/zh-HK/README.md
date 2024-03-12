@@ -14,7 +14,7 @@
     <!-- Java -->
     <img src="https://img.shields.io/badge/Java-ED8B00?logo=spring&logoColor=white" alt="Java 語言，Spring 框架" />
     <!-- hub.docker.com-->
-    <a target="_blank" href="#installation">
+    <a target="_blank" href="#安裝">
         <img src="https://img.shields.io/docker/pulls/apitable/init-db" />
     </a>
     <!-- Github Release Latest -->
@@ -70,7 +70,7 @@
 
 如果您想演示 APITable 開源項目，可使用 [⚡️Gitpod Online Demo](https://gitpod.io/#https://github.com/apitable/apitable)。
 
-如果您想要在本地或雲端計算環境中安裝 APITable ，請參閱 [💾 安裝](#installation)
+如果您想要在本地或雲端計算環境中安裝 APITable ，請參閱 [💾 安裝](#安裝)
 
 如果您想要配置本地開發環境，請參考我們的 [🧑‍💻開發者指南](./docs/contribute/developer-guide.md)
 
@@ -252,7 +252,7 @@ APITable 將提供一個數據表查詢語言(DQL)來查詢您的數據庫電子
 curl https://apitable.github.io/install.sh | bash
 ```
 
-然後在您的瀏覽器中打開 [https://localhost:80](http://localhost:80) 訪問它。
+然後在您的瀏覽器中打開 [http://localhost:80](http://localhost:80) 訪問它。
 
 我們還提供了一個基於 [pm2](https://pm2.keymetrics.io/) 的一體化鏡像，用於演示或測試目的（不推薦用於企業或生產用途）：
 

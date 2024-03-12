@@ -16,72 +16,129 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Box, Button, ListDeprecate, stopPropagation, useTheme } from '@apitable/components';
+import Image from 'next/image';
+import { isValidElement, memo, useRef } from 'react';
+import styled from 'styled-components';
+import { Box, Button, ListDeprecate, stopPropagation, Typography } from '@apitable/components';
 import { Strings, t } from '@apitable/core';
-import { ChevronRightOutlined } from '@apitable/icons';
-import { useHover } from 'ahooks';
-import { useRef } from 'react';
+import { ChevronRightOutlined, NumberOutlined } from '@apitable/icons';
+import { OrTooltip } from 'pc/components/common/or_tooltip';
+import EllipsisText from 'pc/components/ellipsis_text';
+import { useCssColors } from '../trigger/use_css_colors';
 import { ISchemaPropertyListItem, ISchemaPropertyListItemClickFunc } from './helper';
 
+const StyledBox = styled(Box)`
+    p {
+      width: 100%;
+    }
+  `;
 interface ISchemaPropertyListItemProps {
+  currentStep: number
   item: ISchemaPropertyListItem;
   isActive?: boolean;
   disabled?: boolean;
   handleItemClick: ISchemaPropertyListItemClickFunc;
 }
 
-export const SchemaPropertyListItem = (props: ISchemaPropertyListItemProps) => {
-  const { item, isActive, disabled, handleItemClick } = props;
-  const theme = useTheme();
+const StyledButton = styled(Button)`
+`;
+const StyledTypography = styled(Typography)`
+  padding-top: 0;
+  `;
+
+const RowItem= styled(ListDeprecate.Item)`
+  ${StyledButton} {
+    visibility: hidden;
+  }
+  padding: 8px 8px !important;
+  border-radius: 4px !important;
+  height: inherit !important;
+  
+  &:hover {
+    ${StyledButton} {
+      visibility: visible;
+    }
+  }
+`;
+
+export const SchemaPropertyListItem = memo((props: ISchemaPropertyListItemProps) => {
+  const { item, currentStep, isActive, disabled, handleItemClick } = props;
   const ref = useRef<HTMLDivElement>(null);
-  const isHovering = useHover(ref);
-  const getBgColor = () => {
-    if (isActive) {
-      return theme.color.fc5;
-    }
-    if (isHovering) {
-      return theme.color.highBg;
-    }
-    return theme.color.fc8;
-  };
+  const colors = useCssColors();
+  const imgSize = currentStep === 0 ? 32 : 24;
+
   return (
-    <Box
-      ref={ref}
-      key={item.key}
-      marginBottom="4px"
-    >
-      <ListDeprecate.Item
+    <Box ref={ref} key={item.key} marginBottom="4px">
+      <RowItem
         key={item.key}
         id={item.key}
+        active={isActive}
         currentIndex={0}
-        style={{
-          backgroundColor: getBgColor(),
-          borderRadius: '4px'
-        }}
         className={isActive ? 'active' : ''}
         onClick={(e) => {
           if (disabled) return;
           stopPropagation(e);
-          handleItemClick(item);
-        }}>
+          if(item.hasChildren) {
+            handleItemClick(item, true);
+          } else {
+            handleItemClick(item);
+          }
+        }}
+      >
         <Box
           display="flex"
           flexDirection="row"
           alignItems="center"
-          justifyContent="space-between"
+          justifyContent="flex-start"
+          overflowX={'hidden'}
           width="100%"
-          style={disabled ? {
-            opacity: 0.5,
-            cursor: 'not-allowed',
-          } : {}}
+          style={
+            disabled
+              ? {
+                opacity: 0.5,
+                cursor: 'not-allowed',
+              }
+              : {}
+          }
         >
-          {item.label}
-          <Box
-            display="flex"
-            alignItems="center"
-          >
-            {
-              item.canInsert && <Button
+
+          <Box display={'flex'} alignItems='center' flex={'1 1 auto'} overflowX={'hidden'} ba>
+            <Box flex={`0 0 ${imgSize}px`} display={'flex'} alignItesm={'center'} justifyContent={'center'}>
+              {
+                item.icon ? (isValidElement(item.icon) ? item.icon :
+                  <Image src={String(item.icon)}
+                    width={imgSize}
+                    height={imgSize}
+                    alt=""
+                  />)
+                  :
+                  <NumberOutlined size={16} color={colors.textCommonTertiary}/>
+              }
+            </Box>
+
+            <Box paddingLeft={'8px'} width={'100%'} flex={'1 1 auto'} overflowX={'hidden'}>
+              <StyledBox width={'100%'} alignItems={'flex-start'} display={'flex'} flexDirection={'column'} overflowX={'hidden'}>
+                <EllipsisText>
+                  <Typography variant={'body3'} color={colors.textCommonPrimary} >
+                    {item.label}
+                  </Typography>
+                </EllipsisText>
+                {
+                  item.description && (
+                    <EllipsisText>
+                      <StyledTypography variant={'body4'} color={colors.textCommonTertiary}>
+                        {item.description}
+                      </StyledTypography>
+                    </EllipsisText>
+                  )
+                }
+              </StyledBox>
+            </Box>
+          </Box>
+
+          <Box display="flex" alignItems="center" flex={'none'} flexGrow={'0'} paddingLeft="16px">
+            {item.canInsert && (
+              <StyledButton
                 size="small"
                 color="primary"
                 style={{
@@ -96,14 +153,15 @@ export const SchemaPropertyListItem = (props: ISchemaPropertyListItemProps) => {
                   stopPropagation(e);
                   handleItemClick(item);
                 }}
-              >{t(Strings.robot_variables_insert_button)}</Button>
-            }
-            {
-              item.hasChildren && <Box
-                marginLeft="16px"
+              >
+                {t(Strings.robot_variables_insert_button)}
+              </StyledButton>
+            )}
+            {item.hasChildren && (
+              <Box
                 display="flex"
                 alignItems="center"
-                onClick={(e) => {
+                onClick={(e: any) => {
                   if (disabled) return;
                   stopPropagation(e);
                   handleItemClick(item, true);
@@ -111,10 +169,10 @@ export const SchemaPropertyListItem = (props: ISchemaPropertyListItemProps) => {
               >
                 <ChevronRightOutlined />
               </Box>
-            }
+            )}
           </Box>
         </Box>
-      </ListDeprecate.Item>
+      </RowItem>
     </Box>
   );
-};
+});
