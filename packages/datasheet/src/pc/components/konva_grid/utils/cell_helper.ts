@@ -23,7 +23,6 @@ import {
   Api,
   ArrayValueField,
   BasicValueType,
-  ButtonActionType,
   ButtonStyleType,
   ConfigConstant,
   DatasheetApi,
@@ -322,6 +321,7 @@ export class CellHelper extends KonvaDrawer {
     const buttonField = renderProps.field as IButtonField;
     const cellValue = [1];
     const isOperating = isActive;
+    const GRID_CELL_VALUE_PADDING = 0;
     let currentX = GRID_CELL_VALUE_PADDING;
     let currentY = GRID_CELL_MULTI_PADDING_TOP;
     const isShortHeight = rowHeightLevel === RowHeightLevel.Short;
@@ -1239,20 +1239,22 @@ export class CellHelper extends KonvaDrawer {
      * Then if it's a directly rendered associated field, pageParams.nodeId === currentResourceId
      */
     const { x, y, field, cellValue, rowHeight, columnWidth, rowHeightLevel, isActive, editable, callback, currentResourceId } = renderProps;
-    const linkRecordIds = cellValue ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT) : null;
+    const linkRecordIds = Array.isArray(cellValue) ? (cellValue as string[]).slice(0, MAX_SHOW_LINK_IDS_COUNT) : [];
     const state = store.getState();
     const NO_DATA = Symbol('NO_DATA');
     const ERROR_DATA = Symbol('ERROR_DATA');
+    const ARCHIVED_DATA = Symbol('ARCHIVED_DATA');
     const foreignDatasheetId = field.property.foreignDatasheetId;
     const datasheet = getDatasheetOrLoad(state, foreignDatasheetId, currentResourceId, true);
     const isLoading = Selectors.getDatasheetLoading(state, foreignDatasheetId);
     const datasheetClient = Selectors.getDatasheetClient(state, foreignDatasheetId);
     const snapshot = datasheet && datasheet.snapshot;
+    const archivedRecordIds = snapshot?.meta.archivedRecordIds || [];
 
     const emptyRecords: string[] = [];
 
     if (!linkRecordIds?.length) return DEFAULT_RENDER_DATA;
-    let linkInfoList: { recordId: string; text: string | symbol | null }[] = [];
+    let linkInfoList: { recordId: string; text: string | symbol | null, disabled?: boolean }[] = [];
     linkInfoList = linkRecordIds.map((recordId) => {
       if (!snapshot) {
         return {
@@ -1262,16 +1264,25 @@ export class CellHelper extends KonvaDrawer {
       }
 
       if (!snapshot.recordMap[recordId]) {
+        if (archivedRecordIds.includes(recordId)) {
+          return {
+            recordId,
+            text: ARCHIVED_DATA,
+            disabled: true
+          };
+        }
         if (!isLoading && datasheetClient!.loadingRecord[recordId] === 'error') {
           return {
             recordId,
             text: ERROR_DATA,
+            disabled: true
           };
         }
         emptyRecords.push(recordId);
         return {
           recordId,
           text: NO_DATA,
+          disabled: true
         };
       }
       return {
@@ -1305,6 +1316,8 @@ export class CellHelper extends KonvaDrawer {
           return t(Strings.loading);
         case ERROR_DATA:
           return t(Strings.record_fail_data);
+        case ARCHIVED_DATA:
+          return t(Strings.record_archived_data);
         default:
           return text as string;
       }
@@ -1318,7 +1331,7 @@ export class CellHelper extends KonvaDrawer {
     let isOverflow = false;
 
     for (let index = 0; index < listCount; index++) {
-      const { recordId, text: _text } = linkInfoList[index];
+      const { recordId, text: _text, disabled } = linkInfoList[index];
       const color = typeof _text === 'string' ? colors.firstLevelText : colors.thirdLevelText;
       const text = displayText(_text);
       let realMaxTextWidth = maxTextWidth < 0 ? 0 : maxTextWidth;
@@ -1388,6 +1401,7 @@ export class CellHelper extends KonvaDrawer {
         text: renderText,
         style: { color },
         id: recordId,
+        disabled,
       });
       currentX += itemWidth + GRID_CELL_MULTI_ITEM_MARGIN_LEFT;
     }

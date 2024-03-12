@@ -23,7 +23,7 @@ import { useThemeColors } from '@apitable/components';
 
 import {
   BasicValueType,
-  CollaCommandName,
+  CollaCommandName, ConfigConstant,
   ExecuteResult,
   Field,
   FieldType,
@@ -59,12 +59,11 @@ import { expandFieldPermission } from 'pc/components/field_permission';
 import { getShowFieldName } from 'pc/components/multi_grid/context_menu/utils';
 import { useAppDispatch } from 'pc/hooks/use_app_dispatch';
 import { resourceService } from 'pc/resource_service';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables } from 'pc/utils/env';
 
 import { useActiveFieldSetting, useDeleteField, useFilterField, useHideField, useSortField } from '../multi_grid/hooks';
 import { expandFieldDescEditorMobile } from './field_desc_editor';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 interface IFieldMenu {
   onClose(): void;
@@ -91,6 +90,8 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = ({ onClo
       fieldIndex,
     };
   }, shallowEqual);
+  const catalogTreeActiveType = useAppSelector((state) => state.catalogTree.activeType);
+  const isPrivate = catalogTreeActiveType === ConfigConstant.Modules.PRIVATE;
   const fieldPermissionMap = useAppSelector(Selectors.getFieldPermissionMap);
   const mirrorId = useAppSelector((state) => state.pageParams.mirrorId);
   const dispatch = useAppDispatch();
@@ -262,7 +263,7 @@ export const FieldMenu: React.FC<React.PropsWithChildren<IFieldMenu>> = ({ onClo
             props: { fieldId },
           } = arg;
 
-          if (!fieldId || embedId) {
+          if (!fieldId || embedId || isPrivate) {
             return true;
           }
 

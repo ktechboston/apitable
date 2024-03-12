@@ -137,7 +137,7 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
     cacheTheme,
   } = useContext(KonvaGridViewContext);
   const { isScrolling } = scrollState;
-  const { activeCellBound, setTooltipInfo, clearTooltipInfo, draggingOutlineInfo } = useContext(KonvaGridContext);
+  const { activeCellBound, setTooltipInfo, clearTooltipInfo, draggingOutlineInfo, activeNodePrivate } = useContext(KonvaGridContext);
   const state = store.getState();
   const { rowHeight, rowHeightLevel, columnCount, rowCount, frozenColumnCount, rowInitSize } = instance;
   const totalColumnCount = visibleColumns.length;
@@ -183,7 +183,6 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
             const y = instance.getRowOffset(rowIndex);
             const columnWidth = instance.getColumnWidth(columnIndex);
             const cellValue = Selectors.getCellValue(state, snapshot, recordId, fieldId);
-            const isFirstColumn = columnIndex === 0;
             const isFrozenColumn = columnIndex < frozenColumnCount;
             const { offset, width } = getCellHorizontalPosition({
               depth,
@@ -197,8 +196,9 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
               isCurrentSearchCell = searchRecordId === recordId && searchFieldId === fieldId;
             }
             const editable = getCellEditable(activeField, _editable);
-            const fontWeight = isFirstColumn ? 'bold' : 'normal';
+            const fontWeight = 'normal';
             const permissions = Selectors.getDatasheet(state)?.permissions || {};
+
             const renderProps = {
               x: x + offset,
               y,
@@ -231,6 +231,7 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
               activeHeight: activeCellHeight,
               isActive: true,
             });
+
             const currentCell = (
               <>
                 {!(
@@ -311,76 +312,6 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
    */
   let fillHandler: React.ReactNode = null;
   let frozenFillHandler: React.ReactNode = null;
-  if (!isEditing && selectRanges.length) {
-    const selectionRange = selectRanges[0];
-    if (selectionRange != null) {
-      const fillHandleCellIndex = Range.bindModel(selectionRange).getUIIndexRange(state);
-      const { min: recordMinIndex, max: recordMaxIndex } = fillHandleCellIndex?.record || {
-        min: null,
-        max: null,
-      };
-      const { min: fieldMinIndex, max: fieldMaxIndex } = fillHandleCellIndex?.field || {
-        min: null,
-        max: null,
-      };
-      if (recordMaxIndex != null && !isNaN(recordMaxIndex) && fieldMaxIndex != null && !isNaN(fieldMaxIndex)) {
-        const { fieldId } = visibleColumns[fieldMaxIndex];
-        const maxIndexField = fieldMap[fieldId];
-        // Computed fields do not render drag handler
-        if (getCellEditable(maxIndexField, _editable)) {
-          const x = instance.getColumnOffset(fieldMaxIndex);
-          const y = instance.getRowOffset(recordMaxIndex);
-          const isSingleCell = recordMinIndex === recordMaxIndex && fieldMinIndex === fieldMaxIndex;
-          const activeField = fieldMap[activeCell!.fieldId];
-          const realField = Selectors.findRealField(state, activeField);
-          const cellHeight = getCellHeight({
-            field: activeField,
-            realField,
-            rowHeight,
-            activeHeight: activeCellBound.height,
-            isActive: isSingleCell,
-          });
-          const columnWidth = instance.getColumnWidth(fieldMaxIndex);
-          const { depth } = linearRows[recordMaxIndex];
-          const { width, offset } = getCellHorizontalPosition({
-            depth,
-            columnWidth,
-            columnIndex: fieldMaxIndex,
-            columnCount: totalColumnCount,
-          });
-
-          const currentHandler = (
-            <Rect
-              name={KONVA_DATASHEET_ID.GRID_CELL_FILL_HANDLER}
-              x={x - GRID_FILL_HANDLER_SIZE / 2 - 0.5 + width + offset}
-              y={y + cellHeight - GRID_FILL_HANDLER_SIZE / 2 - 0.5}
-              width={GRID_FILL_HANDLER_SIZE}
-              height={GRID_FILL_HANDLER_SIZE}
-              stroke={colors.primaryColor}
-              strokeWidth={0.5}
-            />
-          );
-          // select section with workdoc field cannot be filled
-          let selectWithWorkdocField = false;
-          for(let idx = fieldMinIndex; idx <= fieldMaxIndex; idx++) {
-            const { fieldId } = visibleColumns[idx];
-            const field = fieldMap[fieldId];
-            if (field.type === FieldType.WorkDoc) {
-              selectWithWorkdocField = true;
-              break;
-            }
-          }
-          if (selectWithWorkdocField) {
-            fillHandler = null;
-          } else if (fieldMaxIndex < frozenColumnCount) {
-            frozenFillHandler = currentHandler;
-          } else {
-            fillHandler = currentHandler;
-          }
-        }
-      }
-    }
-  }
 
   const toggleEditing: () => Promise<boolean | void> = useCallback((): Promise<boolean | void> => {
     return ShortcutActionManager.trigger(ShortcutActionName.ToggleEditing);
@@ -489,6 +420,7 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
       return tempCells;
       // eslint-disable-next-line
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       activeCell,
       activeCellHeight,
@@ -537,6 +469,79 @@ export const useDynamicCells = (props: IUseDynamicCellsProps) => {
       />
     );
   }, [colors.primaryColor, draggingOutlineInfo, instance, rowHeight]);
+
+  if (!isEditing && selectRanges.length) {
+    const selectionRange = selectRanges[0];
+    if (selectionRange != null) {
+      const fillHandleCellIndex = Range.bindModel(selectionRange).getUIIndexRange(state);
+      const { min: recordMinIndex, max: recordMaxIndex } = fillHandleCellIndex?.record || {
+        min: null,
+        max: null,
+      };
+      const { min: fieldMinIndex, max: fieldMaxIndex } = fillHandleCellIndex?.field || {
+        min: null,
+        max: null,
+      };
+      if (recordMaxIndex != null && !isNaN(recordMaxIndex) && fieldMaxIndex != null && !isNaN(fieldMaxIndex)) {
+        const maxIndexColumn = visibleColumns[fieldMaxIndex];
+        if (!maxIndexColumn) return;
+        const { fieldId } = maxIndexColumn;
+        const maxIndexField = fieldMap[fieldId];
+        // Computed fields do not render drag handler
+        if (getCellEditable(maxIndexField, _editable)) {
+          const x = instance.getColumnOffset(fieldMaxIndex);
+          const y = instance.getRowOffset(recordMaxIndex);
+          const isSingleCell = recordMinIndex === recordMaxIndex && fieldMinIndex === fieldMaxIndex;
+          const activeField = fieldMap[activeCell!.fieldId];
+          const realField = Selectors.findRealField(state, activeField);
+          const cellHeight = getCellHeight({
+            field: activeField,
+            realField,
+            rowHeight,
+            activeHeight: activeCellBound.height,
+            isActive: isSingleCell,
+          });
+          const columnWidth = instance.getColumnWidth(fieldMaxIndex);
+          const { depth } = linearRows[recordMaxIndex];
+          const { width, offset } = getCellHorizontalPosition({
+            depth,
+            columnWidth,
+            columnIndex: fieldMaxIndex,
+            columnCount: totalColumnCount,
+          });
+
+          const currentHandler = (
+            <Rect
+              name={KONVA_DATASHEET_ID.GRID_CELL_FILL_HANDLER}
+              x={x - GRID_FILL_HANDLER_SIZE / 2 - 0.5 + width + offset}
+              y={y + cellHeight - GRID_FILL_HANDLER_SIZE / 2 - 0.5}
+              width={GRID_FILL_HANDLER_SIZE}
+              height={GRID_FILL_HANDLER_SIZE}
+              stroke={colors.primaryColor}
+              strokeWidth={0.5}
+            />
+          );
+          // select section with workdoc field cannot be filled
+          let selectWithWorkdocField = false;
+          for (let idx = fieldMinIndex; idx <= fieldMaxIndex; idx++) {
+            const { fieldId } = visibleColumns[idx];
+            const field = fieldMap[fieldId];
+            if (field.type === FieldType.WorkDoc) {
+              selectWithWorkdocField = true;
+              break;
+            }
+          }
+          if (selectWithWorkdocField) {
+            fillHandler = null;
+          } else if (fieldMaxIndex < frozenColumnCount) {
+            frozenFillHandler = currentHandler;
+          } else {
+            fillHandler = currentHandler;
+          }
+        }
+      }
+    }
+  }
 
   return {
     ...activeCellMap,

@@ -25,10 +25,9 @@ import { InlineNodeName } from 'pc/components/common/inline_node_name';
 import { NodeInfoBar } from 'pc/components/common/node_info_bar';
 import { Router } from 'pc/components/route_manager/router';
 import { useSideBarVisible } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { gstMirrorIconByViewType } from './mirror_list/utils';
 import styles from './style.module.less';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 interface IMirrorPath {
   breadInfo: ISourceDatasheetInfo;
@@ -48,6 +47,7 @@ export const MirrorPath: React.FC<React.PropsWithChildren<IMirrorPath>> = (props
     }
     return Selectors.getViewById(snapshot, breadInfo.viewId);
   });
+  
   const isGhostNode = useAppSelector((state) => {
     return Selectors.getDatasheet(state, breadInfo.datasheetId)?.isGhostNode;
   });
@@ -109,7 +109,10 @@ export const MirrorPath: React.FC<React.PropsWithChildren<IMirrorPath>> = (props
                 iconEditable={false}
               />
               <span style={{ margin: '0 4px' }}>/</span>
-              <Tooltip title={isGhostNode ? t(Strings.ghost_node_no_access) : t(Strings.form_to_datasheet_view)}>
+              <Tooltip
+                title={isGhostNode ? t(Strings.ghost_node_no_access) : t(Strings.form_to_datasheet_view)
+                }
+              >
                 <span className={styles.viewInfo} onClick={jumpHandler}>
                   <span className={styles.viewIcon}>{gstMirrorIconByViewType(view!.type, colors.fourthLevelText)}</span>
                   <span className={styles.viewName}>{view?.name}</span>

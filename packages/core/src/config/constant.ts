@@ -49,6 +49,7 @@ export enum NodeType {
   AI = 9,
   AUTOMATION = 10,
   VIEW = 11,
+  CUSTOM_PAGE = 12,
   ASSET_FILE = 98,
   TRASH = 99,
 }
@@ -95,7 +96,18 @@ export enum NodeTypeReg {
   AUTOMATION = 'aut',
   MIRROR = 'mir',
   WIDGET = 'wdt',
+  AI = 'ai_',
 }
+
+export const nodePrefixNameMap = new Map<NodeTypeReg, string>([
+  [NodeTypeReg.FOLDER, t(Strings.folder)],
+  [NodeTypeReg.DATASHEET, t(Strings.datasheet)],
+  [NodeTypeReg.FORM, t(Strings.form)],
+  [NodeTypeReg.AUTOMATION, t(Strings.automation)],
+  [NodeTypeReg.MIRROR, t(Strings.mirror)],
+  [NodeTypeReg.DASHBOARD, t(Strings.dashboard)],
+  [NodeTypeReg.AI, t(Strings.ai_chat)],
+]);
 
 export enum SocialType {
   WECOM = 1,
@@ -206,6 +218,15 @@ export const nodePermissionMap = new Map<NodeType, { [key: string]: string }>([
       [permission.updater]: '在「只可阅读」基础上，还可以编辑小程序和分享仪表盘',
     },
   ],
+  [
+    NodeType.CUSTOM_PAGE,
+    {
+      [permission.manager]: t(Strings.embed_page_node_permission_manager),
+      [permission.editor]: t(Strings.embed_page_node_permission_editor),
+      [permission.reader]: t(Strings.embed_page_node_permission_reader),
+      [permission.updater]: t(Strings.embed_page_node_permission_updater),
+    },
+  ],
 ]);
 
 export const permissionText = {
@@ -278,6 +299,7 @@ export enum Modules {
   CATALOG = 'CATALOG',
   SHARE = 'SHARE',
   TEAM_TREE = 'TEAM_TREE',
+  PRIVATE = 'PRIVATE',
 }
 
 /** Indicates the type of menu, each different type of menu corresponds to a different menu list */
@@ -294,6 +316,7 @@ export enum ContextMenuType {
   FORM_FIELD_OP = 'FORM_FIELD_OP', // Magical form field operation menu
   EXPAND_RECORD_FIELD = 'EXPAND_RECORD_FIELD', // Expand the operation field configuration in the card
   AI = 'AI',
+  CUSTOM_PAGE = 'CUSTOM_PAGE',
 }
 
 export const NODE_DESCRIPTION_EDITOR_ID = 'folderDescribeEditor';

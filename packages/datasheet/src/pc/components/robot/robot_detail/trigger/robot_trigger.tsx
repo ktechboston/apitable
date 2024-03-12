@@ -20,7 +20,7 @@ import { useMount } from 'ahooks';
 import produce from 'immer';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { identity, isEqual, isEqualWith, isNil, pickBy } from 'lodash';
-import { Just, Maybe } from 'purify-ts';
+import { Just, Maybe } from 'purify-ts/index';
 import * as React from 'react';
 import { memo, MutableRefObject, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { shallowEqual } from 'react-redux';
@@ -472,9 +472,9 @@ export const RobotTriggerBase = memo((props: IRobotTriggerBase) => {
                 const transformedValue =
                   value == null || isEqual(value, EmptyNullOperand)
                     ? {
-                        operator: OperatorEnums.And,
-                        operands: [],
-                      }
+                      operator: OperatorEnums.And,
+                      operands: [],
+                    }
                     : value.value;
                 return (
                   <RecordMatchesConditionsFilter
@@ -583,9 +583,9 @@ export const RobotTriggerBase = memo((props: IRobotTriggerBase) => {
           const transformedValue =
             value == null || isEqual(value, EmptyNullOperand)
               ? {
-                  operator: OperatorEnums.And,
-                  operands: [],
-                }
+                operator: OperatorEnums.And,
+                operands: [],
+              }
               : value.value;
           const dstId = getDstIdItem ?? triggerDatasheetValue?.id;
 
@@ -784,7 +784,7 @@ export const RobotTriggerBase = memo((props: IRobotTriggerBase) => {
         if (fieldId != null && shareInfo?.shareId == null) {
           if (fieldMap?.[fieldId] != null) {
             const field = fieldMap?.[fieldId] as IButtonField;
-            const automationNotSame = field.property.action.automation?.automationId !== automationState?.resourceId;
+            const automationNotSame = field.property?.action?.automation?.automationId !== automationState?.resourceId;
             if (
               (automationNotSame || field.property.action?.type !== ButtonActionType.TriggerAutomation) &&
               !e.some((error) => error.dataPath === '.fieldId')

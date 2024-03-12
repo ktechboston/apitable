@@ -17,7 +17,6 @@
  */
 
 import { Workbook } from 'exceljs';
-import { browser } from 'modules/shared/browser';
 import React from 'react';
 import {
   ConfigConstant,
@@ -37,6 +36,7 @@ import {
   UnitItem,
   ViewDerivateBase,
 } from '@apitable/core';
+import { browser } from 'modules/shared/browser';
 import { NodeIcon } from 'pc/components/catalog/node_context_menu/node_icons';
 import { Message } from 'pc/components/common/message';
 import { Modal } from 'pc/components/common/modal/modal/modal';
@@ -83,6 +83,11 @@ export const nodeConfigData = [
     type: ConfigConstant.NodeType.AUTOMATION,
     icon: NodeIcon.AddAutomation,
     name: t(Strings.automation),
+  },
+  {
+    type: ConfigConstant.NodeType.CUSTOM_PAGE,
+    icon: NodeIcon.AddEmbed,
+    name: t(Strings.embed_page),
   },
 ];
 
@@ -432,6 +437,8 @@ export const getContextTypeByNodeType = (type: ConfigConstant.NodeType) => {
       return ConfigConstant.ContextMenuType.MIRROR;
     case ConfigConstant.NodeType.AI:
       return ConfigConstant.ContextMenuType.AI;
+    case ConfigConstant.NodeType.CUSTOM_PAGE:
+      return ConfigConstant.ContextMenuType.CUSTOM_PAGE;
     default:
       return ConfigConstant.ContextMenuType.DEFAULT;
   }

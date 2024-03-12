@@ -20,6 +20,8 @@ package com.apitable.space.service;
 
 import com.apitable.interfaces.ai.model.ChartTimeDimension;
 import com.apitable.interfaces.ai.model.CreditInfo;
+import com.apitable.interfaces.billing.model.SubscriptionInfo;
+import com.apitable.interfaces.social.model.SocialConnectInfo;
 import com.apitable.internal.vo.InternalSpaceCapacityVo;
 import com.apitable.internal.vo.InternalSpaceUsageVo;
 import com.apitable.space.dto.GetSpaceListFilterCondition;
@@ -450,4 +452,44 @@ public interface ISpaceService extends IService<SpaceEntity> {
      * @author Chambers
      */
     boolean getSpaceSeatAvailableStatus(String spaceId);
+
+    /**
+     * get space ids by created by.
+     *
+     * @param userId user id
+     * @return space ids
+     */
+    List<String> getSpaceIdsByCreatedBy(Long userId);
+
+    /**
+     * check widget whether over limit.
+     *
+     * @param spaceId space id
+     */
+    void checkWidgetOverLimit(String spaceId);
+
+    /**
+     * get space subscription.
+     *
+     * @param spaceId space id
+     * @return SubscriptionInfo
+     */
+    SubscriptionInfo getSpaceSubscription(String spaceId);
+
+    /**
+     * get social connection info.
+     *
+     * @param spaceId space id
+     * @return SocialConnectInfo
+     */
+    SocialConnectInfo getSocialConnectInfo(String spaceId);
+
+    /**
+     * get social suite key.
+     *
+     * @param appId app id
+     * @return social suite key
+     */
+    String getSocialSuiteKeyByAppId(String appId);
+
 }

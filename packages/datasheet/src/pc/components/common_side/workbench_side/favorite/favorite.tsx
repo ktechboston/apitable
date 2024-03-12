@@ -45,6 +45,7 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
     favoriteLoading,
     favoriteExpandedKeys,
     treeNodesMap,
+    privateTreeNodesMap,
   } = useAppSelector(
     (state: IReduxState) => ({
       favoriteTreeNodeIds: state.catalogTree.favoriteTreeNodeIds,
@@ -53,6 +54,7 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
       favoriteLoading: state.catalogTree.favoriteLoading,
       favoriteExpandedKeys: state.catalogTree.favoriteExpandedKeys,
       treeNodesMap: state.catalogTree.treeNodesMap,
+      privateTreeNodesMap: state.catalogTree.privateTreeNodesMap,
     }),
     shallowEqual,
   );
@@ -69,9 +71,8 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
     dispatch(StoreActions.setExpandedKeys(nodeIds, ConfigConstant.Modules.FAVORITE));
   };
 
-  const { getFavoriteNodeListReq, getChildNodeListReq } = useCatalogTreeRequest();
+  const { getFavoriteNodeListReq } = useCatalogTreeRequest();
   const { run: getFavoriteNodeList } = useRequest(getFavoriteNodeListReq, { manual: true });
-  const { run: getChildNodeList } = useRequest(getChildNodeListReq, { manual: true });
 
   useEffect(() => {
     if (spaceId) {
@@ -79,23 +80,6 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spaceId]);
-
-  const fetchNodeList = async (folderId: string) => {
-    const result = await getChildNodeList(folderId);
-    if (result) {
-      dispatch(StoreActions.addNodeToMap(result, false));
-    }
-  };
-
-  useEffect(() => {
-    if (favoriteExpandedKeys.length) {
-      favoriteExpandedKeys.forEach((nodeId) => {
-        if (treeNodesMap[nodeId]?.hasChildren && !treeNodesMap[nodeId]?.children?.length) {
-          fetchNodeList(nodeId);
-        }
-      });
-    }
-  }, [favoriteExpandedKeys, fetchNodeList, treeNodesMap]);
 
   const onContextMenu = (e: React.SyntheticEvent) => {
     e.stopPropagation();
@@ -110,9 +94,10 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
       ConfigConstant.NodeType.DASHBOARD,
       ConfigConstant.NodeType.MIRROR,
       ConfigConstant.NodeType.AI,
+      ConfigConstant.NodeType.CUSTOM_PAGE,
     ]);
     return children.map((nodeId, index) => {
-      const nodeInfo = treeNodesMap[nodeId];
+      const nodeInfo = treeNodesMap[nodeId] || privateTreeNodesMap[nodeId];
       if (nodeInfo == null) return null;
       const { type, children, hasChildren, errType } = nodeInfo;
       const pos = `${level}-${index}`;
@@ -188,13 +173,23 @@ const FavoriteBase: FC<React.PropsWithChildren<unknown>> = () => {
   };
 
   const loadData = (nodeId: string) => {
-    if (!treeNodesMap[nodeId]?.hasChildren) {
+    const nodeInfo = treeNodesMap[nodeId] || privateTreeNodesMap[nodeId];
+    if (!nodeInfo?.hasChildren) {
       return new Promise((resolve) => {
         resolve(false);
       });
     }
-    return dispatch(StoreActions.getChildNode(nodeId));
+    return dispatch(StoreActions.getChildNode(nodeId, nodeInfo.nodePrivate ? ConfigConstant.Modules.PRIVATE : undefined));
   };
+
+  useEffect(() => {
+    if (favoriteExpandedKeys.length) {
+      favoriteExpandedKeys.forEach((nodeId) => {
+        loadData(nodeId);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoriteExpandedKeys]);
 
   const rightClickHandler = (e: React.MouseEvent<Element, MouseEvent>, data: any) => {
     e.preventDefault();

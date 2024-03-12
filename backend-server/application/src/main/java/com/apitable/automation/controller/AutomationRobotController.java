@@ -271,9 +271,7 @@ public class AutomationRobotController {
             NodePermission.EDIT_NODE,
             status -> ExceptionUtil.isTrue(status, PermissionException.NODE_OPERATION_DENIED));
         String spaceId = iNodeService.getSpaceIdByNodeId(resourceId);
-        return ResponseData.success(
-            iAutomationTriggerService.createByDatabus(userId, spaceId, data));
-
+        return ResponseData.success(iAutomationTriggerService.create(userId, spaceId, data));
     }
 
     /**
@@ -303,7 +301,7 @@ public class AutomationRobotController {
             status -> ExceptionUtil.isTrue(status, PermissionException.NODE_OPERATION_DENIED));
         String spaceId = iNodeService.getSpaceIdByNodeId(resourceId);
         return ResponseData.success(
-            iAutomationTriggerService.updateByDatabus(triggerId, userId, spaceId, data));
+            iAutomationTriggerService.update(userId, triggerId, spaceId, data));
     }
 
     /**
@@ -330,7 +328,7 @@ public class AutomationRobotController {
         iPermissionService.checkPermissionBySessionOrShare(resourceId, null,
             NodePermission.EDIT_NODE,
             status -> ExceptionUtil.isTrue(status, PermissionException.NODE_OPERATION_DENIED));
-        iAutomationTriggerService.deleteByDatabus(robotId, triggerId, userId);
+        iAutomationTriggerService.deleteByTriggerId(robotId, triggerId, userId);
         return ResponseData.success();
     }
 

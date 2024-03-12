@@ -25,12 +25,11 @@ import { SettingOutlined, InfoCircleOutlined } from '@apitable/icons';
 import { Avatar } from 'pc/components/common/avatar';
 import { IAvatarProps } from 'pc/components/common/avatar/avatar';
 import { Loading } from 'pc/components/common/loading';
-import { Tag } from 'pc/components/common/tag';
+import { Tag, TagColors } from 'pc/components/common/tag';
 import { useCatalogTreeRequest } from 'pc/hooks/use_catalogtree_request';
 import { useRequest } from 'pc/hooks/use_request';
 import { useAppSelector } from 'pc/store/react-redux';
 import { getEnvVariables } from 'pc/utils/env';
-import { TagColors } from '../tag';
 // @ts-ignore
 import { getSocialWecomUnitName } from 'enterprise/home/social_platform/utils';
 import styles from './style.module.less';
@@ -71,6 +70,9 @@ export const UserCard: FC<React.PropsWithChildren<IUserCard>> = ({
   const [tagType, setTagType] = useState('');
   const spaceInfo = useAppSelector((state) => state.space.curSpaceInfo);
   const activeNodeId = useAppSelector((state) => Selectors.getNodeId(state));
+  const activeNodePrivate = useAppSelector((state) =>
+    state.catalogTree.treeNodesMap[activeNodeId]?.nodePrivate || state.catalogTree.privateTreeNodesMap[activeNodeId]?.nodePrivate
+  );
   const { shareSettingsReq } = useCatalogTreeRequest();
   const { data: memberInfo, loading } = useRequest(getMemberInfo);
   const { run: getMemberRole, data: memberRole } = useRequest(getMemberRoleReq, { manual: true });
@@ -164,7 +166,7 @@ export const UserCard: FC<React.PropsWithChildren<IUserCard>> = ({
           <Loading />
         ) : (
           <div>
-            {permissionVisible && memberRole && memberInfo && getEnvVariables().FILE_PERMISSION_VISIBLE && (
+            {permissionVisible && memberRole && memberInfo && getEnvVariables().FILE_PERMISSION_VISIBLE && !activeNodePrivate && (
               <div className={styles.cardTool} onClick={openPermissionModal}>
                 <div className={styles.settingPermissionBtn}>
                   <SettingOutlined size={20} color={colors.textCommonPrimary} />

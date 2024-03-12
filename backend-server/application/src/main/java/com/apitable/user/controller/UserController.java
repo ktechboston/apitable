@@ -343,6 +343,7 @@ public class UserController {
      * @param data CheckUserEmailRo
      * @return {@link ResponseData}
      */
+    @Deprecated(since = "v1.10.0")
     @PostResource(path = "/validate/email", requiredPermission = false)
     @Operation(summary = "Query whether the user is consistent with the "
         + "specified mail", description = "Query whether the user is consistent "
@@ -394,7 +395,8 @@ public class UserController {
         boolean exist = iUserService.checkByEmail(param.getEmail());
         ExceptionUtil.isFalse(exist, EMAIL_HAS_BIND);
         Long userId = SessionContext.getUserId();
-        iUserService.updateEmailByUserId(userId, param.getEmail());
+        String oldEmail = LoginContext.me().getLoginUser().getEmail();
+        iUserService.updateEmailByUserId(userId, param.getEmail(), oldEmail);
         return ResponseData.success();
     }
 

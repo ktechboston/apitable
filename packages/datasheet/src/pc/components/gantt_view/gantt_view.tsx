@@ -80,6 +80,7 @@ import {
 import { useDispatch, useResponsive, useSetState } from 'pc/hooks';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getStorage, setStorage, StorageName } from 'pc/utils/storage/storage';
 import { ScreenSize } from '../common/component_display/enum';
 import { IContainerEdit } from '../editors/interface';
@@ -103,10 +104,8 @@ import {
   ITaskLineSetting,
   ITargetTaskInfo,
 } from './interface';
-import styles from './style.module.less';
 import { getAllTaskLine, detectCyclesStack, autoTaskScheduling, getCollapsedLinearRows, getGanttViewStatusWithDefault } from './utils';
-
-import {useAppSelector} from "pc/store/react-redux";
+import styles from './style.module.less';
 
 interface IGanttViewProps {
   height: number;
@@ -858,6 +857,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo((pro
     }
   }, [clearTooltipInfo, isScrolling]);
   const theme = useTheme();
+  const activeNodePrivate = useAppSelector(Selectors.getActiveNodePrivate);
 
   const linkCycleEdges = useMemo(() => {
     if (!linkFieldId) {
@@ -952,6 +952,7 @@ export const GanttView: FC<React.PropsWithChildren<IGanttViewProps>> = memo((pro
 
   const konvaGridContext = {
     theme,
+    activeNodePrivate,
     tooltipInfo,
     setTooltipInfo,
     clearTooltipInfo,

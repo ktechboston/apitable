@@ -25,14 +25,13 @@ import { ChevronRightOutlined, CloseOutlined } from '@apitable/icons';
 // eslint-disable-next-line no-restricted-imports
 import { Message, Tooltip } from 'pc/components/common';
 import { SearchPanel, SecondConfirmType } from 'pc/components/datasheet_search_panel';
+import { useAppSelector } from 'pc/store/react-redux';
 import { getUrlWithHost } from 'pc/utils';
 import NotDataImgDark from 'static/icon/datasheet/empty_state_dark.png';
 import NotDataImgLight from 'static/icon/datasheet/empty_state_light.png';
 import { ScrollBar } from '../../scroll_bar';
 import { createWidgetByExistWidgetId } from '../utils';
 import styles from './style.module.less';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 interface IRecommendWidgetPanelProps {
   setVisibleRecommend: React.Dispatch<React.SetStateAction<boolean>>;
@@ -56,6 +55,9 @@ export const RecommendWidgetPanel: React.FC<React.PropsWithChildren<IRecommendWi
   const [installingWidgetIds, setInstallingWidgetIds] = useState<null | string[]>(null);
   const dashboardId = useAppSelector((state) => state.pageParams.dashboardId)!;
   const spaceId = useAppSelector((state) => state.space.activeId);
+  const activeNodePrivate = useAppSelector((state) =>
+    state.catalogTree.treeNodesMap[dashboardId]?.nodePrivate || state.catalogTree.privateTreeNodesMap[dashboardId]?.nodePrivate
+  );
   const [recommendList, serRecommendList] = useState<IRecentInstalledItem[]>([]);
   const [searchPanelVisible, setSearchPanelVisible] = useState(false);
   const rootNodeId = useAppSelector((state: IReduxState) => state.catalogTree.rootId);
@@ -73,14 +75,14 @@ export const RecommendWidgetPanel: React.FC<React.PropsWithChildren<IRecommendWi
       return;
     }
     setLoading(true);
-    WidgetApi.getRecentInstalledWidgets(spaceId!).then((res) => {
+    WidgetApi.getRecentInstalledWidgets(spaceId!, activeNodePrivate ? 3 : 1).then((res) => {
       setLoading(false);
       const { data, success } = res.data;
       if (success) {
         serRecommendList(data);
       }
     });
-  }, [visibleRecommend, spaceId]);
+  }, [visibleRecommend, spaceId, activeNodePrivate]);
 
   const quoteWidget = async (widgetIds: string[]) => {
     setInstallingWidgetIds(widgetIds);

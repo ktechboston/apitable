@@ -25,14 +25,13 @@ import { PopUpTitle } from 'pc/components/common';
 import { Router } from 'pc/components/route_manager/router';
 import { useCatalog } from 'pc/hooks/use_catalog';
 import { resourceService } from 'pc/resource_service';
+import { useAppSelector } from 'pc/store/react-redux';
 import { executeCommandWithMirror } from 'pc/utils/execute_command_with_mirror';
 import MirrorEmptyDark from 'static/icon/common/mirror_empty_dark.png';
 import MirrorEmptyLight from 'static/icon/common/mirror_empty_light.png';
 import { IMirrorItem } from './interface';
-import styles from './style.module.less';
 import { gstMirrorIconByViewType } from './utils';
-
-import {useAppSelector} from "pc/store/react-redux";
+import styles from './style.module.less';
 
 interface IMirrorListInner {
   mirrorList: IMirrorItem[];
@@ -75,7 +74,8 @@ export const MirrorListInner: React.FC<React.PropsWithChildren<IMirrorListInner>
 
   const mirrorCreatable = useAppSelector((state) => {
     const { manageable } = Selectors.getPermissions(state);
-    const { manageable: folderManageable } = state.catalogTree.treeNodesMap[folderId!]?.permissions || {};
+    const { manageable: folderManageable } = state.catalogTree.treeNodesMap[folderId!]?.permissions ||
+    state.catalogTree.privateTreeNodesMap[folderId!]?.permissions || {};
     return manageable && folderManageable;
   });
   const execute = (cmd: ICollaCommandOptions) => resourceService.instance!.commandManager.execute(cmd);

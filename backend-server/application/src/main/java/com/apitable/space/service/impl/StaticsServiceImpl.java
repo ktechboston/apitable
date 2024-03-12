@@ -19,11 +19,13 @@
 package com.apitable.space.service.impl;
 
 import static com.apitable.core.constants.RedisConstants.GENERAL_STATICS;
+import static com.apitable.core.constants.RedisConstants.getApiUsageTableDayMindIdCacheKey;
 import static com.apitable.shared.constants.DateFormatConstants.YEARS_MONTH_PATTERN;
 import static com.apitable.shared.util.DateHelper.SIMPLE_DATE;
 import static com.apitable.shared.util.DateHelper.SIMPLE_MONTH;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -33,22 +35,31 @@ import com.apitable.control.mapper.ControlMapper;
 import com.apitable.control.model.ControlTypeDTO;
 import com.apitable.core.constants.RedisConstants;
 import com.apitable.core.util.SqlTool;
+import com.apitable.organization.dto.UnitMemberTeamDTO;
 import com.apitable.organization.service.IMemberService;
 import com.apitable.shared.clock.spring.ClockManager;
 import com.apitable.shared.util.DateHelper;
+import com.apitable.shared.util.page.PageHelper;
+import com.apitable.shared.util.page.PageInfo;
 import com.apitable.space.dto.ControlStaticsDTO;
 import com.apitable.space.dto.DatasheetStaticsDTO;
 import com.apitable.space.dto.NodeStaticsDTO;
 import com.apitable.space.dto.NodeTypeStaticsDTO;
 import com.apitable.space.mapper.StaticsMapper;
 import com.apitable.space.service.IStaticsService;
+import com.apitable.workspace.dto.NodeStatisticsDTO;
+import com.apitable.workspace.enums.NodeType;
 import com.apitable.workspace.enums.ViewType;
 import com.apitable.workspace.mapper.DatasheetMapper;
 import com.apitable.workspace.mapper.NodeMapper;
+import com.apitable.workspace.service.INodeService;
+import com.apitable.workspace.vo.NodeStatisticsVo;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import jakarta.annotation.Resource;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +98,9 @@ public class StaticsServiceImpl implements IStaticsService {
     @Resource
     private RedisTemplate<String, Long> redisTemplate;
 
+    @Resource
+    private INodeService iNodeService;
+
     @Value("${SKIP_USAGE_VERIFICATION:false}")
     private Boolean skipUsageVerification;
 
@@ -99,40 +113,14 @@ public class StaticsServiceImpl implements IStaticsService {
             return 0;
         }
         // Get the API usage of this month up to yesterday
-        Long apiUsageUntilYesterday = this.getCurrentMonthApiUsageUntilYesterday(spaceId, currentMonth);
+        Long apiUsageUntilYesterday =
+            this.getCurrentMonthApiUsageUntilYesterday(spaceId, currentMonth);
         // If it is NULL, it indicates that the daily API usage statistics table is empty, and the old method is adopted
-        if (apiUsageUntilYesterday == null) {
+        if (null == apiUsageUntilYesterday) {
             return this.getCurrentMonthApiUsageWithCache(spaceId, currentMonth);
         } else {
             return apiUsageUntilYesterday + this.getTodayApiUsage(spaceId);
         }
-    }
-
-    /**
-     * Get today's API usage and update the cache.
-     *
-     * @param spaceId space id
-     * @return amount
-     */
-    private Long getTodayApiUsage(String spaceId) {
-        // Get today's API usage cache
-        LocalDate now = ClockManager.me().getLocalDateNow();
-        String todayKey =
-            StrUtil.format(GENERAL_STATICS, "api" + now.format(SIMPLE_DATE), spaceId);
-        Object apiUsageToday = redisTemplate.opsForValue().get(todayKey);
-        if (apiUsageToday == null) {
-            // Maximum table ID of yesterday's API usage record
-            LocalDate yesterday = now.minusDays(1);
-            Long yesterdayMaxId =
-                staticsMapper.selectMaxIdByTime(yesterday.format(SIMPLE_DATE));
-            // Get today's API usage
-            apiUsageToday = staticsMapper.countByIdGreaterThanAndSpaceId(yesterdayMaxId, spaceId);
-            // Update today's api usage cache
-            redisTemplate.opsForValue()
-                .set(todayKey, Long.valueOf(apiUsageToday.toString()), 2, TimeUnit.HOURS);
-        }
-        // Return to the space station today's API usage
-        return Long.valueOf(apiUsageToday.toString());
     }
 
     /**
@@ -187,27 +175,53 @@ public class StaticsServiceImpl implements IStaticsService {
         return Long.valueOf(apiUsageToday.toString());
     }
 
+    /**
+     * Get today's API usage and update the cache.
+     *
+     * @param spaceId space id
+     * @return amount
+     */
+    private Long getTodayApiUsage(String spaceId) {
+        // Get today's API usage cache
+        LocalDate now = ClockManager.me().getLocalDateNow();
+        String todayKey =
+            StrUtil.format(GENERAL_STATICS, "api" + now.format(SIMPLE_DATE), spaceId);
+        Object apiUsageToday = redisTemplate.opsForValue().get(todayKey);
+        if (null == apiUsageToday) {
+            // The created at field is not queried based on the created at field
+            // reducing the number of table returns
+            Long currentDayMinId = getApiUsageTableMinIdByDay();
+            if (null != currentDayMinId) {
+                apiUsageToday = staticsMapper.countApiUsageBySpaceId(spaceId, currentDayMinId);
+            } else {
+                Long currentMonthMindId = getApiUsageTableMinId(now);
+                if (null == currentMonthMindId) {
+                    return 0L;
+                }
+                // Get today's API usage
+                apiUsageToday =
+                    staticsMapper.countByIdGreaterThanAndSpaceIdAndCreatedAt(currentMonthMindId,
+                        spaceId,
+                        now.format(SIMPLE_DATE));
+            }
+            // Update today's api usage cache
+            redisTemplate.opsForValue()
+                .set(todayKey, Long.valueOf(apiUsageToday.toString()), 2, TimeUnit.HOURS);
+        }
+        // Return to the space station today's API usage
+        return Long.valueOf(apiUsageToday.toString());
+    }
+
     private Long getApiUsageTableMinId(LocalDate now) {
         // Get the minimum ID of the API consumption table this month
         String key = StrUtil.format(GENERAL_STATICS, "api-usage-min-id",
             DateHelper.formatFullTime(now, YEARS_MONTH_PATTERN));
         Long id = redisTemplate.opsForValue().get(key);
-        if (id != null) {
-            return id;
-        }
-        // The minimum ID of this month does not exist. Query the minimum ID of last month to reduce the query volume
-        String lastMonthKey = StrUtil.format(GENERAL_STATICS, "api-usage-min-id",
-            DateHelper.formatFullTime(now.plusMonths(-1), YEARS_MONTH_PATTERN));
-        Long lastMonthMinId = redisTemplate.opsForValue().get(lastMonthKey);
-        // If the minimum table ID of last month does not exist, query the maximum table ID directly
-        if (lastMonthMinId == null) {
+        if (null == id) {
             id = staticsMapper.selectApiUsageMaxId();
-        } else {
-            LocalDateTime startDayOfMonth = now.atStartOfDay();
-            id = staticsMapper.selectApiUsageMinIdByCreatedAt(lastMonthMinId, startDayOfMonth);
+            // Keep the cache of the month
+            redisTemplate.opsForValue().set(key, id, 33, TimeUnit.DAYS);
         }
-        // Keep the cache of the month
-        redisTemplate.opsForValue().set(key, id, 33, TimeUnit.DAYS);
         return id;
     }
 
@@ -351,7 +365,12 @@ public class StaticsServiceImpl implements IStaticsService {
             return viewCacheVo;
         }
         DatasheetStaticsDTO viewVO = new DatasheetStaticsDTO();
-        List<String> objects = staticsMapper.selectDstViewStaticsBySpaceId(spaceId);
+        List<String> dstIds =
+            nodeMapper.selectNodeIdBySpaceIdAndType(spaceId, NodeType.DATASHEET.getNodeType());
+        if (CollUtil.isEmpty(dstIds)) {
+            return viewVO;
+        }
+        List<String> objects = staticsMapper.selectDstViewStaticsByDstIds(dstIds);
         if (CollUtil.isNotEmpty(objects)) {
             objects.stream()
                 .flatMap(o -> JSONUtil.parseArray(o).stream())
@@ -445,5 +464,46 @@ public class StaticsServiceImpl implements IStaticsService {
         if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
             redisTemplate.delete(key);
         }
+    }
+
+    @Override
+    public PageInfo<NodeStatisticsVo> getNodeStatistics(String spaceId, Page<Void> page) {
+        List<NodeStatisticsVo> records = new ArrayList<>();
+        IPage<NodeStatisticsDTO> nodes = nodeMapper.selectCountBySpaceIdWithPage(spaceId, page);
+        if (nodes.getRecords().isEmpty()) {
+            return PageHelper.build(nodes.getCurrent(), nodes.getSize(), nodes.getTotal(), records);
+        }
+        List<Long> userIds = nodes.getRecords().stream().map(
+            NodeStatisticsDTO::getCreatedBy).filter(userId -> !userId.equals(0L)).toList();
+        List<UnitMemberTeamDTO> members =
+            iMemberService.getMemberBySpaceIdAndUserIds(spaceId, userIds);
+        Map<Long, UnitMemberTeamDTO> memberMap = members.stream()
+            .collect(Collectors.toMap(UnitMemberTeamDTO::getUserId, i -> i));
+        // get private node count
+        List<Long> unitIds =
+            members.stream().map(UnitMemberTeamDTO::getUnitId).collect(Collectors.toList());
+        Map<Long, Integer> privateNodeCountMap = iNodeService.getCountByUnitIds(unitIds);
+        for (NodeStatisticsDTO node : nodes.getRecords()) {
+            NodeStatisticsVo vo = new NodeStatisticsVo();
+            UnitMemberTeamDTO member = memberMap.get(node.getCreatedBy());
+            vo.setMemberId(member.getMemberId().toString());
+            vo.setMemberName(member.getMemberName());
+            vo.setAvatar(member.getAvatar());
+            vo.setAvatarColor(member.getAvatarColor());
+            vo.setTeamName(member.getTeamName());
+            vo.setTotalNodeCount(node.getNodeCount());
+            vo.setPrivateNodeCount(
+                NumberUtil.nullToZero(privateNodeCountMap.get(member.getUnitId())));
+            vo.setTeamNodeCount(vo.getTotalNodeCount() - vo.getPrivateNodeCount());
+            records.add(vo);
+        }
+        return PageHelper.build(nodes.getCurrent(), nodes.getSize(), nodes.getTotal(), records);
+    }
+
+    private Long getApiUsageTableMinIdByDay() {
+        // Get the minimum ID of theAPI consumption table today, input in at 0 o'clock in everyday
+        // see ApiUsageTask
+        String key = getApiUsageTableDayMindIdCacheKey(LocalDate.now().format(SIMPLE_DATE));
+        return redisTemplate.opsForValue().get(key);
     }
 }

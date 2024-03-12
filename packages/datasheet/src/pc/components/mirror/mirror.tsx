@@ -27,9 +27,10 @@ import { SuspensionPanel } from 'pc/components/suspension_panel';
 import { CollaboratorStatus } from 'pc/components/tab_bar/collaboration_status';
 import { View } from 'pc/components/view';
 import { useNetwork } from 'pc/hooks/use_network';
-import styles from './style.module.less';
 
-import {useAppSelector} from "pc/store/react-redux";
+import { useAppSelector } from 'pc/store/react-redux';
+import { JobTaskProvider } from '../editors/button_editor/job_task';
+import styles from './style.module.less';
 
 export const Mirror: React.FC<React.PropsWithChildren<{ mirror: IMirror }>> = ({ mirror }) => {
   const { status } = useNetwork(true, mirror!.id, ResourceType.Mirror);
@@ -54,7 +55,10 @@ export const Mirror: React.FC<React.PropsWithChildren<{ mirror: IMirror }>> = ({
               <MobileToolBar hideToolBar />
             </ComponentDisplay>
           </div>
-          <View />
+
+          <JobTaskProvider>
+            <View />
+          </JobTaskProvider>
         </div>
       }
     />

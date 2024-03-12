@@ -37,11 +37,10 @@ import {
 import { AddOutlined } from '@apitable/icons';
 import { ShortcutActionManager, ShortcutActionName } from 'modules/shared/shortcut_key';
 import { ViewIcon } from 'pc/components/tool_bar/view_switcher/view_icon';
+import { useAppSelector } from 'pc/store/react-redux';
 import DefaultViewPng from 'static/icon/datasheet/view/datasheet_img_view@4x.png';
 import { NodeIcon } from './node_icon';
 import styles from './style.module.less';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 459;
@@ -100,7 +99,8 @@ export const ViewIntroduceList = (props: IViewIntroduceList) => {
   const formCreatable = useAppSelector((state) => {
     const folderId = Selectors.getDatasheetParentId(state)!;
     const { editable } = Selectors.getPermissions(state);
-    const { manageable } = state.catalogTree.treeNodesMap[folderId]?.permissions || {};
+    const node = state.catalogTree.treeNodesMap[folderId] || state.catalogTree.privateTreeNodesMap[folderId];
+    const { manageable } = node?.permissions || {};
     return manageable && editable;
   });
   const nodeTypeList = formCreatable ? [ConfigConstant.NodeType.FORM] : [];

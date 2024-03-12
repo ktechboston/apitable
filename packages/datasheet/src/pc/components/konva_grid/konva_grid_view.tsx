@@ -63,12 +63,11 @@ import {
 import { useAllowDownloadAttachment } from 'pc/components/upload_modal/preview_item';
 import { useCacheScroll } from 'pc/context';
 import { useSetState, useDispatch } from 'pc/hooks';
+import { useAppSelector } from 'pc/store/react-redux';
 import { IContainerEdit } from '../editors/interface';
 import { getFieldLock } from '../field_permission';
 import { autoSizerCanvas } from '../konva_components';
 import styles from './style.module.less';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 interface IGridViewProps {
   height: number;
@@ -268,7 +267,7 @@ export const KonvaGridView: FC<React.PropsWithChildren<IGridViewProps>> = memo((
   // Height of field header
   const fieldHeadHeight = useMemo(() => {
     if (!autoHeadHeight) return GRID_FIELD_HEAD_HEIGHT;
-    textSizer.current.setFont({ fontWeight: 'bold', fontSize: 13 });
+    textSizer.current.setFont({ fontSize: 13 });
     const fieldHeight = visibleColumns.reduce((prev, cur, index) => {
       const { fieldId } = cur;
       const field = fieldMap[fieldId];
@@ -590,10 +589,12 @@ export const KonvaGridView: FC<React.PropsWithChildren<IGridViewProps>> = memo((
 
   const { unitTitleMap } = useWxTitleMap();
   const theme = useTheme();
+  const activeNodePrivate = useAppSelector(Selectors.getActiveNodePrivate);
   const cacheTheme = useAppSelector(Selectors.getTheme);
 
   const konvaGridContext = {
     theme,
+    activeNodePrivate,
     tooltipInfo,
     setTooltipInfo,
     clearTooltipInfo,

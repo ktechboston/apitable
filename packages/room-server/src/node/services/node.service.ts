@@ -179,6 +179,7 @@ export class NodeService {
         description: description || '{}',
         parentId: nodeInfo?.parentId || '',
         icon: nodeInfo?.icon || '',
+        nodePrivate: nodeInfo?.unitId != '0',
         nodeShared: nodeShared,
         nodePermitSet: nodePermitSet,
         revision: revision == null ? 0 : revision,
@@ -263,5 +264,20 @@ export class NodeService {
       nodeMap.set(node.nodeId, info);
     }
     return nodeMap;
+  }
+
+  async nodePrivate(nodeId: string): Promise<boolean> {
+    return (await this.nodeRepository.selectUnitCountByNodeId(nodeId)) > 0;
+  }
+
+  async filterPrivateNode(nodeIds: string[]): Promise<string[]> {
+    if (!nodeIds.length) {
+      return [];
+    }
+    const nodes = await this.nodeRepository.selectTeamNodeByNodeIds(nodeIds);
+    if (!nodes || !nodes.length) {
+      return [];
+    }
+    return nodes.map((i) => i.nodeId);
   }
 }

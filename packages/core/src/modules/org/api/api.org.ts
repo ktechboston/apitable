@@ -18,7 +18,9 @@
 
 import axios from 'axios';
 import * as Url from '../../shared/api/url';
-import { IAddIsActivedMemberInfo, IApiWrapper, IInviteMemberList, IMemberInfoInAddressList, IUpdateMemberInfo } from '../../../exports/store/interfaces';
+import {
+  IAddIsActivedMemberInfo, IApiWrapper, IInviteMemberList, IMemberInfoInAddressList, IUpdateMemberInfo
+} from '../../../exports/store/interfaces';
 import urlcat from 'urlcat';
 
 const CancelToken = axios.CancelToken;
@@ -254,10 +256,9 @@ export function updateMemberTeam(memberIds: string[], newTeamIds: string[], preT
 /**
  * Invite members(batch available)
  */
-export function sendInvite(invite: IInviteMemberList[], nodeId?: string, nvcVal?: string) {
-  return axios.post(Url.SEND_INVITE, {
+export function sendInvite(spaceId: string, invite: IInviteMemberList[], nvcVal?: string) {
+  return axios.post(urlcat(Url.SEND_EMAIL_INVITATION, { spaceId }), {
     invite,
-    nodeId,
     data: nvcVal,
   });
 }
@@ -267,21 +268,25 @@ export function sendInvite(invite: IInviteMemberList[], nodeId?: string, nvcVal?
  *
  * @param email strict email format
  */
-export function reSendInvite(email: string) {
-  return axios.post(Url.RESEND_INVITE, {
+export function reSendInvite(spaceId: string, email: string) {
+  return axios.post(urlcat(Url.RESEND_EMAIL_INVITATION, { spaceId }), {
     email,
   });
 }
 
 /**
  * Invite Email Verify
- * @param token one-time invite token
- * @param from inviter
+ * @param inviteToken one-time invite token
  */
-export function inviteEmailVerify(token: string) {
-  return axios.post(Url.INVITE_EMAIL_VERIFY, {
-    token,
-  });
+export function inviteEmailVerify(inviteToken: string) {
+  return axios.get(urlcat(Url.VALID_EMAIL_INVITATION, { inviteToken }));
+}
+
+/**
+ * Accept email invitation.
+ */
+export function acceptEmailInvitation(spaceId: string, inviteToken: string) {
+  return axios.post(urlcat(Url.ACCEPT_EMAIL_INVITATION, { spaceId, inviteToken }));
 }
 
 /**

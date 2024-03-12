@@ -157,9 +157,10 @@ export class LinkField extends ArrayValueField {
     if (!snapshot) {
       return false;
     }
+    const archivedRecordIds = snapshot.meta.archivedRecordIds || [];
     if (Array.isArray(value)) {
       return value.every(recordId => {
-        if (snapshot.recordMap[recordId]) {
+        if (snapshot.recordMap[recordId] || archivedRecordIds.includes(recordId)) {
           return true;
         }
         return false;
@@ -303,7 +304,7 @@ export class LinkField extends ArrayValueField {
       data: [],
     };
 
-    if (recordIds) {
+    if (recordIds && Array.isArray(recordIds)) {
       stdVal.data = recordIds.map(recordId => {
         const text = this.getLinkedRecordCellString(recordId) || t(Strings.record_unnamed);
         return {

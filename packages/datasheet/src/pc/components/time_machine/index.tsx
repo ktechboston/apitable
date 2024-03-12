@@ -42,10 +42,6 @@ import {
   ThemeName,
 } from '@apitable/core';
 import { CloseOutlined, QuestionCircleOutlined } from '@apitable/icons';
-// @ts-ignore
-import { getSocialWecomUnitName } from 'enterprise/home/social_platform/utils';
-// @ts-ignore
-import { Backup } from 'enterprise/time_machine/backup/backup';
 import { Avatar, Modal } from 'pc/components/common';
 import { notify } from 'pc/components/common/notify';
 import { NotifyKey } from 'pc/components/common/notify/notify.interface';
@@ -54,14 +50,16 @@ import { Beta } from 'pc/components/robot/robot_panel/robot_list_head';
 import { useAppDispatch } from 'pc/hooks/use_app_dispatch';
 import { resourceService } from 'pc/resource_service';
 import { store } from 'pc/store';
+import { useAppSelector } from 'pc/store/react-redux';
 import DataEmptyDark from 'static/icon/common/time_machine_empty_dark.png';
 import DataEmptyLight from 'static/icon/common/time_machine_empty_light.png';
-
 import { TabPaneKeys } from './interface';
 import { getForeignDatasheetIdsByOp, getOperationInfo } from './utils';
+// @ts-ignore
+import { getSocialWecomUnitName } from 'enterprise/home/social_platform/utils';
+// @ts-ignore
+import { Backup } from 'enterprise/time_machine/backup/backup';
 import styles from './style.module.less';
-
-import {useAppSelector} from "pc/store/react-redux";
 
 const { TabPane } = Tabs;
 
@@ -71,6 +69,7 @@ const DATEFORMAT = 'YYYY-MM-DD HH:mm:ss';
 export const TimeMachine: React.FC<React.PropsWithChildren<{ onClose: (visible: boolean) => void }>> = ({ onClose }) => {
   const datasheetId = useAppSelector(Selectors.getActiveDatasheetId)!;
   const curDatasheet = useAppSelector((state) => Selectors.getDatasheet(state, datasheetId));
+  const activeNodePrivate = useAppSelector((state) => Selectors.getActiveNodePrivate(state));
   const [curPreview, setCurPreview] = useState<number | string>();
   const [changesetList, setChangesetList] = useState<IRemoteChangeset[]>([]);
   const [fetching, setFetching] = useState(false);
@@ -331,7 +330,7 @@ export const TimeMachine: React.FC<React.PropsWithChildren<{ onClose: (visible: 
             {!isEmpty && <div className={styles.bottomTip}>{noMore ? t(Strings.no_more) : t(Strings.data_loading)}</div>}
           </div>
         </TabPane>
-        {Boolean(Backup) && (
+        {Boolean(Backup) && !activeNodePrivate && (
           <TabPane tab={t(Strings.backup_title)} key={TabPaneKeys.BACKUP}>
             <Backup datasheetId={datasheetId} setCurPreview={setCurPreview} curPreview={curPreview!} />
           </TabPane>
