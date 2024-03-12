@@ -1,3 +1,4 @@
+---
 server:
   port: ${SERVER_PORT:8081}
   max-http-request-header-size: ${MAX_HTTP_HEADER_SIZE:32KB}
@@ -96,7 +97,8 @@ socket:
 
 email:
   personal: ${EMAIL_PERSONAL:APITable}
-  from: ${MAIL_FROM:}
+  from: ${MAIL_FROM:$MAIL_USERNAME}
+  noticeRecipient: ${NOTICE_EMAIL:devops@apitable.com}
 
 cte-sql:
   enabled: ${CTE_SQL_ENABLED:true}

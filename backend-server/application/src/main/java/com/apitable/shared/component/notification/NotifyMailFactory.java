@@ -262,7 +262,7 @@ public class NotifyMailFactory {
             null,
             null,
             textBtl,
-            Collections.singletonList("devops@apitable.com"));
+            Collections.singletonList(emailSendProperties.getNoticeRecipient()));
     }
 
     /**
@@ -311,6 +311,7 @@ public class NotifyMailFactory {
         emailMessage.setFrom(emailSendProperties.getFrom());
         emailMessage.setSubject(subject);
         emailMessage.setTo(to);
+        emailMessage.setFrom(emailSendProperties.getFrom());
         if (subjectType != null) {
             return;
         }
@@ -355,6 +356,7 @@ public class NotifyMailFactory {
             emailMessage.setFrom(emailSendProperties.getFrom());
             emailMessage.setSubject(subject);
             emailMessage.setTo(Collections.singletonList(to.get(i)));
+            emailMessage.setFrom(emailSendProperties.getFrom());
             emailMessage.setPlainText(plainText);
             emailMessage.setHtmlText(htmlBody);
             messages[i] = emailMessage;
