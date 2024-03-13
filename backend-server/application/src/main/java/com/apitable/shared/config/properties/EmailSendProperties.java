@@ -42,12 +42,12 @@ public class EmailSendProperties {
     private String personal;
 
     /**
-     * From email of all messages
+     * From email of all messages.
      */
     private String from;
 
     /**
-     * Email address to receive notifications via notify()
+     * Email address to receive notifications via notify().
      */
     private String noticeRecipient;
 }
